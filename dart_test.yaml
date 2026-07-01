@@ -1,0 +1,6 @@
+# Test tags. `golden` marks pixel golden tests, which are environment-specific
+# (font rasterisation differs across machines) and are kept for local visual
+# review — CI runs `flutter test --exclude-tags golden`.
+tags:
+  golden:
+    description: Pixel golden tests; run locally for visual review, skipped in CI.

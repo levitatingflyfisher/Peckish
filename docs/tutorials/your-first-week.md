@@ -1,0 +1,22 @@
+# Your first week
+
+**Day one, ten minutes.**
+
+1. **Recipes** — paste links to three dinners your family actually eats
+   (or write them down; the editor takes a minute each).
+2. **Plan** — tap Monday's plate, pick a recipe. Repeat for the week;
+   drop "Leftovers" on the slow days. Watch the plates fill.
+3. **Set the table** — the button under the week builds your grocery list,
+   sorted by aisle. Add the non-food things by hand; they'll survive every
+   regeneration.
+
+**If you want your own numbers** (entirely optional):
+
+4. On **Today**, tap **+** and log what you actually eat for a day or two —
+   search works offline over 13,652 foods. Your regulars appear on the
+   recents rail; from then on, logging them is one tap.
+5. Build a saved meal for your standing order (the whole Panda run, one
+   tap), and set static targets in the + sheet's totals if numbers help.
+
+That's the entire system. The app never pings you, never scores you, and
+works in airplane mode.

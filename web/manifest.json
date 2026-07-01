@@ -1,0 +1,35 @@
+{
+    "name": "Peckish",
+    "short_name": "Peckish",
+    "start_url": ".",
+    "display": "standalone",
+    "background_color": "#F7F1E5",
+    "theme_color": "#7A4160",
+    "description": "The family food app — recipe box, weekly plan, grocery list, food diary. Local-first.",
+    "orientation": "portrait-primary",
+    "prefer_related_applications": false,
+    "icons": [
+        {
+            "src": "icons/Icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/Icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/Icon-maskable-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "icons/Icon-maskable-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ]
+}
