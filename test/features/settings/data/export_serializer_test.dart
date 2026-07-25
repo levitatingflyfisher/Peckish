@@ -42,12 +42,12 @@ PeckishExport fullExport() => PeckishExport(
           items: [
             const SavedMealItem(
               id: 'i-1',
-              food: const FoodRef.custom('cf-1'),
+              food: FoodRef.custom('cf-1'),
               label: 'Orange chicken',
               qty: 1,
               unitLabel: 'serving',
               grams: null,
-              macros: const MacroSet(kcal: 490),
+              macros: MacroSet(kcal: 490),
             ),
           ],
         ),

@@ -57,12 +57,12 @@ void main() {
       items: [
         const SavedMealItem(
           id: 'i-1',
-          food: const FoodRef.quick(),
+          food: FoodRef.quick(),
           label: 'Item',
           qty: 1,
           unitLabel: 'serving',
           grams: null,
-          macros: const MacroSet(kcal: 100),
+          macros: MacroSet(kcal: 100),
         ),
       ],
     ));
