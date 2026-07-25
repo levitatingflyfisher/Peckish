@@ -175,6 +175,44 @@ class RecipeIngredients extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+/// Storage-side enums for the plan + grocery tables (same reorder-safety
+/// rationale as [FoodKindDb]).
+enum PlanSlotDb { breakfast, lunch, dinner, other }
+
+enum PlanKindDb { recipe, meal, note }
+
+enum GroceryAisleDb { produce, meat, dairy, bakery, frozen, pantry, other }
+
+/// The week's cells: a recipe, a staple, or a note per (day, slot). Titles
+/// are resolved at read time — the plan never snapshots names.
+@DataClassName('PlanEntryRow')
+class PlanEntries extends Table {
+  TextColumn get id => text()();
+  TextColumn get day => text()();
+  IntColumn get slot => intEnum<PlanSlotDb>()();
+  IntColumn get kind => intEnum<PlanKindDb>()();
+  TextColumn get refId => text().nullable()();
+  TextColumn get note => text().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+/// The grocery list — generated projection of the plan + manual adds.
+@DataClassName('GroceryItemRow')
+class GroceryItems extends Table {
+  TextColumn get id => text()();
+  TextColumn get name => text()();
+  IntColumn get aisle => intEnum<GroceryAisleDb>()();
+  BoolColumn get checked => boolean().withDefault(const Constant(false))();
+  BoolColumn get manual => boolean().withDefault(const Constant(false))();
+  TextColumn get sourceRecipeId => text().nullable()();
+  DateTimeColumn get createdAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 /// Static personal targets — a single row (id = 1), all-null = no targets.
 /// Deliberately NOT adaptive: numbers change when the user changes them.
 @DataClassName('TargetsRow')
@@ -201,6 +239,8 @@ class Targets extends Table {
   SavedMealItems,
   Recipes,
   RecipeIngredients,
+  PlanEntries,
+  GroceryItems,
   Targets,
 ])
 class AppDatabase extends _$AppDatabase {
@@ -230,6 +270,8 @@ class AppDatabase extends _$AppDatabase {
         await delete(savedMeals).go();
         await delete(recipeIngredients).go();
         await delete(recipes).go();
+        await delete(planEntries).go();
+        await delete(groceryItems).go();
         await delete(customFoods).go();
         await delete(targets).go();
         // The USDA spine (usdaFoods/usdaPortions) is reference data, not user

@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/foundation.dart';
 import 'package:sanctuary_backup_ui/sanctuary_backup_ui.dart';
 
@@ -8,6 +9,8 @@ import '../../diary/data/diary_repository.dart';
 import '../../diary/data/saved_meal_repository.dart';
 import '../../diary/data/targets_repository.dart';
 import '../../food/data/custom_food_repository.dart';
+import '../../groceries/domain/grocery_item.dart';
+import '../../plan/domain/plan_entry.dart';
 import '../../recipes/data/recipe_repository.dart';
 import '../../settings/data/export_serializer.dart';
 
@@ -44,6 +47,29 @@ class PeckishBackupSerializer
       savedMeals:
           await SavedMealRepository(_db).getAll(includeArchived: true),
       recipes: await RecipeRepository(_db).getAll(includeArchived: true),
+      planEntries: [
+        for (final r in await (_db.select(_db.planEntries)).get())
+          PlanEntry(
+            id: r.id,
+            day: r.day,
+            slot: PlanSlot.values[r.slot.index],
+            kind: PlanKind.values[r.kind.index],
+            refId: r.refId,
+            note: r.note,
+          ),
+      ],
+      groceryItems: [
+        for (final r in await (_db.select(_db.groceryItems)).get())
+          GroceryItem(
+            id: r.id,
+            name: r.name,
+            aisle: GroceryAisle.values[r.aisle.index],
+            checked: r.checked,
+            manual: r.manual,
+            sourceRecipeId: r.sourceRecipeId,
+            createdAt: r.createdAt,
+          ),
+      ],
       targets: await TargetsRepository(_db).get(),
     );
   }
@@ -100,6 +126,27 @@ class PeckishBackupSerializer
       final recipes = RecipeRepository(_db);
       for (final recipe in export.recipes) {
         await recipes.create(recipe);
+      }
+      for (final p in export.planEntries) {
+        await _db.into(_db.planEntries).insert(PlanEntriesCompanion(
+              id: Value(p.id),
+              day: Value(p.day),
+              slot: Value(PlanSlotDb.values[p.slot.index]),
+              kind: Value(PlanKindDb.values[p.kind.index]),
+              refId: Value(p.refId),
+              note: Value(p.note),
+            ));
+      }
+      for (final g in export.groceryItems) {
+        await _db.into(_db.groceryItems).insert(GroceryItemsCompanion(
+              id: Value(g.id),
+              name: Value(g.name),
+              aisle: Value(GroceryAisleDb.values[g.aisle.index]),
+              checked: Value(g.checked),
+              manual: Value(g.manual),
+              sourceRecipeId: Value(g.sourceRecipeId),
+              createdAt: Value(g.createdAt),
+            ));
       }
       await TargetsRepository(_db).set(export.targets);
     });

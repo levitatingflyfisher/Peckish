@@ -3,6 +3,8 @@ import 'package:peckish/features/diary/domain/diary_entry.dart';
 import 'package:peckish/features/diary/domain/saved_meal.dart';
 import 'package:peckish/features/food/domain/custom_food.dart';
 import 'package:peckish/features/food/domain/macro_set.dart';
+import 'package:peckish/features/groceries/domain/grocery_item.dart';
+import 'package:peckish/features/plan/domain/plan_entry.dart';
 import 'package:peckish/features/recipes/domain/recipe.dart';
 import 'package:peckish/features/settings/data/export_serializer.dart';
 
@@ -74,6 +76,33 @@ PeckishExport fullExport() => PeckishExport(
           ],
         ),
       ],
+      planEntries: const [
+        PlanEntry(
+          id: 'p-1',
+          day: '2026-07-27',
+          slot: PlanSlot.dinner,
+          kind: PlanKind.recipe,
+          refId: 'r-1',
+        ),
+        PlanEntry(
+          id: 'p-2',
+          day: '2026-07-29',
+          slot: PlanSlot.dinner,
+          kind: PlanKind.note,
+          note: 'Leftovers',
+        ),
+      ],
+      groceryItems: [
+        GroceryItem(
+          id: 'g-1',
+          name: '2× 1 onion',
+          aisle: GroceryAisle.produce,
+          checked: true,
+          manual: false,
+          sourceRecipeId: 'r-1',
+          createdAt: DateTime.utc(2026, 7, 25),
+        ),
+      ],
       targets: const MacroSet(kcal: 3200, proteinG: 180),
     );
 
@@ -104,6 +133,14 @@ void main() {
     expect(r.ingredients.last.food, isNull);
     expect(r.ingredients.last.macros, isNull);
 
+    expect(decoded.planEntries, hasLength(2));
+    expect(decoded.planEntries.first.slot, PlanSlot.dinner);
+    expect(decoded.planEntries.last.note, 'Leftovers');
+    final g = decoded.groceryItems.single;
+    expect(g.aisle, GroceryAisle.produce);
+    expect(g.checked, isTrue);
+    expect(g.sourceRecipeId, 'r-1');
+
     expect(decoded.targets.kcal, 3200);
     expect(decoded.targets.fatG, isNull);
   });
@@ -116,6 +153,8 @@ void main() {
     expect(decoded.diaryEntries, isEmpty);
     expect(decoded.savedMeals, isEmpty);
     expect(decoded.recipes, isEmpty);
+    expect(decoded.planEntries, isEmpty);
+    expect(decoded.groceryItems, isEmpty);
     expect(decoded.targets.kcal, isNull);
   });
 

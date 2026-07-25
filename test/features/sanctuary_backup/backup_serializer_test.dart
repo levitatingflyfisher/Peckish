@@ -98,6 +98,8 @@ void main() {
     expect(copy, contains('saved meal'));
     expect(copy, contains('custom food'));
     expect(copy, contains('recipe'));
+    expect(copy, contains('plan'));
+    expect(copy, contains('grocery'));
     expect(copy, contains('target'));
   });
 }

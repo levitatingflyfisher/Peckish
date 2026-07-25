@@ -4,6 +4,8 @@ import 'package:peckish/features/diary/domain/diary_entry.dart';
 import 'package:peckish/features/diary/domain/saved_meal.dart';
 import 'package:peckish/features/food/domain/custom_food.dart';
 import 'package:peckish/features/food/domain/macro_set.dart';
+import 'package:peckish/features/groceries/domain/grocery_item.dart';
+import 'package:peckish/features/plan/domain/plan_entry.dart';
 import 'package:peckish/features/recipes/domain/recipe.dart';
 import 'package:peckish/shared/extensions/datetime_ext.dart';
 
@@ -31,6 +33,8 @@ class PeckishExport {
   final List<DiaryEntry> diaryEntries;
   final List<SavedMeal> savedMeals;
   final List<Recipe> recipes;
+  final List<PlanEntry> planEntries;
+  final List<GroceryItem> groceryItems;
   final MacroSet targets;
 
   const PeckishExport({
@@ -39,6 +43,8 @@ class PeckishExport {
     this.diaryEntries = const [],
     this.savedMeals = const [],
     this.recipes = const [],
+    this.planEntries = const [],
+    this.groceryItems = const [],
     this.targets = const MacroSet(),
   });
 
@@ -52,6 +58,8 @@ class PeckishExport {
         'diaryEntries': [for (final e in diaryEntries) _entryMap(e)],
         'savedMeals': [for (final m in savedMeals) _mealMap(m)],
         'recipes': [for (final r in recipes) _recipeMap(r)],
+        'planEntries': [for (final p in planEntries) _planMap(p)],
+        'groceryItems': [for (final g in groceryItems) _groceryMap(g)],
         'targets': _macros(targets),
       };
 
@@ -88,6 +96,12 @@ class PeckishExport {
       ],
       recipes: [
         for (final r in _section(raw, 'recipes')) _recipeFrom(r),
+      ],
+      planEntries: [
+        for (final p in _section(raw, 'planEntries')) _planFrom(p),
+      ],
+      groceryItems: [
+        for (final g in _section(raw, 'groceryItems')) _groceryFrom(g),
       ],
       targets: _macrosFrom(raw['targets']),
     );
@@ -202,6 +216,47 @@ class PeckishExport {
             },
         ],
       };
+
+  static Map<String, Object?> _planMap(PlanEntry p) => {
+        'id': p.id,
+        'day': p.day,
+        'slot': p.slot.name,
+        'kind': p.kind.name,
+        if (p.refId != null) 'refId': p.refId,
+        if (p.note != null) 'note': p.note,
+      };
+
+  static PlanEntry _planFrom(Map<String, dynamic> raw) => PlanEntry(
+        id: raw['id'] as String,
+        day: raw['day'] as String,
+        slot: PlanSlot.values.firstWhere((s) => s.name == raw['slot'],
+            orElse: () => PlanSlot.other),
+        kind: PlanKind.values.firstWhere((k) => k.name == raw['kind'],
+            orElse: () => PlanKind.note),
+        refId: raw['refId'] as String?,
+        note: raw['note'] as String?,
+      );
+
+  static Map<String, Object?> _groceryMap(GroceryItem g) => {
+        'id': g.id,
+        'name': g.name,
+        'aisle': g.aisle.name,
+        'checked': g.checked,
+        'manual': g.manual,
+        if (g.sourceRecipeId != null) 'sourceRecipeId': g.sourceRecipeId,
+        'createdAt': g.createdAt.toIso8601String(),
+      };
+
+  static GroceryItem _groceryFrom(Map<String, dynamic> raw) => GroceryItem(
+        id: raw['id'] as String,
+        name: raw['name'] as String,
+        aisle: GroceryAisle.values.firstWhere((a) => a.name == raw['aisle'],
+            orElse: () => GroceryAisle.other),
+        checked: raw['checked'] as bool? ?? false,
+        manual: raw['manual'] as bool? ?? false,
+        sourceRecipeId: raw['sourceRecipeId'] as String?,
+        createdAt: DateTime.parse(raw['createdAt'] as String),
+      );
 
   static Map<String, Object?> _recipeMap(Recipe r) => {
         'id': r.id,

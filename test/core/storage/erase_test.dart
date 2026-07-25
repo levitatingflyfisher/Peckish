@@ -12,6 +12,9 @@ import 'package:peckish/features/food/data/custom_food_repository.dart';
 import 'package:peckish/features/food/data/usda_food_repository.dart';
 import 'package:peckish/features/food/domain/custom_food.dart';
 import 'package:peckish/features/food/domain/macro_set.dart';
+import 'package:peckish/features/groceries/data/grocery_repository.dart';
+import 'package:peckish/features/plan/data/plan_repository.dart';
+import 'package:peckish/features/plan/domain/plan_entry.dart';
 import 'package:peckish/features/recipes/data/recipe_repository.dart';
 import 'package:peckish/features/recipes/domain/recipe.dart';
 
@@ -76,6 +79,15 @@ void main() {
       createdAt: DateTime(2026, 7, 25),
       ingredients: const [RecipeIngredient(id: 'ri-1', text: '1 onion')],
     ));
+    await PlanRepository(db).upsert(const PlanEntry(
+      id: 'p-1',
+      day: '2026-07-27',
+      slot: PlanSlot.dinner,
+      kind: PlanKind.recipe,
+      refId: 'r-1',
+    ));
+    final groceries = GroceryRepository(db);
+    await groceries.addManual('Milk');
     await TargetsRepository(db).set(const MacroSet(kcal: 3200));
     await db.into(db.userPrefs).insertOnConflictUpdate(
         UserPrefsCompanion.insert(key: 'theme', value: 'dark'));
@@ -87,6 +99,8 @@ void main() {
         isEmpty);
     expect(await meals.getAll(includeArchived: true), isEmpty);
     expect(await recipes.getAll(includeArchived: true), isEmpty);
+    expect(await PlanRepository(db).entriesForDays(['2026-07-27']), isEmpty);
+    expect(await groceries.getAll(), isEmpty);
     expect((await TargetsRepository(db).get()).kcal, isNull);
     // reference spine and shell prefs survive
     expect(await usda.byId(1), isNotNull);
