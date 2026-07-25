@@ -49,9 +49,115 @@ class UsdaPortions extends Table {
   RealColumn get grams => real()();
 }
 
+/// Household-defined foods. Macros are PER SERVING.
+@DataClassName('CustomFoodRow')
+class CustomFoods extends Table {
+  TextColumn get id => text()();
+  TextColumn get name => text()();
+  TextColumn get servingLabel => text()();
+  RealColumn get kcal => real().nullable()();
+  RealColumn get proteinG => real().nullable()();
+  RealColumn get carbG => real().nullable()();
+  RealColumn get fatG => real().nullable()();
+  DateTimeColumn get createdAt => dateTime()();
+  BoolColumn get archived => boolean().withDefault(const Constant(false))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+/// The food ledger. Macros are a snapshot taken at log time; `day` is a local
+/// 'YYYY-MM-DD' string so DST can never move an entry across midnight.
+@DataClassName('DiaryEntryRow')
+class DiaryEntries extends Table {
+  TextColumn get id => text()();
+  TextColumn get day => text()();
+  DateTimeColumn get at => dateTime()();
+  IntColumn get foodKind => intEnum<FoodKindDb>()();
+  IntColumn get usdaFdcId => integer().nullable()();
+  TextColumn get customFoodId => text().nullable()();
+  TextColumn get label => text()();
+  RealColumn get qty => real()();
+  TextColumn get unitLabel => text()();
+  RealColumn get grams => real().nullable()();
+  RealColumn get kcal => real().nullable()();
+  RealColumn get proteinG => real().nullable()();
+  RealColumn get carbG => real().nullable()();
+  RealColumn get fatG => real().nullable()();
+  IntColumn get source => intEnum<EntrySourceDb>()();
+  DateTimeColumn get createdAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+/// Storage-side enums for [DiaryEntries]. Kept separate from the domain enums
+/// so a domain reorder can never silently rewrite what stored integers mean.
+enum FoodKindDb { usda, custom, quick }
+
+enum EntrySourceDb { tap, search, manual, ai }
+
+/// Staples — named bundles relogged in one tap.
+@DataClassName('SavedMealRow')
+class SavedMeals extends Table {
+  TextColumn get id => text()();
+  TextColumn get name => text()();
+  IntColumn get position => integer()();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get lastUsedAt => dateTime().nullable()();
+  BoolColumn get archived => boolean().withDefault(const Constant(false))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+@DataClassName('SavedMealItemRow')
+class SavedMealItems extends Table {
+  TextColumn get id => text()();
+  TextColumn get mealId => text().references(SavedMeals, #id)();
+  IntColumn get position => integer()();
+  IntColumn get foodKind => intEnum<FoodKindDb>()();
+  IntColumn get usdaFdcId => integer().nullable()();
+  TextColumn get customFoodId => text().nullable()();
+  TextColumn get label => text()();
+  RealColumn get qty => real()();
+  TextColumn get unitLabel => text()();
+  RealColumn get grams => real().nullable()();
+  RealColumn get kcal => real().nullable()();
+  RealColumn get proteinG => real().nullable()();
+  RealColumn get carbG => real().nullable()();
+  RealColumn get fatG => real().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+/// Static personal targets — a single row (id = 1), all-null = no targets.
+/// Deliberately NOT adaptive: numbers change when the user changes them.
+@DataClassName('TargetsRow')
+class Targets extends Table {
+  IntColumn get id => integer().withDefault(const Constant(1))();
+  RealColumn get kcal => real().nullable()();
+  RealColumn get proteinG => real().nullable()();
+  RealColumn get carbG => real().nullable()();
+  RealColumn get fatG => real().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 // ─── Database ─────────────────────────────────────────────────────────────────
 
-@DriftDatabase(tables: [UserPrefs, UsdaFoods, UsdaPortions])
+@DriftDatabase(tables: [
+  UserPrefs,
+  UsdaFoods,
+  UsdaPortions,
+  CustomFoods,
+  DiaryEntries,
+  SavedMeals,
+  SavedMealItems,
+  Targets,
+])
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor])
       : super(executor ??
@@ -74,8 +180,13 @@ class AppDatabase extends _$AppDatabase {
   /// in lockstep with the domain schema, and the backup restore-consequence
   /// copy in `backup_config.dart` must always enumerate what it erases.
   Future<void> eraseUserData() => transaction(() async {
-        // No domain tables yet — the food/diary/recipe/plan tables land with
-        // their features and are added here in the same commit.
+        await delete(diaryEntries).go();
+        await delete(savedMealItems).go();
+        await delete(savedMeals).go();
+        await delete(customFoods).go();
+        await delete(targets).go();
+        // The USDA spine (usdaFoods/usdaPortions) is reference data, not user
+        // data — it survives, as do the shell prefs.
       });
 
   @override
