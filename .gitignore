@@ -1,0 +1,95 @@
+# Private corpus — user's health notes are source material, NEVER committed.
+# They live at the repo root until moved into corpus/; both locations ignored.
+corpus/
+peckish-prd.md
+final-red-team-errata.md
+healthConvoStarters.txt
+health-wins.md
+health-wins-v2.md
+human-maintenance-algorithm.md
+integrated-daily-protocol.md
+new-parent-survival-stack.md
+olympian-birth-protocol.md
+vbac-large-family-protocol.md
+
+.worktrees/
+
+# Flutter / Dart standard ignores
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+build/
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.buildlog/
+.history
+.svn/
+migrate_working_dir/
+
+# Android
+**/android/**/gradle-wrapper.jar
+**/android/.gradle
+**/android/captures/
+**/android/gradlew
+**/android/gradlew.bat
+**/android/local.properties
+**/android/**/GeneratedPluginRegistrant.java
+**/android/.kotlin/
+
+# iOS
+**/ios/**/*.mode1v3
+**/ios/**/*.mode2v3
+**/ios/**/*.moved-aside
+**/ios/**/*.pbxuser
+**/ios/**/*.perspectivev3
+**/ios/**/*sync/
+**/ios/**/.sconsign.dblite
+**/ios/**/.tags*
+**/ios/**/.vagrant/
+**/ios/**/DerivedData/
+**/ios/**/Icon?
+**/ios/**/Pods/
+**/ios/**/.symlinks/
+**/ios/**/profile
+**/ios/**/xcuserdata
+**/ios/.generated/
+**/ios/Flutter/.last_build_id
+**/ios/Flutter/App.framework
+**/ios/Flutter/Flutter.framework
+**/ios/Flutter/Flutter.podspec
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/ephemeral/
+**/ios/Flutter/app.flx
+**/ios/Flutter/app.zip
+**/ios/Flutter/flutter_assets/
+**/ios/ServiceDefinitions.json
+**/ios/Runner/GeneratedPluginRegistrant.*
+
+# Web
+**/web/flutter_service_worker.js
+
+# Generated drift/riverpod sources are committed so a fresh checkout builds and
+# tests without a build_runner pass; regenerate with
+# `dart run build_runner build --delete-conflicting-outputs`.
+.superpowers/
+
+# IDE
+.idea/
+*.iml
+
+# Local working artifacts — do not commit
+# (AGENTS.md is intentionally NOT ignored — it ships as the agent+human guide)
+CLAUDE.md
+GEMINI.md
+docs/superpowers/
+/docs/superpowers/
+test/visual/failures/
+.claude/
+
+# Generated sources — CI + local run build_runner
+*.g.dart

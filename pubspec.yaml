@@ -1,0 +1,98 @@
+name: peckish
+description: The family food app — recipe box, weekly dinner plan, self-writing grocery list, and a one-tap food diary. Local-first — OpenHearth.
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_riverpod: ^2.5.1
+  riverpod_annotation: ^2.3.5
+  drift: ^2.18.0
+  drift_flutter: ^0.2.2
+  sqlite3_flutter_libs: ^0.5.24
+  go_router: ^14.2.7
+  fpdart: ^1.1.0
+  uuid: ^4.4.2
+  # Bumped from ^0.19.0: sanctuary_backup_ui (backup filename date formatting)
+  # requires ^0.20.2.
+  intl: ^0.20.2
+  shared_preferences: ^2.3.2
+  path_provider: ^2.1.4
+  path: ^1.9.0
+  share_plus: ^10.0.3
+  lucide_flutter: ^1.7.0
+  # Encrypted backup (SANCTUARY-BRIEF §4.W2) — sibling path deps, the eloEngine
+  # precedent. file_picker is new (restore's "pick a .ohbk file" on every
+  # platform); share_plus is already a dep (used by the plaintext export).
+  # Shared design tokens/typography. Peckish is tier-T (zero visual change):
+  # only the byte-identical Material TextTheme ladder comes from the package;
+  # the jam/oat/butter identity stays app-local.
+  openhearth_design:
+    path: ../ohStyle/openhearth_design
+  sanctuary_auth_core:
+    path: ../packages/sanctuary_auth_core
+  sanctuary_backup_ui:
+    path: ../packages/sanctuary_backup_ui
+  file_picker: '>=8.0.0 <10.0.0'
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/icon/app_icon.png"
+  min_sdk_android: 21
+  adaptive_icon_background: "#7A4160"
+  adaptive_icon_foreground: "assets/icon/app_icon_foreground.png"
+  web:
+    generate: true
+    image_path: "assets/icon/app_icon.png"
+    background_color: "#F7F1E5"
+    theme_color: "#7A4160"
+
+dev_dependencies:
+  flutter_launcher_icons: ^0.14.1
+  flutter_test:
+    sdk: flutter
+  integration_test:
+    sdk: flutter
+  build_runner: ^2.4.12
+  riverpod_generator: ^2.4.3
+  drift_dev: ^2.18.0
+  mocktail: ^1.0.4
+  flutter_lints: ^4.0.0
+  flutter_goldens:
+    sdk: flutter
+  # Fleet standards as failing-able tests (style grammar, backup envelope,
+  # size budgets, permission surface, harness canon) — sibling path dep,
+  # consumed by test/fleet_conformance_test.dart.
+  oh_fleet_conformance:
+    path: ../packages/oh_fleet_conformance
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/icon/
+
+  fonts:
+    - family: Lora
+      fonts:
+        - asset: assets/fonts/Lora-Regular.ttf
+        - asset: assets/fonts/Lora-Italic.ttf
+          style: italic
+        - asset: assets/fonts/Lora-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Lora-Bold.ttf
+          weight: 700
+    - family: Nunito
+      fonts:
+        - asset: assets/fonts/Nunito-Regular.ttf
+        - asset: assets/fonts/Nunito-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Nunito-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Nunito-Bold.ttf
+          weight: 700

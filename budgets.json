@@ -1,0 +1,6 @@
+{
+  "main_dart_js_gz_max_bytes": 1091614,
+  "main_dart_js_gz_note": "baseline 1039632 bytes (gzip -c build/web/main.dart.js | wc -c, 2026-07-17) + 5%",
+  "apk_arm64_max_bytes": 23983731,
+  "apk_arm64_note": "2026-07-22 deliberate ratchet DOWN: first real split-per-abi arm64 build = 22841648 bytes (+5%). Replaces the 2026-07-17 universal-APK-derived guess (25771293), which the split measurement proved slack."
+}
