@@ -76,6 +76,7 @@ flutter:
 
   assets:
     - assets/icon/
+    - assets/food/
 
   fonts:
     - family: Lora
