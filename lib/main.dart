@@ -52,6 +52,10 @@ class _PeckishAppState extends ConsumerState<PeckishApp> {
     // errors (the Sundial/Lullaby startup pattern).
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(backupControllerProvider.notifier).runStartupMaintenance();
+      // Kick the USDA spine import (idempotent, version-stamped). Fire-and-
+      // forget: first boot imports ~13.6k foods in the background; every
+      // later boot is a single version-stamp read.
+      ref.read(spineReadyProvider.future).ignore();
     });
   }
 
