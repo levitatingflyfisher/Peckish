@@ -8,6 +8,7 @@ import '../../diary/data/diary_repository.dart';
 import '../../diary/data/saved_meal_repository.dart';
 import '../../diary/data/targets_repository.dart';
 import '../../food/data/custom_food_repository.dart';
+import '../../recipes/data/recipe_repository.dart';
 import '../../settings/data/export_serializer.dart';
 
 /// Serializes Peckish's user data to/from a JSON [Uint8List] for encrypted
@@ -42,6 +43,7 @@ class PeckishBackupSerializer
       ],
       savedMeals:
           await SavedMealRepository(_db).getAll(includeArchived: true),
+      recipes: await RecipeRepository(_db).getAll(includeArchived: true),
       targets: await TargetsRepository(_db).get(),
     );
   }
@@ -94,6 +96,10 @@ class PeckishBackupSerializer
       final meals = SavedMealRepository(_db);
       for (final meal in export.savedMeals) {
         await meals.create(meal);
+      }
+      final recipes = RecipeRepository(_db);
+      for (final recipe in export.recipes) {
+        await recipes.create(recipe);
       }
       await TargetsRepository(_db).set(export.targets);
     });

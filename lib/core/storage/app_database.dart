@@ -132,6 +132,49 @@ class SavedMealItems extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+/// The recipe box. Declared* columns hold site-published per-serving
+/// nutrition (schema.org), kept separate from anything computed.
+@DataClassName('RecipeRow')
+class Recipes extends Table {
+  TextColumn get id => text()();
+  TextColumn get title => text()();
+  RealColumn get servings => real().nullable()();
+  TextColumn get sourceUrl => text().nullable()();
+  TextColumn get instructions => text().withDefault(const Constant(''))();
+  RealColumn get declaredKcal => real().nullable()();
+  RealColumn get declaredProteinG => real().nullable()();
+  RealColumn get declaredCarbG => real().nullable()();
+  RealColumn get declaredFatG => real().nullable()();
+  DateTimeColumn get createdAt => dateTime()();
+  BoolColumn get archived => boolean().withDefault(const Constant(false))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+/// Ingredient lines. `line` (the domain's `text`) is always kept; the food
+/// match columns are nullable because matching is optional and reversible.
+/// (Named `line` in storage — a column getter called `text` would shadow
+/// drift's own `text()` builder.)
+@DataClassName('RecipeIngredientRow')
+class RecipeIngredients extends Table {
+  TextColumn get id => text()();
+  TextColumn get recipeId => text().references(Recipes, #id)();
+  IntColumn get position => integer()();
+  TextColumn get line => text()();
+  IntColumn get foodKind => intEnum<FoodKindDb>().nullable()();
+  IntColumn get usdaFdcId => integer().nullable()();
+  TextColumn get customFoodId => text().nullable()();
+  RealColumn get grams => real().nullable()();
+  RealColumn get kcal => real().nullable()();
+  RealColumn get proteinG => real().nullable()();
+  RealColumn get carbG => real().nullable()();
+  RealColumn get fatG => real().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 /// Static personal targets — a single row (id = 1), all-null = no targets.
 /// Deliberately NOT adaptive: numbers change when the user changes them.
 @DataClassName('TargetsRow')
@@ -156,6 +199,8 @@ class Targets extends Table {
   DiaryEntries,
   SavedMeals,
   SavedMealItems,
+  Recipes,
+  RecipeIngredients,
   Targets,
 ])
 class AppDatabase extends _$AppDatabase {
@@ -183,6 +228,8 @@ class AppDatabase extends _$AppDatabase {
         await delete(diaryEntries).go();
         await delete(savedMealItems).go();
         await delete(savedMeals).go();
+        await delete(recipeIngredients).go();
+        await delete(recipes).go();
         await delete(customFoods).go();
         await delete(targets).go();
         // The USDA spine (usdaFoods/usdaPortions) is reference data, not user

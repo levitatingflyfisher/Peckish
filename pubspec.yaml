@@ -15,6 +15,8 @@ dependencies:
   drift_flutter: ^0.2.2
   sqlite3_flutter_libs: ^0.5.24
   go_router: ^14.2.7
+  # Recipe URL import: fetch exactly the one page the user pasted.
+  http: ^1.2.1
   fpdart: ^1.1.0
   uuid: ^4.4.2
   # Bumped from ^0.19.0: sanctuary_backup_ui (backup filename date formatting)

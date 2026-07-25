@@ -92,10 +92,12 @@ void main() {
       () {
     final copy = peckishBackupConfig.restoreReplaceConsequence;
     // AppDatabase.eraseUserData deletes: diary entries, saved meals (+items),
-    // custom foods, targets. The sentence must own each one.
+    // recipes (+ingredients), custom foods, targets. The sentence must own
+    // each one.
     expect(copy, contains('diary'));
     expect(copy, contains('saved meal'));
     expect(copy, contains('custom food'));
+    expect(copy, contains('recipe'));
     expect(copy, contains('target'));
   });
 }

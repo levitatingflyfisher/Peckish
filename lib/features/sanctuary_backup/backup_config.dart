@@ -16,10 +16,10 @@ const peckishBackupConfig = SanctuaryBackupConfig(
   aadContext: 'peckish-backup/v1',
   appDisplayName: 'Peckish',
   restoreReplaceConsequence:
-      'Restoring will delete every diary entry, saved meal, custom food, and '
-      'your targets on this device, then replace them with the contents of '
-      'the backup file. Your theme preference and the built-in food database '
-      'are kept.',
+      'Restoring will delete every diary entry, saved meal, custom food, '
+      'recipe, and your targets on this device, then replace them with the '
+      'contents of the backup file. Your theme preference and the built-in '
+      'food database are kept.',
   onAfterRestore: _afterRestore,
 );
 

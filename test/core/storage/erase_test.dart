@@ -12,6 +12,8 @@ import 'package:peckish/features/food/data/custom_food_repository.dart';
 import 'package:peckish/features/food/data/usda_food_repository.dart';
 import 'package:peckish/features/food/domain/custom_food.dart';
 import 'package:peckish/features/food/domain/macro_set.dart';
+import 'package:peckish/features/recipes/data/recipe_repository.dart';
+import 'package:peckish/features/recipes/domain/recipe.dart';
 
 void main() {
   test('eraseUserData wipes user tables, keeps the spine and shell prefs',
@@ -66,6 +68,14 @@ void main() {
         ),
       ],
     ));
+    final recipes = RecipeRepository(db);
+    await recipes.create(Recipe(
+      id: 'r-1',
+      title: 'Tacos',
+      servings: 4,
+      createdAt: DateTime(2026, 7, 25),
+      ingredients: const [RecipeIngredient(id: 'ri-1', text: '1 onion')],
+    ));
     await TargetsRepository(db).set(const MacroSet(kcal: 3200));
     await db.into(db.userPrefs).insertOnConflictUpdate(
         UserPrefsCompanion.insert(key: 'theme', value: 'dark'));
@@ -76,6 +86,7 @@ void main() {
     expect(await CustomFoodRepository(db).getAll(includeArchived: true),
         isEmpty);
     expect(await meals.getAll(includeArchived: true), isEmpty);
+    expect(await recipes.getAll(includeArchived: true), isEmpty);
     expect((await TargetsRepository(db).get()).kcal, isNull);
     // reference spine and shell prefs survive
     expect(await usda.byId(1), isNotNull);

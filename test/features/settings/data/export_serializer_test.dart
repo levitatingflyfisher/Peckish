@@ -3,6 +3,7 @@ import 'package:peckish/features/diary/domain/diary_entry.dart';
 import 'package:peckish/features/diary/domain/saved_meal.dart';
 import 'package:peckish/features/food/domain/custom_food.dart';
 import 'package:peckish/features/food/domain/macro_set.dart';
+import 'package:peckish/features/recipes/domain/recipe.dart';
 import 'package:peckish/features/settings/data/export_serializer.dart';
 
 PeckishExport fullExport() => PeckishExport(
@@ -52,6 +53,27 @@ PeckishExport fullExport() => PeckishExport(
           ],
         ),
       ],
+      recipes: [
+        Recipe(
+          id: 'r-1',
+          title: 'Weeknight Tacos',
+          servings: 4,
+          sourceUrl: 'https://example.com/tacos',
+          instructions: 'Brown the beef.',
+          declaredPerServing: const MacroSet(kcal: 300),
+          createdAt: DateTime.utc(2026, 7, 3),
+          ingredients: const [
+            RecipeIngredient(
+              id: 'ri-1',
+              text: '1 lb ground beef',
+              food: FoodRef.usda(171077),
+              grams: 454,
+              macros: MacroSet(kcal: 1150, proteinG: 78),
+            ),
+            RecipeIngredient(id: 'ri-2', text: '8 corn tortillas'),
+          ],
+        ),
+      ],
       targets: const MacroSet(kcal: 3200, proteinG: 180),
     );
 
@@ -74,6 +96,14 @@ void main() {
     expect(m.items.single.food.customFoodId, 'cf-1');
     expect(m.lastUsedAt, DateTime.utc(2026, 7, 24, 18));
 
+    final r = decoded.recipes.single;
+    expect(r.title, 'Weeknight Tacos');
+    expect(r.declaredPerServing!.kcal, 300);
+    expect(r.ingredients, hasLength(2));
+    expect(r.ingredients.first.food!.usdaFdcId, 171077);
+    expect(r.ingredients.last.food, isNull);
+    expect(r.ingredients.last.macros, isNull);
+
     expect(decoded.targets.kcal, 3200);
     expect(decoded.targets.fatG, isNull);
   });
@@ -85,6 +115,7 @@ void main() {
     expect(decoded.customFoods, isEmpty);
     expect(decoded.diaryEntries, isEmpty);
     expect(decoded.savedMeals, isEmpty);
+    expect(decoded.recipes, isEmpty);
     expect(decoded.targets.kcal, isNull);
   });
 

@@ -4,6 +4,7 @@ import 'package:peckish/features/diary/domain/diary_entry.dart';
 import 'package:peckish/features/diary/domain/saved_meal.dart';
 import 'package:peckish/features/food/domain/custom_food.dart';
 import 'package:peckish/features/food/domain/macro_set.dart';
+import 'package:peckish/features/recipes/domain/recipe.dart';
 import 'package:peckish/shared/extensions/datetime_ext.dart';
 
 /// The date-stamped filename for a data export, e.g.
@@ -29,6 +30,7 @@ class PeckishExport {
   final List<CustomFood> customFoods;
   final List<DiaryEntry> diaryEntries;
   final List<SavedMeal> savedMeals;
+  final List<Recipe> recipes;
   final MacroSet targets;
 
   const PeckishExport({
@@ -36,6 +38,7 @@ class PeckishExport {
     this.customFoods = const [],
     this.diaryEntries = const [],
     this.savedMeals = const [],
+    this.recipes = const [],
     this.targets = const MacroSet(),
   });
 
@@ -48,6 +51,7 @@ class PeckishExport {
         'customFoods': [for (final f in customFoods) _foodMap(f)],
         'diaryEntries': [for (final e in diaryEntries) _entryMap(e)],
         'savedMeals': [for (final m in savedMeals) _mealMap(m)],
+        'recipes': [for (final r in recipes) _recipeMap(r)],
         'targets': _macros(targets),
       };
 
@@ -81,6 +85,9 @@ class PeckishExport {
       ],
       savedMeals: [
         for (final m in _section(raw, 'savedMeals')) _mealFrom(m),
+      ],
+      recipes: [
+        for (final r in _section(raw, 'recipes')) _recipeFrom(r),
       ],
       targets: _macrosFrom(raw['targets']),
     );
@@ -195,6 +202,54 @@ class PeckishExport {
             },
         ],
       };
+
+  static Map<String, Object?> _recipeMap(Recipe r) => {
+        'id': r.id,
+        'title': r.title,
+        if (r.servings != null) 'servings': r.servings,
+        if (r.sourceUrl != null) 'sourceUrl': r.sourceUrl,
+        'instructions': r.instructions,
+        if (r.declaredPerServing != null)
+          'declaredPerServing': _macros(r.declaredPerServing!),
+        'createdAt': r.createdAt.toIso8601String(),
+        'archived': r.archived,
+        'ingredients': [
+          for (final i in r.ingredients)
+            {
+              'id': i.id,
+              'text': i.text,
+              if (i.food != null) 'food': _refMap(i.food!),
+              if (i.grams != null) 'grams': i.grams,
+              if (i.macros != null) 'macros': _macros(i.macros!),
+            },
+        ],
+      };
+
+  static Recipe _recipeFrom(Map<String, dynamic> raw) => Recipe(
+        id: raw['id'] as String,
+        title: raw['title'] as String,
+        servings: (raw['servings'] as num?)?.toDouble(),
+        sourceUrl: raw['sourceUrl'] as String?,
+        instructions: raw['instructions'] as String? ?? '',
+        declaredPerServing: raw['declaredPerServing'] == null
+            ? null
+            : _macrosFrom(raw['declaredPerServing']),
+        createdAt: DateTime.parse(raw['createdAt'] as String),
+        archived: raw['archived'] as bool? ?? false,
+        ingredients: [
+          for (final i in (raw['ingredients'] as List? ?? const [])
+              .cast<Map<String, dynamic>>())
+            RecipeIngredient(
+              id: i['id'] as String,
+              text: i['text'] as String,
+              food: i['food'] == null
+                  ? null
+                  : _refFrom(i['food'] as Map<String, dynamic>),
+              grams: (i['grams'] as num?)?.toDouble(),
+              macros: i['macros'] == null ? null : _macrosFrom(i['macros']),
+            ),
+        ],
+      );
 
   static SavedMeal _mealFrom(Map<String, dynamic> raw) => SavedMeal(
         id: raw['id'] as String,
