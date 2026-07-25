@@ -15,9 +15,43 @@ class UserPrefs extends Table {
   Set<Column> get primaryKey => {key};
 }
 
+/// The bundled USDA reference spine (see assets/food/ + tool/usda/).
+/// Reference data, not user data: survives [AppDatabase.eraseUserData] and is
+/// wholesale-replaced when the shipped spine version changes. All macro
+/// values are per 100 g.
+@DataClassName('UsdaFoodRow')
+class UsdaFoods extends Table {
+  IntColumn get fdcId => integer()();
+  TextColumn get source => text()();
+  TextColumn get name => text()();
+
+  /// Lowercased [name], the search column (LIKE scans stay index-friendly on
+  /// one normalized spelling).
+  TextColumn get nameNorm => text()();
+  RealColumn get kcal => real().nullable()();
+  RealColumn get proteinG => real().nullable()();
+  RealColumn get carbG => real().nullable()();
+  RealColumn get fatG => real().nullable()();
+  RealColumn get fiberG => real().nullable()();
+  RealColumn get sugarG => real().nullable()();
+  RealColumn get sodiumMg => real().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {fdcId};
+}
+
+/// Household portions for USDA foods ("1 medium (3\" dia)" → 182 g).
+@DataClassName('UsdaPortionRow')
+class UsdaPortions extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get fdcId => integer()();
+  TextColumn get label => text()();
+  RealColumn get grams => real()();
+}
+
 // ─── Database ─────────────────────────────────────────────────────────────────
 
-@DriftDatabase(tables: [UserPrefs])
+@DriftDatabase(tables: [UserPrefs, UsdaFoods, UsdaPortions])
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor])
       : super(executor ??
