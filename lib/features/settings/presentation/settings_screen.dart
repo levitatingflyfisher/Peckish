@@ -74,6 +74,18 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: AppSpacing.lg),
 
+          Text('Household', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: AppSpacing.sm),
+          ListTile(
+            leading: const Icon(Icons.sync_outlined),
+            title: const Text('Household sync'),
+            subtitle: const Text(
+                'One plan, one list, every device — encrypted, on your own '
+                'Wi-Fi. Diaries stay personal.'),
+            onTap: () => context.push('/sync'),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+
           Text('Intelligence', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: AppSpacing.sm),
           ListTile(

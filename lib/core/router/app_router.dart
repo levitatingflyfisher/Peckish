@@ -10,6 +10,7 @@ import 'package:peckish/features/plan/presentation/plan_screen.dart';
 import 'package:peckish/features/recipes/presentation/recipes_screen.dart';
 import 'package:peckish/features/barcode/presentation/scan_screen.dart';
 import 'package:peckish/features/settings/presentation/settings_screen.dart';
+import 'package:peckish/features/sync/presentation/sync_screen.dart';
 
 part 'app_router.g.dart';
 
@@ -70,6 +71,11 @@ GoRouter appRouter(Ref ref) {
         path: '/scan',
         pageBuilder: (c, s) =>
             _fade(key: s.pageKey, child: const ScanScreen()),
+      ),
+      GoRoute(
+        path: '/sync',
+        pageBuilder: (c, s) =>
+            _fade(key: s.pageKey, child: const SyncScreen()),
       ),
     ],
   );
