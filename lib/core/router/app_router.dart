@@ -8,6 +8,7 @@ import 'package:peckish/features/diary/presentation/today_screen.dart';
 import 'package:peckish/features/groceries/presentation/groceries_screen.dart';
 import 'package:peckish/features/plan/presentation/plan_screen.dart';
 import 'package:peckish/features/recipes/presentation/recipes_screen.dart';
+import 'package:peckish/features/barcode/presentation/scan_screen.dart';
 import 'package:peckish/features/settings/presentation/settings_screen.dart';
 
 part 'app_router.g.dart';
@@ -64,6 +65,11 @@ GoRouter appRouter(Ref ref) {
         path: '/about',
         pageBuilder: (c, s) =>
             _fade(key: s.pageKey, child: const AboutScreen()),
+      ),
+      GoRoute(
+        path: '/scan',
+        pageBuilder: (c, s) =>
+            _fade(key: s.pageKey, child: const ScanScreen()),
       ),
     ],
   );

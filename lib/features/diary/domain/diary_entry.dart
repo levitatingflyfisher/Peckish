@@ -4,8 +4,9 @@ import 'package:peckish/features/food/domain/macro_set.dart';
 enum FoodKind { usda, custom, quick }
 
 /// How a logged line was produced — provenance, kept on every entry so the
-/// ledger can always say where a number came from.
-enum EntrySource { tap, search, manual, ai }
+/// ledger can always say where a number came from. Append-only: the storage
+/// twin (EntrySourceDb) maps by index.
+enum EntrySource { tap, search, manual, ai, scan }
 
 /// Reference to a food: a bundled USDA row, a household custom food, or a
 /// quick ad-hoc line that references nothing (label + macros only).

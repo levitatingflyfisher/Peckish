@@ -95,7 +95,7 @@ class DiaryEntries extends Table {
 /// so a domain reorder can never silently rewrite what stored integers mean.
 enum FoodKindDb { usda, custom, quick }
 
-enum EntrySourceDb { tap, search, manual, ai }
+enum EntrySourceDb { tap, search, manual, ai, scan }
 
 /// Staples — named bundles relogged in one tap.
 @DataClassName('SavedMealRow')

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 
 import 'package:peckish/core/providers/core_providers.dart';
@@ -78,6 +79,15 @@ class _IdleSheet extends ConsumerWidget {
           title: const Text('Quick add'),
           subtitle: const Text('Just a name and numbers you know'),
           onTap: () => _showQuickAdd(context, ref),
+        ),
+        ListTile(
+          leading: const Icon(Icons.qr_code_scanner, color: AppColors.sage),
+          title: const Text('Scan a barcode'),
+          subtitle: const Text('Packaged food — one scan, one lookup'),
+          onTap: () {
+            Navigator.of(context).pop();
+            context.push('/scan');
+          },
         ),
         const Divider(),
         if ((meals.value ?? const []).isNotEmpty) ...[

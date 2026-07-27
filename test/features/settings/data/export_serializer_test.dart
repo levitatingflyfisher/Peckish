@@ -169,4 +169,34 @@ void main() {
     expect(exportFileName(DateTime(2026, 7, 25)),
         'peckish-export-2026-07-25.json');
   });
+
+  test('a scan-sourced entry round-trips, and unknown sources degrade to '
+      'manual (older app reading a newer file)', () {
+    final export = PeckishExport(
+      createdAt: DateTime.utc(2026, 7, 26),
+      diaryEntries: [
+        DiaryEntry(
+          id: 'e-scan',
+          day: '2026-07-26',
+          at: DateTime.utc(2026, 7, 26, 9),
+          food: const FoodRef.quick(),
+          label: 'Nutella (Ferrero)',
+          qty: 15,
+          unitLabel: 'g',
+          grams: 15,
+          macros: const MacroSet(kcal: 81),
+          source: EntrySource.scan,
+          createdAt: DateTime.utc(2026, 7, 26, 9),
+        ),
+      ],
+    );
+    final decoded = PeckishExport.fromJson(export.toPrettyJson());
+    expect(decoded.diaryEntries.single.source, EntrySource.scan);
+
+    final foreign = export
+        .toPrettyJson()
+        .replaceAll('"source": "scan"', '"source": "hologram"');
+    expect(PeckishExport.fromJson(foreign).diaryEntries.single.source,
+        EntrySource.manual);
+  });
 }
