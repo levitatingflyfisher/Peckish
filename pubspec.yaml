@@ -1,7 +1,7 @@
 name: peckish
 description: The family food app — recipe box, weekly dinner plan, self-writing grocery list, and a one-tap food diary. Local-first — OpenHearth.
 publish_to: 'none'
-version: 0.1.0+1
+version: 0.2.0+2
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
@@ -42,6 +42,9 @@ dependencies:
   file_picker: '>=8.0.0 <10.0.0'
   flutter_zxing: ^2.2.1
   flutter_secure_storage: ^9.2.4
+  crdt: ^5.1.3
+  shelf: ^1.4.2
+  shelf_router: ^1.1.4
 
 flutter_launcher_icons:
   android: true
@@ -74,6 +77,7 @@ dev_dependencies:
   # consumed by test/fleet_conformance_test.dart.
   oh_fleet_conformance:
     path: ../packages/oh_fleet_conformance
+  sqlite3: ^2.9.4
 
 flutter:
   uses-material-design: true
