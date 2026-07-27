@@ -41,6 +41,7 @@ dependencies:
     path: ../packages/sanctuary_backup_ui
   file_picker: '>=8.0.0 <10.0.0'
   flutter_zxing: ^2.2.1
+  flutter_secure_storage: ^9.2.4
 
 flutter_launcher_icons:
   android: true
