@@ -33,7 +33,9 @@ class PeckishBackupSerializer
 
   static const String _appId = 'peckish';
 
-  Future<PeckishExport> _snapshot() async {
+  /// Everything the app holds, as one export value — the single gathering
+  /// path shared by the encrypted backup and the plain-JSON export.
+  Future<PeckishExport> snapshot() async {
     final allEntries = await (_db.select(_db.diaryEntries)).get();
     final diary = DiaryRepository(_db);
     final days = allEntries.map((e) => e.day).toSet().toList()..sort();
@@ -76,7 +78,7 @@ class PeckishBackupSerializer
 
   @override
   Future<Uint8List> dumpAll() async {
-    final export = await _snapshot();
+    final export = await snapshot();
     return Uint8List.fromList(utf8.encode(export.toPrettyJson()));
   }
 
