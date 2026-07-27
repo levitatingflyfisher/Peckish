@@ -52,9 +52,10 @@ class AboutScreen extends StatelessWidget {
           const _Section(
             title: 'Food data',
             body: 'Generic-food nutrition comes from USDA FoodData Central '
-                '(public domain, bundled with the app). Peckish is not '
-                'medical or dietary advice — for anything clinical, talk to a '
-                'professional.',
+                '(public domain, bundled with the app). Barcode lookups are '
+                'answered live by Open Food Facts — product data © Open Food '
+                'Facts contributors, ODbL. Peckish is not medical or dietary '
+                'advice — for anything clinical, talk to a professional.',
           ),
 
           const SizedBox(height: AppSpacing.sm),

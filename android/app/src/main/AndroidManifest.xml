@@ -3,9 +3,13 @@
          recipe URL (fetch that one page, parse, discard) and an Open Food
          Facts barcode lookup (sends only the barcode string). The food
          database itself is BUNDLED — day-to-day logging, planning, and
-         grocery lists never touch the network. No other permission is
-         declared. -->
+         grocery lists never touch the network.
+         CAMERA is declared for exactly one flow: the barcode scan screen
+         (runtime permission, requested when you open it). Frames stay on
+         the device; only the decoded digits ever leave, and only to Open
+         Food Facts. No other permission is declared. -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.CAMERA"/>
     <application
         android:label="Peckish"
         android:name="${applicationName}"
