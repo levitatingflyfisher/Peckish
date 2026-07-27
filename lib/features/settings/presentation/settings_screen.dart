@@ -4,8 +4,10 @@ import 'package:go_router/go_router.dart';
 import 'package:sanctuary_backup_ui/sanctuary_backup_ui.dart';
 
 import 'package:peckish/core/providers/core_providers.dart';
+import 'package:peckish/features/ai/presentation/ai_settings_dialog.dart';
 import 'package:peckish/features/settings/data/export_serializer.dart';
 import 'package:peckish/features/settings/data/export_share.dart';
+import 'package:peckish/features/settings/data/plain_export.dart';
 import 'package:peckish/features/settings/presentation/settings_actions.dart';
 import 'package:peckish/shared/theme/app_spacing.dart';
 import 'package:peckish/shared/widgets/confirm_dialog.dart';
@@ -43,8 +45,10 @@ class SettingsScreen extends ConsumerWidget {
             title: const Text('Export data (plain JSON)'),
             subtitle: const Text('A readable copy you own — keep it anywhere.'),
             onTap: () async {
-              final json = PeckishExport(createdAt: DateTime.now())
-                  .toPrettyJson();
+              // Gathered through the same snapshot the encrypted backup
+              // uses (v0.1 exported an empty shell here).
+              final json =
+                  await buildPlainExport(ref.read(appDatabaseProvider));
               await shareExport(
                 fileName: exportFileName(DateTime.now()),
                 content: json,
@@ -67,6 +71,17 @@ class SettingsScreen extends ConsumerWidget {
               await eraseAllData(ref);
               if (context.mounted) context.go('/');
             },
+          ),
+          const SizedBox(height: AppSpacing.lg),
+
+          Text('Intelligence', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: AppSpacing.sm),
+          ListTile(
+            leading: const Icon(Icons.auto_awesome_outlined),
+            title: const Text('AI guesstimate'),
+            subtitle: const Text(
+                'Off by default. Your own key or your own local server.'),
+            onTap: () => showAiSettingsDialog(context, ref),
           ),
           const SizedBox(height: AppSpacing.lg),
 

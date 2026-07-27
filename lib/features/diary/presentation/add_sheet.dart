@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 
 import 'package:peckish/core/providers/core_providers.dart';
+import 'package:peckish/features/ai/presentation/guess_sheet.dart';
 import 'package:peckish/features/diary/domain/diary_entry.dart';
 import 'package:peckish/features/food/domain/custom_food.dart';
 import 'package:peckish/features/food/domain/macro_set.dart';
@@ -70,6 +71,10 @@ class _IdleSheet extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final meals = ref.watch(_mealsProvider);
+    // The AI tile only exists once a household configured a brain — the
+    // shipped default has no key, no endpoint, and no tile.
+    final aiReady =
+        ref.watch(aiConfigProvider).value?.configured ?? false;
     return ListView(
       controller: scroll,
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
@@ -89,6 +94,16 @@ class _IdleSheet extends ConsumerWidget {
             context.push('/scan');
           },
         ),
+        if (aiReady)
+          ListTile(
+            leading: const Icon(Icons.auto_awesome, color: AppColors.jam),
+            title: const Text('Guess it for me'),
+            subtitle: const Text('Describe the meal — AI drafts, you confirm'),
+            onTap: () {
+              Navigator.of(context).pop();
+              showGuessSheet(context);
+            },
+          ),
         const Divider(),
         if ((meals.value ?? const []).isNotEmpty) ...[
           Padding(
