@@ -49,9 +49,21 @@ class UsdaPortions extends Table {
   RealColumn get grams => real()();
 }
 
+/// The sync metadata every household-SHARED table carries (v0.2, schema v2):
+/// per-row HLC + writer node for last-write-wins merging, and a tombstone
+/// instead of hard deletes so a deletion travels. Null hlc/nodeId = written
+/// before sync existed (or with sync off); enabling sync backfills stamps.
+/// Diary entries and targets are deliberately NOT in this club — the
+/// kitchen is shared, the plate is yours.
+mixin SyncColumns on Table {
+  TextColumn get hlc => text().nullable()();
+  TextColumn get nodeId => text().nullable()();
+  BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
+}
+
 /// Household-defined foods. Macros are PER SERVING.
 @DataClassName('CustomFoodRow')
-class CustomFoods extends Table {
+class CustomFoods extends Table with SyncColumns {
   TextColumn get id => text()();
   TextColumn get name => text()();
   TextColumn get servingLabel => text()();
@@ -99,7 +111,7 @@ enum EntrySourceDb { tap, search, manual, ai, scan }
 
 /// Staples — named bundles relogged in one tap.
 @DataClassName('SavedMealRow')
-class SavedMeals extends Table {
+class SavedMeals extends Table with SyncColumns {
   TextColumn get id => text()();
   TextColumn get name => text()();
   IntColumn get position => integer()();
@@ -135,7 +147,7 @@ class SavedMealItems extends Table {
 /// The recipe box. Declared* columns hold site-published per-serving
 /// nutrition (schema.org), kept separate from anything computed.
 @DataClassName('RecipeRow')
-class Recipes extends Table {
+class Recipes extends Table with SyncColumns {
   TextColumn get id => text()();
   TextColumn get title => text()();
   RealColumn get servings => real().nullable()();
@@ -186,7 +198,7 @@ enum GroceryAisleDb { produce, meat, dairy, bakery, frozen, pantry, other }
 /// The week's cells: a recipe, a staple, or a note per (day, slot). Titles
 /// are resolved at read time — the plan never snapshots names.
 @DataClassName('PlanEntryRow')
-class PlanEntries extends Table {
+class PlanEntries extends Table with SyncColumns {
   TextColumn get id => text()();
   TextColumn get day => text()();
   IntColumn get slot => intEnum<PlanSlotDb>()();
@@ -200,7 +212,7 @@ class PlanEntries extends Table {
 
 /// The grocery list — generated projection of the plan + manual adds.
 @DataClassName('GroceryItemRow')
-class GroceryItems extends Table {
+class GroceryItems extends Table with SyncColumns {
   TextColumn get id => text()();
   TextColumn get name => text()();
   IntColumn get aisle => intEnum<GroceryAisleDb>()();
@@ -258,7 +270,7 @@ class AppDatabase extends _$AppDatabase {
             ));
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   /// Wipe every user-data table in one transaction — the "Erase all data"
   /// path. Leaves the key→value shell prefs (theme) in place. This list grows
@@ -281,8 +293,38 @@ class AppDatabase extends _$AppDatabase {
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onCreate: (m) => m.createAll(),
+        onUpgrade: (m, from, to) async {
+          if (from < 2) {
+            // v2: the sync columns on the five household-shared tables.
+            // Drift migrations are NOT transactional (the StillLife lesson:
+            // a mid-failure re-entry lands in half-migrated state), so each
+            // ALTER is guarded by a column-existence check.
+            final syncedTables = <(TableInfo, List<GeneratedColumn>)>[
+              (customFoods, [customFoods.hlc, customFoods.nodeId, customFoods.isDeleted]),
+              (savedMeals, [savedMeals.hlc, savedMeals.nodeId, savedMeals.isDeleted]),
+              (recipes, [recipes.hlc, recipes.nodeId, recipes.isDeleted]),
+              (planEntries, [planEntries.hlc, planEntries.nodeId, planEntries.isDeleted]),
+              (groceryItems, [groceryItems.hlc, groceryItems.nodeId, groceryItems.isDeleted]),
+            ];
+            for (final (table, columns) in syncedTables) {
+              for (final column in columns) {
+                await _addColumnIfMissing(m, table, column);
+              }
+            }
+          }
+        },
         beforeOpen: (details) async {
           await customStatement('PRAGMA foreign_keys = ON');
         },
       );
+
+  Future<void> _addColumnIfMissing(
+      Migrator m, TableInfo table, GeneratedColumn column) async {
+    final info = await customSelect(
+      'PRAGMA table_info(${table.actualTableName})',
+    ).get();
+    final exists =
+        info.any((row) => row.read<String>('name') == column.name);
+    if (!exists) await m.addColumn(table, column);
+  }
 }
