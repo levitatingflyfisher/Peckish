@@ -6,6 +6,7 @@ import 'package:peckish/features/groceries/domain/grocery_item.dart';
 import 'package:peckish/features/plan/data/plan_repository.dart';
 import 'package:peckish/features/plan/domain/plan_entry.dart';
 import 'package:peckish/features/recipes/data/recipe_repository.dart';
+import 'package:peckish/features/sync/data/sync_clock.dart';
 
 /// The list that writes itself. Regeneration laws:
 /// - manual items ALWAYS survive;
@@ -13,6 +14,12 @@ import 'package:peckish/features/recipes/data/recipe_repository.dart';
 ///   bought the onions);
 /// - unchecked generated items are replaced wholesale — they exist only as a
 ///   projection of the current plan.
+///
+/// Household-shared (the whole point: one list at the store — check off the
+/// milk while your partner is in aisle 3). Writes are HLC-stamped, removals
+/// tombstone, and derived rows get DETERMINISTIC ids from their normalized
+/// line, so two devices regenerating the same plan converge on the same rows
+/// instead of duplicating them.
 class GroceryRepository {
   GroceryRepository(this._db, {String Function()? idGenerator})
       : _newId = idGenerator ?? const Uuid().v4;
@@ -20,29 +27,61 @@ class GroceryRepository {
   final AppDatabase _db;
   final String Function() _newId;
 
-  Future<void> addManual(String name) =>
-      _db.into(_db.groceryItems).insert(GroceryItemsCompanion(
-            id: Value(_newId()),
-            name: Value(name),
-            aisle: Value(GroceryAisleDb.values[classifyAisle(name).index]),
-            checked: const Value(false),
-            manual: const Value(true),
-            createdAt: Value(DateTime.now()),
-          ));
+  SyncClock get _clock => SyncClock.of(_db);
 
-  Future<void> setChecked(String id, {required bool checked}) =>
-      (_db.update(_db.groceryItems)..where((g) => g.id.equals(id)))
-          .write(GroceryItemsCompanion(checked: Value(checked)));
+  /// The convergence trick: same normalized ingredient line → same id on
+  /// every device, forever.
+  static String derivedId(String normalizedName) =>
+      const Uuid().v5(Namespace.url.value, 'peckish:grocery:$normalizedName');
 
-  Future<void> remove(String id) =>
-      (_db.delete(_db.groceryItems)..where((g) => g.id.equals(id))).go();
+  Future<void> addManual(String name) async {
+    final s = await _clock.stamp();
+    await _db.into(_db.groceryItems).insert(GroceryItemsCompanion(
+          id: Value(_newId()),
+          name: Value(name),
+          aisle: Value(GroceryAisleDb.values[classifyAisle(name).index]),
+          checked: const Value(false),
+          manual: const Value(true),
+          createdAt: Value(DateTime.now()),
+          hlc: Value(s.hlc),
+          nodeId: Value(s.nodeId),
+        ));
+  }
+
+  Future<void> setChecked(String id, {required bool checked}) async {
+    final s = await _clock.stamp();
+    await (_db.update(_db.groceryItems)..where((g) => g.id.equals(id)))
+        .write(GroceryItemsCompanion(
+      checked: Value(checked),
+      hlc: Value(s.hlc),
+      nodeId: Value(s.nodeId),
+    ));
+  }
+
+  Future<void> remove(String id) async {
+    final s = await _clock.stamp();
+    await (_db.update(_db.groceryItems)..where((g) => g.id.equals(id)))
+        .write(GroceryItemsCompanion(
+      isDeleted: const Value(true),
+      hlc: Value(s.hlc),
+      nodeId: Value(s.nodeId),
+    ));
+  }
 
   /// Sweep the bought things off the list.
-  Future<void> clearChecked() =>
-      (_db.delete(_db.groceryItems)..where((g) => g.checked.equals(true))).go();
+  Future<void> clearChecked() async {
+    final s = await _clock.stamp();
+    await (_db.update(_db.groceryItems)..where((g) => g.checked.equals(true)))
+        .write(GroceryItemsCompanion(
+      isDeleted: const Value(true),
+      hlc: Value(s.hlc),
+      nodeId: Value(s.nodeId),
+    ));
+  }
 
   Future<List<GroceryItem>> getAll() async {
     final rows = await (_db.select(_db.groceryItems)
+          ..where((g) => g.isDeleted.equals(false))
           ..orderBy([
             (g) => OrderingTerm.asc(g.aisle),
             (g) => OrderingTerm.asc(g.name),
@@ -57,7 +96,9 @@ class GroceryRepository {
 
   /// Rebuild the generated portion of the list from the recipes planned on
   /// [days]. Identical ingredient lines across recipes aggregate into one
-  /// line with a count ("2× 1 onion").
+  /// line with a count ("2× 1 onion"). Derived rows keep their deterministic
+  /// id across regens (and across devices); rows that fall out of the plan
+  /// tombstone instead of vanishing, so the disappearance syncs too.
   Future<void> regenerateFromPlan(List<String> days) async {
     final plan = await PlanRepository(_db).entriesForDays(days);
     final recipes = RecipeRepository(_db);
@@ -79,35 +120,65 @@ class GroceryRepository {
       }
     }
 
+    final s = await _clock.stamp();
     await _db.transaction(() async {
-      // Replace only the unchecked generated projection.
-      await (_db.delete(_db.groceryItems)
-            ..where((g) => g.manual.equals(false) & g.checked.equals(false)))
-          .go();
+      final existing = await (_db.select(_db.groceryItems)).get();
 
-      // Survivors (manual or checked) suppress duplicates by normalized name.
-      final survivors = await (_db.select(_db.groceryItems)).get();
-      final surviving = {for (final s in survivors) _normalize(s.name)};
+      // Live survivors suppress duplicates by normalized name (the "you
+      // already bought the onions" law). _normalize strips a leading "N× ",
+      // so a checked "2× 1 onion" suppresses "1 onion" too.
+      final liveCheckedNorms = {
+        for (final r in existing)
+          if (!r.isDeleted && r.checked) _normalize(r.name),
+      };
+      final liveManualNorms = {
+        for (final r in existing)
+          if (!r.isDeleted && r.manual) _normalize(r.name),
+      };
 
+      final wantedIds = <String>{};
       for (final entry in counts.entries) {
-        // A checked "2× 1 onion" survivor must also suppress "1 onion".
-        if (surviving.contains(entry.key) ||
-            surviving.any((s) => s.endsWith('× ${entry.key}'))) {
+        final norm = entry.key;
+        final id = derivedId(norm);
+        wantedIds.add(id);
+        if (liveCheckedNorms.contains(norm) ||
+            liveManualNorms.contains(norm)) {
           continue;
         }
         final name = entry.value > 1
-            ? '${entry.value}× ${display[entry.key]}'
-            : display[entry.key]!;
-        await _db.into(_db.groceryItems).insert(GroceryItemsCompanion(
-              id: Value(_newId()),
-              name: Value(name),
-              aisle: Value(
-                  GroceryAisleDb.values[classifyAisle(display[entry.key]!).index]),
-              checked: const Value(false),
-              manual: const Value(false),
-              sourceRecipeId: Value(source[entry.key]),
-              createdAt: Value(DateTime.now()),
-            ));
+            ? '${entry.value}× ${display[norm]}'
+            : display[norm]!;
+        await _db.into(_db.groceryItems).insertOnConflictUpdate(
+              GroceryItemsCompanion(
+                id: Value(id),
+                name: Value(name),
+                aisle: Value(
+                    GroceryAisleDb.values[classifyAisle(display[norm]!).index]),
+                checked: const Value(false),
+                manual: const Value(false),
+                sourceRecipeId: Value(source[norm]),
+                createdAt: Value(DateTime.now()),
+                hlc: Value(s.hlc),
+                nodeId: Value(s.nodeId),
+                isDeleted: const Value(false),
+              ),
+            );
+      }
+
+      // Derived + unchecked + no longer wanted → tombstone (the projection
+      // shrank, and the shrink has to travel).
+      for (final r in existing) {
+        if (!r.manual &&
+            !r.checked &&
+            !r.isDeleted &&
+            !wantedIds.contains(r.id)) {
+          await (_db.update(_db.groceryItems)..where((g) => g.id.equals(r.id)))
+              .write(GroceryItemsCompanion(
+            isDeleted: const Value(true),
+            hlc: Value(s.hlc),
+            nodeId: Value(s.nodeId),
+          ));
+        }
       }
     });
   }

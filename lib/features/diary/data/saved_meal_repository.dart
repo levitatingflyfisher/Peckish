@@ -5,10 +5,12 @@ import 'package:peckish/core/storage/app_database.dart';
 import 'package:peckish/features/diary/domain/diary_entry.dart';
 import 'package:peckish/features/diary/domain/saved_meal.dart';
 import 'package:peckish/features/food/domain/macro_set.dart';
+import 'package:peckish/features/sync/data/sync_clock.dart';
 
 /// Staples: create a named bundle once, relog it forever in one tap.
 /// Items are snapshots — deleting or editing a meal never touches diary
-/// entries already logged from it.
+/// entries already logged from it. Household-shared: meal rows are
+/// HLC-stamped, deletes tombstone the parent (items travel with it).
 class SavedMealRepository {
   SavedMealRepository(this._db, {String Function()? idGenerator})
       : _newId = idGenerator ?? const Uuid().v4;
@@ -16,54 +18,84 @@ class SavedMealRepository {
   final AppDatabase _db;
   final String Function() _newId;
 
-  Future<void> create(SavedMeal meal) => _db.transaction(() async {
-        await _db.into(_db.savedMeals).insert(SavedMealsCompanion(
-              id: Value(meal.id),
-              name: Value(meal.name),
-              position: Value(meal.position),
-              createdAt: Value(meal.createdAt),
-              lastUsedAt: Value(meal.lastUsedAt),
-              archived: Value(meal.archived),
-            ));
+  SyncClock get _clock => SyncClock.of(_db);
+
+  Future<SavedMealsCompanion> _stamp(SavedMealsCompanion row) async {
+    final s = await _clock.stamp();
+    return row.copyWith(hlc: Value(s.hlc), nodeId: Value(s.nodeId));
+  }
+
+  Future<void> create(SavedMeal meal) async {
+    final row = await _stamp(SavedMealsCompanion(
+      id: Value(meal.id),
+      name: Value(meal.name),
+      position: Value(meal.position),
+      createdAt: Value(meal.createdAt),
+      lastUsedAt: Value(meal.lastUsedAt),
+      archived: Value(meal.archived),
+    ));
+    await _db.transaction(() async {
+        await _db.into(_db.savedMeals).insert(row);
         for (final (index, item) in meal.items.indexed) {
           await _db.into(_db.savedMealItems).insert(_itemRow(meal.id, index, item));
         }
       });
+  }
 
-  Future<void> rename(String id, String name) =>
+  Future<void> rename(String id, String name) async =>
       (_db.update(_db.savedMeals)..where((m) => m.id.equals(id)))
-          .write(SavedMealsCompanion(name: Value(name)));
+          .write(await _stamp(SavedMealsCompanion(name: Value(name))));
 
   /// Replace the item list wholesale — editing a staple is a re-declaration.
-  Future<void> replaceItems(String id, List<SavedMealItem> items) =>
-      _db.transaction(() async {
-        await (_db.delete(_db.savedMealItems)
-              ..where((i) => i.mealId.equals(id)))
-            .go();
-        for (final (index, item) in items.indexed) {
-          await _db.into(_db.savedMealItems).insert(_itemRow(id, index, item));
-        }
-      });
+  /// Stamps the PARENT: items travel with their meal, so an item edit that
+  /// left the parent stamp untouched would never reach the household.
+  Future<void> replaceItems(String id, List<SavedMealItem> items) async {
+    final stamp = await _stamp(const SavedMealsCompanion());
+    await _db.transaction(() async {
+      await (_db.delete(_db.savedMealItems)
+            ..where((i) => i.mealId.equals(id)))
+          .go();
+      for (final (index, item) in items.indexed) {
+        await _db.into(_db.savedMealItems).insert(_itemRow(id, index, item));
+      }
+      await (_db.update(_db.savedMeals)..where((m) => m.id.equals(id)))
+          .write(stamp);
+    });
+  }
 
-  Future<void> reorder(List<String> idsInOrder) => _db.transaction(() async {
-        for (final (index, id) in idsInOrder.indexed) {
-          await (_db.update(_db.savedMeals)..where((m) => m.id.equals(id)))
-              .write(SavedMealsCompanion(position: Value(index)));
-        }
-      });
+  Future<void> reorder(List<String> idsInOrder) async {
+    final stamps = <SavedMealsCompanion>[
+      for (final _ in idsInOrder) const SavedMealsCompanion(),
+    ];
+    for (var i = 0; i < stamps.length; i++) {
+      stamps[i] = await _stamp(stamps[i]);
+    }
+    await _db.transaction(() async {
+      for (final (index, id) in idsInOrder.indexed) {
+        await (_db.update(_db.savedMeals)..where((m) => m.id.equals(id)))
+            .write(stamps[index].copyWith(position: Value(index)));
+      }
+    });
+  }
 
-  Future<void> setArchived(String id, {required bool archived}) =>
+  Future<void> setArchived(String id, {required bool archived}) async =>
       (_db.update(_db.savedMeals)..where((m) => m.id.equals(id)))
-          .write(SavedMealsCompanion(archived: Value(archived)));
+          .write(await _stamp(SavedMealsCompanion(archived: Value(archived))));
 
-  Future<void> delete(String id) => _db.transaction(() async {
-        await (_db.delete(_db.savedMealItems)..where((i) => i.mealId.equals(id)))
-            .go();
-        await (_db.delete(_db.savedMeals)..where((m) => m.id.equals(id))).go();
-      });
+  Future<void> delete(String id) async {
+    final row = await _stamp(
+        const SavedMealsCompanion(isDeleted: Value(true)));
+    await _db.transaction(() async {
+      await (_db.delete(_db.savedMealItems)..where((i) => i.mealId.equals(id)))
+          .go();
+      await (_db.update(_db.savedMeals)..where((m) => m.id.equals(id)))
+          .write(row);
+    });
+  }
 
   Future<List<SavedMeal>> getAll({bool includeArchived = false}) async {
     final mealQ = _db.select(_db.savedMeals)
+      ..where((m) => m.isDeleted.equals(false))
       ..orderBy([(m) => OrderingTerm.asc(m.position)]);
     if (!includeArchived) mealQ.where((m) => m.archived.equals(false));
     final meals = await mealQ.get();

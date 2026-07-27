@@ -4,40 +4,72 @@ import 'package:peckish/core/storage/app_database.dart';
 import 'package:peckish/features/diary/domain/diary_entry.dart';
 import 'package:peckish/features/food/domain/macro_set.dart';
 import 'package:peckish/features/recipes/domain/recipe.dart';
+import 'package:peckish/features/sync/data/sync_clock.dart';
 
 /// The recipe box — full CRUD; ingredient lists replace wholesale on update
-/// (editing a recipe is a re-declaration, not a diff).
+/// (editing a recipe is a re-declaration, not a diff). Household-shared:
+/// recipe rows are HLC-stamped and deletes tombstone the parent (ingredients
+/// travel with their recipe, so a tombstoned recipe's lines are dropped —
+/// only the tombstone itself needs to survive).
 class RecipeRepository {
   RecipeRepository(this._db);
 
   final AppDatabase _db;
 
-  Future<void> create(Recipe recipe) => _db.transaction(() async {
-        await _db.into(_db.recipes).insert(_recipeRow(recipe));
-        await _insertIngredients(recipe.id, recipe.ingredients);
-      });
+  SyncClock get _clock => SyncClock.of(_db);
 
-  Future<void> update(Recipe recipe) => _db.transaction(() async {
-        await _db.update(_db.recipes).replace(_recipeRow(recipe));
-        await (_db.delete(_db.recipeIngredients)
-              ..where((i) => i.recipeId.equals(recipe.id)))
-            .go();
-        await _insertIngredients(recipe.id, recipe.ingredients);
-      });
+  Future<void> create(Recipe recipe) async {
+    final row = await _stamped(_recipeRow(recipe));
+    await _db.transaction(() async {
+      await _db.into(_db.recipes).insert(row);
+      await _insertIngredients(recipe.id, recipe.ingredients);
+    });
+  }
 
-  Future<void> setArchived(String id, {required bool archived}) =>
-      (_db.update(_db.recipes)..where((r) => r.id.equals(id)))
-          .write(RecipesCompanion(archived: Value(archived)));
+  Future<void> update(Recipe recipe) async {
+    final row = await _stamped(_recipeRow(recipe));
+    await _db.transaction(() async {
+      await _db.update(_db.recipes).replace(row);
+      await (_db.delete(_db.recipeIngredients)
+            ..where((i) => i.recipeId.equals(recipe.id)))
+          .go();
+      await _insertIngredients(recipe.id, recipe.ingredients);
+    });
+  }
 
-  Future<void> delete(String id) => _db.transaction(() async {
-        await (_db.delete(_db.recipeIngredients)
-              ..where((i) => i.recipeId.equals(id)))
-            .go();
-        await (_db.delete(_db.recipes)..where((r) => r.id.equals(id))).go();
-      });
+  Future<void> setArchived(String id, {required bool archived}) async {
+    final s = await _clock.stamp();
+    await (_db.update(_db.recipes)..where((r) => r.id.equals(id)))
+        .write(RecipesCompanion(
+      archived: Value(archived),
+      hlc: Value(s.hlc),
+      nodeId: Value(s.nodeId),
+    ));
+  }
+
+  Future<void> delete(String id) async {
+    final s = await _clock.stamp();
+    await _db.transaction(() async {
+      await (_db.delete(_db.recipeIngredients)
+            ..where((i) => i.recipeId.equals(id)))
+          .go();
+      await (_db.update(_db.recipes)..where((r) => r.id.equals(id)))
+          .write(RecipesCompanion(
+        isDeleted: const Value(true),
+        hlc: Value(s.hlc),
+        nodeId: Value(s.nodeId),
+      ));
+    });
+  }
+
+  Future<RecipesCompanion> _stamped(RecipesCompanion row) async {
+    final s = await _clock.stamp();
+    return row.copyWith(hlc: Value(s.hlc), nodeId: Value(s.nodeId));
+  }
 
   Future<Recipe?> byId(String id) async {
-    final row = await (_db.select(_db.recipes)..where((r) => r.id.equals(id)))
+    final row = await (_db.select(_db.recipes)
+          ..where((r) => r.id.equals(id) & r.isDeleted.equals(false)))
         .getSingleOrNull();
     if (row == null) return null;
     final items = await (_db.select(_db.recipeIngredients)
@@ -49,6 +81,7 @@ class RecipeRepository {
 
   Future<List<Recipe>> getAll({bool includeArchived = false}) async {
     final q = _db.select(_db.recipes)
+      ..where((r) => r.isDeleted.equals(false))
       ..orderBy([(r) => OrderingTerm.asc(r.title)]);
     if (!includeArchived) q.where((r) => r.archived.equals(false));
     final rows = await q.get();

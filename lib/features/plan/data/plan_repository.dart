@@ -2,31 +2,49 @@ import 'package:drift/drift.dart';
 
 import 'package:peckish/core/storage/app_database.dart';
 import 'package:peckish/features/plan/domain/plan_entry.dart';
+import 'package:peckish/features/sync/data/sync_clock.dart';
 
 /// The week: upsert cells, read ranges with titles resolved live from the
 /// recipe box / saved meals (a renamed recipe renames on the calendar).
+/// Household-shared: writes are HLC-stamped, removals tombstone.
 class PlanRepository {
   PlanRepository(this._db);
 
   final AppDatabase _db;
 
-  Future<void> upsert(PlanEntry entry) =>
-      _db.into(_db.planEntries).insertOnConflictUpdate(PlanEntriesCompanion(
-            id: Value(entry.id),
-            day: Value(entry.day),
-            slot: Value(PlanSlotDb.values[entry.slot.index]),
-            kind: Value(PlanKindDb.values[entry.kind.index]),
-            refId: Value(entry.refId),
-            note: Value(entry.note),
-          ));
+  SyncClock get _clock => SyncClock.of(_db);
 
-  Future<void> remove(String id) =>
-      (_db.delete(_db.planEntries)..where((p) => p.id.equals(id))).go();
+  Future<void> upsert(PlanEntry entry) async {
+    final s = await _clock.stamp();
+    await _db
+        .into(_db.planEntries)
+        .insertOnConflictUpdate(PlanEntriesCompanion(
+          id: Value(entry.id),
+          day: Value(entry.day),
+          slot: Value(PlanSlotDb.values[entry.slot.index]),
+          kind: Value(PlanKindDb.values[entry.kind.index]),
+          refId: Value(entry.refId),
+          note: Value(entry.note),
+          hlc: Value(s.hlc),
+          nodeId: Value(s.nodeId),
+          isDeleted: const Value(false),
+        ));
+  }
+
+  Future<void> remove(String id) async {
+    final s = await _clock.stamp();
+    await (_db.update(_db.planEntries)..where((p) => p.id.equals(id)))
+        .write(PlanEntriesCompanion(
+      isDeleted: const Value(true),
+      hlc: Value(s.hlc),
+      nodeId: Value(s.nodeId),
+    ));
+  }
 
   Future<List<PlanEntry>> entriesForDays(List<String> days) async {
     if (days.isEmpty) return const [];
     final rows = await (_db.select(_db.planEntries)
-          ..where((p) => p.day.isIn(days))
+          ..where((p) => p.day.isIn(days) & p.isDeleted.equals(false))
           ..orderBy([
             (p) => OrderingTerm.asc(p.day),
             (p) => OrderingTerm.asc(p.slot),
@@ -49,10 +67,11 @@ class PlanRepository {
       for (final r in rows)
         if (r.kind == PlanKindDb.meal && r.refId != null) r.refId!,
     };
+    // Tombstoned refs resolve like hard-deleted ones: '(deleted …)'.
     final recipeTitles = <String, String>{};
     if (recipeIds.isNotEmpty) {
       final recipes = await (_db.select(_db.recipes)
-            ..where((r) => r.id.isIn(recipeIds)))
+            ..where((r) => r.id.isIn(recipeIds) & r.isDeleted.equals(false)))
           .get();
       for (final r in recipes) {
         recipeTitles[r.id] = r.title;
@@ -61,7 +80,7 @@ class PlanRepository {
     final mealNames = <String, String>{};
     if (mealIds.isNotEmpty) {
       final meals = await (_db.select(_db.savedMeals)
-            ..where((m) => m.id.isIn(mealIds)))
+            ..where((m) => m.id.isIn(mealIds) & m.isDeleted.equals(false)))
           .get();
       for (final m in meals) {
         mealNames[m.id] = m.name;
