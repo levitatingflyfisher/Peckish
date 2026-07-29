@@ -47,6 +47,17 @@ class SettingsScreen extends ConsumerWidget {
                 'a budget for the day.'),
             onTap: () => showTargetsDialog(context, ref),
           ),
+          SwitchListTile(
+            secondary: const Icon(Icons.tips_and_updates_outlined),
+            title: const Text('Round out your day'),
+            subtitle: const Text(
+                'Ideas from your regulars to finish the day’s targets. '
+                'All math stays on this phone.'),
+            value: prefs.value?.suggestionsEnabled ?? true,
+            onChanged: (on) => ref
+                .read(settingsRepositoryProvider)
+                .setSuggestionsEnabled(on),
+          ),
           const SizedBox(height: AppSpacing.lg),
 
           Text('Your data', style: Theme.of(context).textTheme.titleMedium),

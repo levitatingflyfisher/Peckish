@@ -8,6 +8,8 @@ import 'package:peckish/features/diary/domain/daily_targets.dart';
 import 'package:peckish/features/diary/domain/diary_entry.dart';
 import 'package:peckish/features/diary/presentation/add_sheet.dart';
 import 'package:peckish/features/diary/presentation/targets_dialog.dart';
+import 'package:peckish/features/diary/domain/suggestion_engine.dart';
+import 'package:peckish/features/food/domain/food_usage.dart';
 import 'package:peckish/features/food/domain/macro_set.dart';
 import 'package:peckish/shared/theme/app_colors.dart';
 import 'package:peckish/shared/theme/app_spacing.dart';
@@ -58,6 +60,16 @@ class TodayScreen extends ConsumerWidget {
                 onPressed: () => showTargetsDialog(context, ref),
               ),
             ),
+          if (ref.watch(_suggestionsProvider(today)) case final advice?
+              when advice.status == SuggestionStatus.ideas ||
+                  advice.status == SuggestionStatus.complete) ...[
+            const SizedBox(height: AppSpacing.lg),
+            _RoundOutCard(
+              day: today,
+              advice: advice,
+              targets: targets.value ?? const DailyTargets(),
+            ),
+          ],
           const SizedBox(height: AppSpacing.lg),
           if ((recents.value ?? const []).isNotEmpty) ...[
             Row(
@@ -106,15 +118,30 @@ final _totalsProvider = StreamProvider.autoDispose.family(
         ref.watch(diaryRepositoryProvider).watchTotalsForDay(day));
 /// Live view of the persistent regulars — reacts to hides/unhides made
 /// anywhere (the Foods screen), not just to diary writes.
-final _recentsProvider = StreamProvider.autoDispose((ref) => ref
+final _usagesProvider = StreamProvider.autoDispose((ref) => ref
     .watch(foodUsageRepositoryProvider)
     .watchAll()
-    .map((all) => [
-          for (final u in all.where((u) => !u.hidden).take(12))
-            u.asTemplateEntry(),
-        ]));
+    .map((all) => [for (final u in all.where((u) => !u.hidden)) u]));
+final _recentsProvider = Provider.autoDispose((ref) => ref
+    .watch(_usagesProvider)
+    .whenData((us) => [for (final u in us.take(12)) u.asTemplateEntry()]));
 final _targetsProvider = StreamProvider.autoDispose(
     (ref) => ref.watch(targetsRepositoryProvider).watch());
+
+/// The round-out-your-day advice, or null when the card has nothing to
+/// show: feature off, dismissed for this day, or inputs still loading.
+final _suggestionsProvider =
+    Provider.autoDispose.family<DaySuggestions?, String>((ref, day) {
+  final prefs = ref.watch(userPrefsProvider).valueOrNull;
+  if (prefs == null || !prefs.suggestionsEnabled) return null;
+  if (prefs.suggestionsDismissedDay == day) return null;
+  final targets = ref.watch(_targetsProvider).valueOrNull;
+  final totals = ref.watch(_totalsProvider(day)).valueOrNull;
+  final usages = ref.watch(_usagesProvider).valueOrNull;
+  if (targets == null || totals == null || usages == null) return null;
+  return const SuggestionEngine()
+      .suggest(targets: targets, eaten: totals, regulars: usages);
+});
 
 /// A target's role, worn on its sleeve: floors read as ≥, caps as ≤,
 /// plain "about" targets stay bare numbers.
@@ -272,6 +299,137 @@ class _RecentsRail extends ConsumerWidget {
             },
           );
         },
+      ),
+    );
+  }
+}
+
+/// "Round out your day" — the engine's advice, worn lightly. Ideas come
+/// with a one-tap Log; a finished day gets one warm line; dismissal lasts
+/// exactly one day. The card never scolds: when nothing helps, the engine
+/// goes quiet and this widget is never even built.
+class _RoundOutCard extends ConsumerWidget {
+  const _RoundOutCard({
+    required this.day,
+    required this.advice,
+    required this.targets,
+  });
+
+  final String day;
+  final DaySuggestions advice;
+  final DailyTargets targets;
+
+  String _combo(Suggestion s) => [
+        for (final i in s.items)
+          '${i.count > 1 ? '${i.count} × ' : ''}${i.usage.label}'
+      ].join(' + ');
+
+  /// Where the day lands, told only in the axes the user actually set.
+  String _landing(Suggestion s) {
+    final parts = <String>[
+      if (targets.values.kcal != null) '${(s.after.kcal ?? 0).round()} kcal',
+      if (targets.values.proteinG != null)
+        '${(s.after.proteinG ?? 0).round()}g protein',
+      if (targets.values.carbG != null)
+        '${(s.after.carbG ?? 0).round()}g carbs',
+      if (targets.values.fatG != null) '${(s.after.fatG ?? 0).round()}g fat',
+    ];
+    final where = parts.join(' · ');
+    return s.completesDay ? 'Finishes the day: $where' : 'Closer: $where';
+  }
+
+  Future<void> _log(WidgetRef ref, Suggestion s) async {
+    final diary = ref.read(diaryRepositoryProvider);
+    for (final item in s.items) {
+      final now = DateTime.now();
+      final u = item.usage;
+      await diary.log(DiaryEntry(
+        id: const Uuid().v4(),
+        day: DiaryEntry.dayOf(now),
+        at: now,
+        food: u.food,
+        label: u.label,
+        qty: u.qty * item.count,
+        unitLabel: u.unitLabel,
+        grams: u.grams == null ? null : u.grams! * item.count,
+        macros: u.macros * item.count.toDouble(),
+        source: EntrySource.tap,
+        createdAt: now,
+      ));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final dismiss = IconButton(
+      icon: const Icon(Icons.close, size: 18),
+      tooltip: 'Hide for today',
+      onPressed: () =>
+          ref.read(settingsRepositoryProvider).setSuggestionsDismissedDay(day),
+    );
+
+    if (advice.status == SuggestionStatus.complete) {
+      return Card(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg, vertical: AppSpacing.xs),
+          child: Row(
+            children: [
+              const Icon(Icons.check_circle_outline,
+                  size: 20, color: AppColors.sage),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text("You're set for today — every target met.",
+                    style: theme.textTheme.bodyMedium),
+              ),
+              dismiss,
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg, AppSpacing.sm, AppSpacing.sm, AppSpacing.sm),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text('Round out your day',
+                      style: theme.textTheme.titleMedium),
+                ),
+                dismiss,
+              ],
+            ),
+            for (final s in advice.ideas)
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(_combo(s), style: theme.textTheme.bodyLarge),
+                        Text(
+                          _landing(s),
+                          style: theme.textTheme.bodySmall
+                              ?.copyWith(color: AppColors.stone),
+                        ),
+                      ],
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => _log(ref, s),
+                    child: const Text('Log'),
+                  ),
+                ],
+              ),
+          ],
+        ),
       ),
     );
   }

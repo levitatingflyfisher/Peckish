@@ -7,6 +7,8 @@ class LocalSettingsRepository implements SettingsRepository {
   final AppDatabase _db;
 
   static const _kDarkMode = 'theme';
+  static const _kSuggest = 'suggest.enabled';
+  static const _kSuggestDismissed = 'suggest.dismissed';
 
   Future<void> _set(String key, String value) => _db
       .into(_db.userPrefs)
@@ -30,6 +32,18 @@ class LocalSettingsRepository implements SettingsRepository {
   Future<void> setDarkMode(bool dark) =>
       _set(_kDarkMode, dark ? 'dark' : 'light');
 
-  UserPrefs _fromMap(Map<String, String> map) =>
-      UserPrefs(isDarkMode: map[_kDarkMode] == 'dark');
+  @override
+  Future<void> setSuggestionsEnabled(bool enabled) =>
+      _set(_kSuggest, enabled ? 'on' : 'off');
+
+  @override
+  Future<void> setSuggestionsDismissedDay(String day) =>
+      _set(_kSuggestDismissed, day);
+
+  UserPrefs _fromMap(Map<String, String> map) => UserPrefs(
+        isDarkMode: map[_kDarkMode] == 'dark',
+        // Absent = on: the card is part of the product until switched off.
+        suggestionsEnabled: map[_kSuggest] != 'off',
+        suggestionsDismissedDay: map[_kSuggestDismissed],
+      );
 }
