@@ -1,5 +1,39 @@
 # Changelog
 
+## 0.4.0 — the targets release
+
+Goals, graphs, and the card that helps you finish the day.
+
+- **Daily targets, finally settable.** The targets table shipped in v0.1
+  with no editor at all (only backup restore ever wrote it). Settings ›
+  Your day now has the editor — four optional numbers, each with a role:
+  About (land near), At least (a floor), Under (a budget). The defaults
+  say what most people mean — protein is a floor, everything else is
+  about — so the minimal setup is typing two numbers. Today's totals
+  wear the roles: floors read ≥, caps read ≤.
+- **"Round out your day."** With targets set, Today can suggest small
+  combinations of your own regulars that finish the day — scored so a
+  floor only counts when you're short and a cap only when you'd go
+  over, favoring foods you actually eat, each idea one tap to log. A
+  finished day gets one warm line; a day nothing helps gets silence,
+  never a scold. Master switch in Settings; dismissing hides it for the
+  day. All math on-device, deterministic, microseconds.
+- **History.** The answer to "what happens tomorrow?" — nothing
+  disappears. Today's app bar opens the week as seven calm bars with
+  your kcal target as a named line, averages over the days you actually
+  logged, and a fortnight of day rows, each opening that day's plate.
+  Blank days stay visibly blank — never fake zeros.
+- **Tap a line to fix it.** Any logged line (Today or a past day) opens
+  an edit sheet. Changing the qty rescales the numbers from the line's
+  own per-unit shape; a typed number always wins. Edits heal the
+  regulars snapshot without inflating use counts.
+- **Back buttons work everywhere.** Settings and About were *replacing*
+  the screen stack instead of stacking on it — no back arrow, and
+  Android's back button exited the app. Both now push properly.
+- Fixed: every sync-stamped write was broadcast as a "preferences
+  changed" event (the sync clock shares the prefs table), re-rendering
+  prefs watchers app-wide mid-write. Clock writes are silent now.
+
 ## 0.3.0 — the regulars release
 
 Every bug from the first phone test, fixed:

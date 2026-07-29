@@ -14,7 +14,8 @@
   "planEntries":  [ { "id", "day", "slot", "kind", "refId?", "note?" } ],
   "groceryItems": [ { "id", "name", "aisle", "checked", "manual", "sourceRecipeId?", "createdAt" } ],
   "foodUsages":   [ { "food", "label", "qty", "unitLabel", "grams?", "macros", "useCount", "lastUsedAt", "hidden" } ],
-  "targets":      { "kcal?", "proteinG?", "carbG?", "fatG?" }
+  "targets":      { "kcal?", "proteinG?", "carbG?", "fatG?",
+                    "kcalRole?", "proteinRole?", "carbRole?", "fatRole?" }
 }
 ```
 
@@ -28,5 +29,8 @@
   stored twice. On restore the diary replay re-derives usage first, then
   these rows overwrite it — counts and `hidden` flags aren't derivable from
   the ledger.
+- `targets.*Role` (added in 0.4, additive): `"about"` / `"atLeast"` /
+  `"under"`. Absent or unrecognized reads as null — the axis default
+  (protein `atLeast`, everything else `about`). See ADR-0008.
 - The encrypted `.ohbk` payload is this same document, wrapped by the
   sanctuary envelope (AEAD context `peckish-backup/v1`).

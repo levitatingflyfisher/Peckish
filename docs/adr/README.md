@@ -9,3 +9,4 @@
 | [0005](0005-single-device-first.md) | v0.1 is single-device; sync is CRDT-over-blind-relay later |
 | [0006](0006-household-sync.md) | Household LAN sync: the kitchen is shared, the plate is yours |
 | [0007](0007-persistent-regulars.md) | Regulars are a persistent record, not a diary echo |
+| [0008](0008-target-roles-and-suggestions.md) | Targets carry roles (floor/cap/about); suggestions come from asymmetric-penalty search over regulars |
