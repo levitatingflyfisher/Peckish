@@ -818,7 +818,7 @@ packages:
       path: "../packages/oh_fleet_conformance"
       relative: true
     source: path
-    version: "0.3.0"
+    version: "0.3.1"
   openhearth_design:
     dependency: "direct main"
     description:
