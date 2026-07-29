@@ -59,6 +59,29 @@ class FoodUsageRepository {
     ));
   }
 
+  /// The edit half of the single-write-path law: an updated entry re-shapes
+  /// the snapshot IF it is (still) the newest use of that food — but an
+  /// edit is not a fresh use, so the count never moves, `at` stays, and a
+  /// hidden regular stays hidden.
+  Future<void> refreshSnapshot(DiaryEntry e) async {
+    final key = e.food.identityKey(e.label);
+    final existing = await (_db.select(_db.foodUsages)
+          ..where((u) => u.identityKey.equals(key)))
+        .getSingleOrNull();
+    if (existing == null || e.at.isBefore(existing.at)) return;
+    await (_db.update(_db.foodUsages)
+          ..where((u) => u.identityKey.equals(key)))
+        .write(FoodUsagesCompanion(
+      qty: Value(e.qty),
+      unitLabel: Value(e.unitLabel),
+      grams: Value(e.grams),
+      kcal: Value(e.macros.kcal),
+      proteinG: Value(e.macros.proteinG),
+      carbG: Value(e.macros.carbG),
+      fatG: Value(e.macros.fatG),
+    ));
+  }
+
   Future<List<FoodUsage>> regulars(
       {int limit = 12, bool includeHidden = false}) async {
     final q = _db.select(_db.foodUsages)

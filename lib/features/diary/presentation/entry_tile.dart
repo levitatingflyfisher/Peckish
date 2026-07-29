@@ -3,11 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:peckish/core/providers/core_providers.dart';
 import 'package:peckish/features/diary/domain/diary_entry.dart';
+import 'package:peckish/features/diary/presentation/edit_entry_sheet.dart';
 import 'package:peckish/shared/theme/app_colors.dart';
 import 'package:peckish/shared/theme/app_spacing.dart';
 
 /// One diary line, wherever a day is shown (Today, a history day).
-/// Swipe-away deletes; [onTap] is the edit hook.
+/// Swipe-away deletes; a tap opens the fix-this-line sheet unless the
+/// caller overrides [onTap].
 class EntryTile extends ConsumerWidget {
   const EntryTile({super.key, required this.entry, this.onTap});
 
@@ -29,7 +31,7 @@ class EntryTile extends ConsumerWidget {
       child: ListTile(
         contentPadding: EdgeInsets.zero,
         minVerticalPadding: AppSpacing.sm,
-        onTap: onTap,
+        onTap: onTap ?? () => showEditEntrySheet(context, entry),
         title: Text(entry.label),
         subtitle: Text(
           entry.qty == 1

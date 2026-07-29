@@ -20,8 +20,13 @@ class DiaryRepository {
         await FoodUsageRepository(_db).recordUsage(entry);
       });
 
-  Future<void> update(DiaryEntry entry) =>
-      _db.update(_db.diaryEntries).replace(_toRow(entry));
+  /// Edits stay on the single write path too: the regulars snapshot heals
+  /// when the edited entry is the newest use of its food (count untouched —
+  /// an edit is not a fresh use).
+  Future<void> update(DiaryEntry entry) => _db.transaction(() async {
+        await _db.update(_db.diaryEntries).replace(_toRow(entry));
+        await FoodUsageRepository(_db).refreshSnapshot(entry);
+      });
 
   Future<void> delete(String id) =>
       (_db.delete(_db.diaryEntries)..where((e) => e.id.equals(id))).go();

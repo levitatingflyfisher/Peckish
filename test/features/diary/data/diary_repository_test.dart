@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:peckish/core/storage/app_database.dart';
 import 'package:peckish/features/diary/data/diary_repository.dart';
 import 'package:peckish/features/diary/domain/diary_entry.dart';
+import 'package:peckish/features/food/data/food_usage_repository.dart';
 import 'package:peckish/features/food/domain/macro_set.dart';
 
 DiaryEntry entry({
@@ -132,6 +133,50 @@ void main() {
         reason: 'an empty day is absent; an unasked day never leaks in');
     expect(totals['2026-07-25']!.kcal, closeTo(363, 0.01));
     expect(totals['2026-07-26']!.kcal, 500);
+  });
+
+  // The single-write-path law, edit half: an update flows into the
+  // regulars snapshot when it touches the newest use — but an edit is not
+  // a new use, so the count never moves and a hidden regular stays hidden.
+  test('update heals the regular snapshot without bumping the count',
+      () async {
+    await repo.log(entry(qty: 1));
+    await repo.update(entry(
+      qty: 2,
+      macros: const MacroSet(kcal: 498, proteinG: 21.8),
+    ));
+
+    final regular = (await FoodUsageRepository(db).getAll()).single;
+    expect(regular.qty, 2, reason: 'the edited qty is the new snapshot');
+    expect(regular.macros.kcal, 498);
+    expect(regular.useCount, 1, reason: 'an edit is not a fresh use');
+  });
+
+  test('editing an older entry never rolls a newer snapshot back', () async {
+    await repo.log(entry(at: DateTime(2026, 7, 25, 8)));
+    await repo.log(entry(
+      id: 'e-2',
+      qty: 3,
+      at: DateTime(2026, 7, 25, 12),
+    ));
+
+    await repo.update(entry(
+      qty: 9,
+      at: DateTime(2026, 7, 25, 8),
+      macros: const MacroSet(kcal: 1),
+    ));
+
+    final regular = (await FoodUsageRepository(db).getAll()).single;
+    expect(regular.qty, 3, reason: 'the noon entry is still the newest use');
+    expect(regular.useCount, 2);
+  });
+
+  test('update leaves a hidden regular hidden', () async {
+    await repo.log(entry());
+    await FoodUsageRepository(db).setHidden('u:2707343', hidden: true);
+    await repo.update(entry(qty: 2));
+    expect((await FoodUsageRepository(db).getAll()).single.hidden, isTrue,
+        reason: 'fixing a number is not reaching for the food again');
   });
 
   test('watchTotalsForDays streams live per-day updates', () async {
