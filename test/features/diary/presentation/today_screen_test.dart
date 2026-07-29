@@ -6,6 +6,7 @@ import 'package:peckish/core/providers/core_providers.dart';
 import 'package:peckish/core/storage/app_database.dart';
 import 'package:peckish/features/diary/data/diary_repository.dart';
 import 'package:peckish/features/diary/domain/diary_entry.dart';
+import 'package:peckish/features/food/data/food_usage_repository.dart';
 import 'package:peckish/features/diary/presentation/today_screen.dart';
 import 'package:peckish/features/food/domain/macro_set.dart';
 import 'package:peckish/shared/theme/app_theme.dart';
@@ -72,6 +73,23 @@ void main() {
     // …after it, today's list shows the logged copy with its kcal.
     expect(find.text('Egg burrito'), findsNWidgets(2));
     expect(find.text('249 kcal'), findsOneWidget);
+    await unmount(tester);
+  });
+
+  testWidgets('hiding a regular elsewhere clears its chip live',
+      (tester) async {
+    await tester.runAsync(
+        () => DiaryRepository(db).log(entry(id: 'e-1', day: '2020-01-01')));
+    await tester.pumpWidget(host(db));
+    await tester.pumpAndSettle();
+    expect(find.text('Egg burrito'), findsOneWidget);
+
+    // The Foods screen (or anything) hides it; the rail must react without
+    // a diary change.
+    await tester.runAsync(
+        () => FoodUsageRepository(db).setHidden('q:egg burrito', hidden: true));
+    await tester.pumpAndSettle();
+    expect(find.text('Egg burrito'), findsNothing);
     await unmount(tester);
   });
 

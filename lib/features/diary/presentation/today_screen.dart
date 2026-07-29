@@ -93,10 +93,15 @@ final _entriesProvider = StreamProvider.autoDispose
 final _totalsProvider = StreamProvider.autoDispose.family(
     (ref, String day) =>
         ref.watch(diaryRepositoryProvider).watchTotalsForDay(day));
-final _recentsProvider = FutureProvider.autoDispose((ref) {
-  ref.watch(_entriesProvider(DiaryEntry.dayOf(DateTime.now())));
-  return ref.watch(diaryRepositoryProvider).recents();
-});
+/// Live view of the persistent regulars — reacts to hides/unhides made
+/// anywhere (the Foods screen), not just to diary writes.
+final _recentsProvider = StreamProvider.autoDispose((ref) => ref
+    .watch(foodUsageRepositoryProvider)
+    .watchAll()
+    .map((all) => [
+          for (final u in all.where((u) => !u.hidden).take(12))
+            u.asTemplateEntry(),
+        ]));
 final _targetsProvider = StreamProvider.autoDispose(
     (ref) => ref.watch(targetsRepositoryProvider).watch());
 
