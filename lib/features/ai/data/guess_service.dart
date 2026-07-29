@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 import 'package:peckish/features/ai/data/ai_config.dart';
 import 'package:peckish/features/ai/domain/meal_guess.dart';
+import 'package:peckish/features/ai/on_device/local_brain.dart';
 
 /// The guess couldn't be made — configuration, network, or the service
 /// itself. The message is written for the sheet, not a log file.
@@ -17,11 +18,14 @@ class GuessException implements Exception {
 /// Sends the user's words to exactly the backend they configured — nothing
 /// else ever leaves the device — and parses the answer into a draft.
 class GuessService {
-  GuessService({required this.config, http.Client? httpClient})
+  GuessService({required this.config, http.Client? httpClient, this.localBrain})
       : _http = httpClient ?? http.Client();
 
   final AiConfig config;
   final http.Client _http;
+
+  /// The on-device model, when this platform has one (null on web).
+  final LocalBrain? localBrain;
 
   static const _timeout = Duration(seconds: 60);
 
@@ -33,9 +37,32 @@ class GuessService {
     final raw = switch (config.backend) {
       AiBackend.anthropic => await _askAnthropic(description),
       AiBackend.openaiCompat => await _askOpenAiCompat(description),
+      AiBackend.onDevice => await _askLocalBrain(description),
       AiBackend.none => throw StateError('unreachable'),
     };
     return MealGuess.parse(raw);
+  }
+
+  Future<String> _askLocalBrain(String description) async {
+    final brain = localBrain;
+    if (brain == null) {
+      throw const GuessException(
+          "On-device AI isn't available on this platform — pick another "
+          'option in Settings.');
+    }
+    try {
+      return await brain.complete(MealGuess.promptFor(description));
+    } on GuessException {
+      rethrow;
+    } on Exception catch (_) {
+      throw const GuessException(
+          "The on-device model couldn't answer — check that it finished "
+          'downloading in Settings, then try again.');
+    } on Error catch (_) {
+      throw const GuessException(
+          "The on-device model couldn't answer — check that it finished "
+          'downloading in Settings, then try again.');
+    }
   }
 
   Future<String> _askAnthropic(String description) async {

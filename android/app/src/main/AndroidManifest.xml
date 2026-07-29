@@ -22,7 +22,10 @@
         tools:node="remove"/>
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         tools:node="remove"/>
+    <!-- largeHeap: a resident half-GB language model plus a photo pipeline
+         is exactly what the default heap cap was not sized for. -->
     <application
+        android:largeHeap="true"
         android:label="Peckish"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">

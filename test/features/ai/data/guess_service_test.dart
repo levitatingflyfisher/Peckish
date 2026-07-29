@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:peckish/features/ai/data/ai_config.dart';
 import 'package:peckish/features/ai/data/guess_service.dart';
+import 'package:peckish/features/ai/on_device/local_brain.dart';
 
 // Two backends, one contract: the user's words go ONLY to the endpoint they
 // configured, and what comes back is parsed as a draft. Key entry is the
@@ -130,4 +131,50 @@ void main() {
     final service = GuessService(config: const AiConfig(backend: AiBackend.none));
     expect(() => service.guess('an apple'), throwsA(isA<GuessException>()));
   });
+
+  group('GuessService — on-device brain', () {
+    const config = AiConfig(backend: AiBackend.onDevice);
+
+    test('the prompt goes to the local brain and the answer is parsed',
+        () async {
+      String? seenPrompt;
+      final service = GuessService(
+        config: config,
+        localBrain: _FakeBrain((prompt) async {
+          seenPrompt = prompt;
+          return 'Sure! {"foods":[{"name":"Toast","kcal":80,'
+              '"confidence":0.6}]}';
+        }),
+      );
+
+      final guess = await service.guess('a slice of toast');
+      expect(guess.foods.single.name, 'Toast');
+      expect(seenPrompt, contains('a slice of toast'),
+          reason: 'the one canonical prompt, same as every backend');
+      expect(seenPrompt, contains('JSON'));
+    });
+
+    test('no brain on this platform → a calm refusal, not a crash', () {
+      final service = GuessService(config: config);
+      expect(() => service.guess('an apple'),
+          throwsA(isA<GuessException>()));
+    });
+
+    test('a brain failure becomes a friendly exception', () {
+      final service = GuessService(
+        config: config,
+        localBrain: _FakeBrain((_) async =>
+            throw StateError('model file missing')),
+      );
+      expect(() => service.guess('an apple'),
+          throwsA(isA<GuessException>()));
+    });
+  });
+}
+
+class _FakeBrain implements LocalBrain {
+  _FakeBrain(this.onComplete);
+  final Future<String> Function(String prompt) onComplete;
+  @override
+  Future<String> complete(String prompt) => onComplete(prompt);
 }
