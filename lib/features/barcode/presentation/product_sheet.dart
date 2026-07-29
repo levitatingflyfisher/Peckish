@@ -9,9 +9,10 @@ import 'package:uuid/uuid.dart';
 
 /// Confirm-before-commit for a scanned product: nothing touches the ledger
 /// until the user confirms the grams. What lands is a snapshot scaled to
-/// that amount, provenance `scan`.
-Future<void> showProductSheet(BuildContext context, OffProduct product) =>
-    showModalBottomSheet(
+/// that amount, provenance `scan`. Resolves true when a line was logged,
+/// null/false on dismiss — the scan screen pops itself on a log.
+Future<bool?> showProductSheet(BuildContext context, OffProduct product) =>
+    showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
@@ -147,7 +148,7 @@ class _ProductSheetState extends ConsumerState<_ProductSheet> {
           createdAt: now,
         ));
 
-    if (context.mounted) Navigator.of(context).pop();
+    if (context.mounted) Navigator.of(context).pop(true);
   }
 
   static String _fmt(double v) =>

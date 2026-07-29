@@ -213,9 +213,11 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
         _busy = false;
         _sheetOpen = true;
       });
-      await showProductSheet(context, product);
+      final logged = await showProductSheet(context, product);
       if (!mounted) return;
       setState(() => _sheetOpen = false);
+      // A log finishes the errand — back to where the user came from.
+      if (logged == true) Navigator.of(context).pop();
     } on OffProductNotFound {
       if (!mounted) return;
       setState(() {

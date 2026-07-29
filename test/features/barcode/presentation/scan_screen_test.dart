@@ -220,4 +220,46 @@ void main() {
     expect(find.byType(BarcodeSketch), findsOneWidget);
     await unmount(tester);
   });
+
+  testWidgets('logging from the confirm sheet returns you all the way home',
+      (tester) async {
+    // ScanScreen is pushed, not home — so the pop after a successful log
+    // is observable.
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        appDatabaseProvider.overrideWithValue(db),
+        offClientProvider.overrideWithValue(client()),
+      ],
+      child: MaterialApp(
+        theme: AppTheme.light,
+        home: Scaffold(
+          body: Builder(
+            builder: (c) => Center(
+              child: TextButton(
+                onPressed: () => Navigator.of(c).push(MaterialPageRoute(
+                    builder: (_) => const ScanScreen())),
+                child: const Text('open scanner'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    ));
+    await tester.tap(find.text('open scanner'));
+    await tester.pumpAndSettle();
+
+    await submit(tester, '3017620422003');
+    expect(find.text('Log it'), findsOneWidget);
+
+    await tester.runAsync(() async {
+      await tester.tap(find.text('Log it'));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    });
+    await tester.pumpAndSettle();
+
+    // Sheet gone AND scanner gone: one log, zero leftover screens.
+    expect(find.text('Log it'), findsNothing);
+    expect(find.text('open scanner'), findsOneWidget);
+    await unmount(tester);
+  });
 }
