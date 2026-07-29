@@ -43,6 +43,10 @@ void main() {
         '"protein_g" REAL, "carb_g" REAL, "fat_g" REAL, '
         '"source" INTEGER NOT NULL, "created_at" INTEGER NOT NULL, '
         'PRIMARY KEY ("id"))',
+    // Same reasoning: the v4 step ALTERs targets, and a real v1 database
+    // always has it.
+    'CREATE TABLE "targets" ("id" INTEGER NOT NULL DEFAULT 1, "kcal" REAL, '
+        '"protein_g" REAL, "carb_g" REAL, "fat_g" REAL, PRIMARY KEY ("id"))',
   ];
 
   sqlite3.Database seedV1() {

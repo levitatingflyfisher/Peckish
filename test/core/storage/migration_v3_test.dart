@@ -19,9 +19,15 @@ void main() {
       '"source" INTEGER NOT NULL, "created_at" INTEGER NOT NULL, '
       'PRIMARY KEY ("id"))';
 
+  // Read by the v4 step's ALTERs — a real v2 database always has it.
+  const targetsDdl =
+      'CREATE TABLE "targets" ("id" INTEGER NOT NULL DEFAULT 1, "kcal" REAL, '
+      '"protein_g" REAL, "carb_g" REAL, "fat_g" REAL, PRIMARY KEY ("id"))';
+
   sqlite3.Database seedV2() {
     final raw = sqlite3.sqlite3.openInMemory();
     raw.execute(diaryDdl);
+    raw.execute(targetsDdl);
     // Two logs of the same quick food (newest carries kcal 160), one custom.
     raw.execute("INSERT INTO diary_entries (id, day, at, food_kind, label, "
         "qty, unit_label, kcal, source, created_at) VALUES "

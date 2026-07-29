@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:peckish/features/diary/domain/daily_targets.dart';
 import 'package:peckish/features/diary/domain/diary_entry.dart';
 import 'package:peckish/features/diary/domain/saved_meal.dart';
 import 'package:peckish/features/food/domain/custom_food.dart';
@@ -37,7 +38,7 @@ class PeckishExport {
   final List<PlanEntry> planEntries;
   final List<GroceryItem> groceryItems;
   final List<FoodUsage> foodUsages;
-  final MacroSet targets;
+  final DailyTargets targets;
 
   const PeckishExport({
     this.createdAt,
@@ -48,7 +49,7 @@ class PeckishExport {
     this.planEntries = const [],
     this.groceryItems = const [],
     this.foodUsages = const [],
-    this.targets = const MacroSet(),
+    this.targets = const DailyTargets(),
   });
 
   String toPrettyJson() => const JsonEncoder.withIndent('  ').convert(toMap());
@@ -65,7 +66,7 @@ class PeckishExport {
         'groceryItems': [for (final g in groceryItems) _groceryMap(g)],
         // Added post-v0.2; an additive section, so schemaVersion stays put.
         'foodUsages': [for (final u in foodUsages) _usageMap(u)],
-        'targets': _macros(targets),
+        'targets': _targetsMap(targets),
       };
 
   factory PeckishExport.fromJson(String json) {
@@ -111,7 +112,7 @@ class PeckishExport {
       foodUsages: [
         for (final u in _section(raw, 'foodUsages')) _usageFrom(u),
       ],
-      targets: _macrosFrom(raw['targets']),
+      targets: _targetsFrom(raw['targets']),
     );
   }
 
@@ -140,6 +141,28 @@ class PeckishExport {
       proteinG: num_('proteinG'),
       carbG: num_('carbG'),
       fatG: num_('fatG'),
+    );
+  }
+
+  // Roles ride in the same 'targets' object as additive keys — files from
+  // before roles existed restore with null roles (= the axis defaults).
+  static Map<String, Object?> _targetsMap(DailyTargets t) => {
+        ..._macros(t.values),
+        if (t.kcalRole != null) 'kcalRole': t.kcalRole!.name,
+        if (t.proteinRole != null) 'proteinRole': t.proteinRole!.name,
+        if (t.carbRole != null) 'carbRole': t.carbRole!.name,
+        if (t.fatRole != null) 'fatRole': t.fatRole!.name,
+      };
+
+  static DailyTargets _targetsFrom(dynamic raw) {
+    final values = _macrosFrom(raw);
+    if (raw is! Map<String, dynamic>) return DailyTargets(values: values);
+    return DailyTargets(
+      values: values,
+      kcalRole: TargetRole.tryParse(raw['kcalRole']),
+      proteinRole: TargetRole.tryParse(raw['proteinRole']),
+      carbRole: TargetRole.tryParse(raw['carbRole']),
+      fatRole: TargetRole.tryParse(raw['fatRole']),
     );
   }
 

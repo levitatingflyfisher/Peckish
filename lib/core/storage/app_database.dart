@@ -259,6 +259,11 @@ class FoodUsages extends Table {
 
 /// Static personal targets — a single row (id = 1), all-null = no targets.
 /// Deliberately NOT adaptive: numbers change when the user changes them.
+///
+/// v4 adds a ROLE per macro ('about' / 'atLeast' / 'under', stored as the
+/// domain enum's name). Null role = the axis default (kcal about, protein
+/// atLeast…), resolved in the domain layer — so rows written before roles
+/// existed pick up sensible meanings without a data rewrite.
 @DataClassName('TargetsRow')
 class Targets extends Table {
   IntColumn get id => integer().withDefault(const Constant(1))();
@@ -266,6 +271,10 @@ class Targets extends Table {
   RealColumn get proteinG => real().nullable()();
   RealColumn get carbG => real().nullable()();
   RealColumn get fatG => real().nullable()();
+  TextColumn get kcalRole => text().nullable()();
+  TextColumn get proteinRole => text().nullable()();
+  TextColumn get carbRole => text().nullable()();
+  TextColumn get fatRole => text().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -303,7 +312,7 @@ class AppDatabase extends _$AppDatabase {
             ));
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   /// Wipe every user-data table in one transaction — the "Erase all data"
   /// path. Leaves the key→value shell prefs (theme) in place. This list grows
@@ -360,6 +369,18 @@ class AppDatabase extends _$AppDatabase {
               await m.createTable(foodUsages);
             }
             await _backfillFoodUsages();
+          }
+          if (from < 4) {
+            // v4: per-macro role columns on targets. Guarded per column —
+            // a re-entered migration adds only what's missing.
+            for (final column in [
+              targets.kcalRole,
+              targets.proteinRole,
+              targets.carbRole,
+              targets.fatRole,
+            ]) {
+              await _addColumnIfMissing(m, targets, column);
+            }
           }
         },
         beforeOpen: (details) async {

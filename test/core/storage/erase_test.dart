@@ -6,6 +6,7 @@ import 'package:peckish/core/storage/app_database.dart';
 import 'package:peckish/features/diary/data/diary_repository.dart';
 import 'package:peckish/features/diary/data/saved_meal_repository.dart';
 import 'package:peckish/features/diary/data/targets_repository.dart';
+import 'package:peckish/features/diary/domain/daily_targets.dart';
 import 'package:peckish/features/diary/domain/diary_entry.dart';
 import 'package:peckish/features/diary/domain/saved_meal.dart';
 import 'package:peckish/features/food/data/custom_food_repository.dart';
@@ -89,7 +90,8 @@ void main() {
     ));
     final groceries = GroceryRepository(db);
     await groceries.addManual('Milk');
-    await TargetsRepository(db).set(const MacroSet(kcal: 3200));
+    await TargetsRepository(db)
+        .set(const DailyTargets(values: MacroSet(kcal: 3200)));
     await db.into(db.userPrefs).insertOnConflictUpdate(
         UserPrefsCompanion.insert(key: 'theme', value: 'dark'));
 
@@ -104,7 +106,7 @@ void main() {
     expect(await groceries.getAll(), isEmpty);
     expect(await FoodUsageRepository(db).getAll(), isEmpty,
         reason: 'the regulars record is user data — erase means erase');
-    expect((await TargetsRepository(db).get()).kcal, isNull);
+    expect((await TargetsRepository(db).get()).values.kcal, isNull);
     // reference spine and shell prefs survive
     expect(await usda.byId(1), isNotNull);
     final theme = await (db.select(db.userPrefs)

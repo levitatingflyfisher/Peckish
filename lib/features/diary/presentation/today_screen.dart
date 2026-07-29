@@ -45,7 +45,7 @@ class TodayScreen extends ConsumerWidget {
         children: [
           _TotalsCard(
             totals: totals.value ?? const MacroSet(),
-            targets: targets.value ?? const MacroSet(),
+            targets: targets.value?.values ?? const MacroSet(),
           ),
           const SizedBox(height: AppSpacing.lg),
           if ((recents.value ?? const []).isNotEmpty) ...[

@@ -6,6 +6,7 @@ import 'package:peckish/core/storage/app_database.dart';
 import 'package:peckish/features/diary/data/diary_repository.dart';
 import 'package:peckish/features/diary/data/saved_meal_repository.dart';
 import 'package:peckish/features/diary/data/targets_repository.dart';
+import 'package:peckish/features/diary/domain/daily_targets.dart';
 import 'package:peckish/features/diary/domain/diary_entry.dart';
 import 'package:peckish/features/diary/domain/saved_meal.dart';
 import 'package:peckish/features/food/data/custom_food_repository.dart';
@@ -60,7 +61,12 @@ void main() {
         ),
       ],
     ));
-    await TargetsRepository(db).set(const MacroSet(kcal: 3200, proteinG: 180));
+    // An explicit role: like the hidden flag below, it is NOT derivable
+    // from the diary replay — the backup must carry it through.
+    await TargetsRepository(db).set(const DailyTargets(
+      values: MacroSet(kcal: 3200, proteinG: 180),
+      kcalRole: TargetRole.under,
+    ));
     // A hidden regular: its count + hidden flag are NOT derivable from the
     // diary replay — the backup must carry them through.
     final usage = FoodUsageRepository(db);
@@ -79,7 +85,12 @@ void main() {
     expect(entries.single.food.customFoodId, 'cf-1');
     final meal = (await meals.getAll()).single;
     expect(meal.items.single.label, 'Orange chicken');
-    expect((await TargetsRepository(db).get()).kcal, 3200);
+    final targets = await TargetsRepository(db).get();
+    expect(targets.values.kcal, 3200);
+    expect(targets.kcalRole, TargetRole.under,
+        reason: 'roles survive the backup round-trip');
+    expect(targets.proteinRole, isNull,
+        reason: 'an unset role restores unset, not invented');
     final restored = await usage.getAll();
     expect(restored.single.identityKey, 'c:cf-1');
     expect(restored.single.hidden, isTrue,

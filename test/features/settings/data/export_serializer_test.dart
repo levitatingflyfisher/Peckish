@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:peckish/features/diary/domain/daily_targets.dart';
 import 'package:peckish/features/diary/domain/diary_entry.dart';
 import 'package:peckish/features/diary/domain/saved_meal.dart';
 import 'package:peckish/features/food/domain/custom_food.dart';
@@ -118,7 +119,10 @@ PeckishExport fullExport() => PeckishExport(
           hidden: true,
         ),
       ],
-      targets: const MacroSet(kcal: 3200, proteinG: 180),
+      targets: const DailyTargets(
+        values: MacroSet(kcal: 3200, proteinG: 180),
+        kcalRole: TargetRole.under,
+      ),
     );
 
 void main() {
@@ -165,8 +169,21 @@ void main() {
     expect(u.lastUsedAt, DateTime.utc(2026, 7, 25, 8));
     expect(u.macros.kcal, 150);
 
-    expect(decoded.targets.kcal, 3200);
-    expect(decoded.targets.fatG, isNull);
+    expect(decoded.targets.values.kcal, 3200);
+    expect(decoded.targets.values.fatG, isNull);
+    expect(decoded.targets.kcalRole, TargetRole.under,
+        reason: 'roles ride in the targets object as additive keys');
+    expect(decoded.targets.proteinRole, isNull);
+  });
+
+  test('a pre-roles targets object decodes with null roles (defaults apply)',
+      () {
+    final decoded = PeckishExport.fromJson(
+        '{"app":"peckish","schemaVersion":1,'
+        '"targets":{"kcal":2000,"proteinG":150}}');
+    expect(decoded.targets.values.kcal, 2000);
+    expect(decoded.targets.kcalRole, isNull);
+    expect(decoded.targets.resolvedProteinRole, TargetRole.atLeast);
   });
 
   test('an export with absent sections decodes to empties (old files restore)',
@@ -181,7 +198,7 @@ void main() {
     expect(decoded.groceryItems, isEmpty);
     expect(decoded.foodUsages, isEmpty,
         reason: 'a v0.2 export has no regulars section — restores fine');
-    expect(decoded.targets.kcal, isNull);
+    expect(decoded.targets.values.kcal, isNull);
   });
 
   test('a different app or a future schema refuses', () {
