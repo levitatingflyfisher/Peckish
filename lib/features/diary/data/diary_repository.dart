@@ -38,6 +38,28 @@ class DiaryRepository {
   Stream<MacroSet> watchTotalsForDay(String day) =>
       watchEntriesForDay(day).map(_fold);
 
+  /// Per-day totals for a set of days in one query — the history screen's
+  /// read. Days without entries are absent from the map, so a blank day
+  /// stays visibly blank instead of becoming a fake zero.
+  Future<Map<String, MacroSet>> totalsForDays(List<String> days) async =>
+      _foldByDay(await _daysQuery(days).get());
+
+  Stream<Map<String, MacroSet>> watchTotalsForDays(List<String> days) =>
+      _daysQuery(days).watch().map(_foldByDay);
+
+  SimpleSelectStatement<$DiaryEntriesTable, DiaryEntryRow> _daysQuery(
+          List<String> days) =>
+      _db.select(_db.diaryEntries)..where((e) => e.day.isIn(days));
+
+  static Map<String, MacroSet> _foldByDay(List<DiaryEntryRow> rows) {
+    final byDay = <String, MacroSet>{};
+    for (final r in rows) {
+      final e = _toDomain(r);
+      byDay[e.day] = (byDay[e.day] ?? const MacroSet()) + e.macros;
+    }
+    return byDay;
+  }
+
   /// The one-tap rail: the persistent regulars, newest first, as template
   /// entries — relog by copying with a fresh id/day/at. Served from the
   /// FoodUsages record, NOT the ledger, so deleting a day's lines never

@@ -7,6 +7,7 @@ import 'package:peckish/core/providers/core_providers.dart';
 import 'package:peckish/features/diary/domain/daily_targets.dart';
 import 'package:peckish/features/diary/domain/diary_entry.dart';
 import 'package:peckish/features/diary/presentation/add_sheet.dart';
+import 'package:peckish/features/diary/presentation/entry_tile.dart';
 import 'package:peckish/features/diary/presentation/targets_dialog.dart';
 import 'package:peckish/features/diary/domain/suggestion_engine.dart';
 import 'package:peckish/features/food/domain/macro_set.dart';
@@ -31,6 +32,11 @@ class TodayScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Today'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.insights_outlined),
+            tooltip: 'History',
+            onPressed: () => context.push('/history'),
+          ),
           IconButton(
             icon: const Icon(Icons.settings_outlined),
             tooltip: 'Settings',
@@ -101,7 +107,7 @@ class TodayScreen extends ConsumerWidget {
               ),
             )
           else
-            for (final entry in entries.value!) _EntryTile(entry: entry),
+            for (final entry in entries.value!) EntryTile(entry: entry),
           const SizedBox(height: 96), // room above the FAB
         ],
       ),
@@ -428,46 +434,6 @@ class _RoundOutCard extends ConsumerWidget {
                 ],
               ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _EntryTile extends ConsumerWidget {
-  const _EntryTile({required this.entry});
-
-  final DiaryEntry entry;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Dismissible(
-      key: ValueKey(entry.id),
-      direction: DismissDirection.endToStart,
-      background: Container(
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: AppSpacing.lg),
-        color: AppColors.clay,
-        child: const Icon(Icons.delete_outline, color: Colors.white),
-      ),
-      onDismissed: (_) => ref.read(diaryRepositoryProvider).delete(entry.id),
-      child: ListTile(
-        contentPadding: EdgeInsets.zero,
-        minVerticalPadding: AppSpacing.sm,
-        title: Text(entry.label),
-        subtitle: Text(
-          entry.qty == 1
-              ? entry.unitLabel
-              : '${entry.qty % 1 == 0 ? entry.qty.toInt() : entry.qty} × ${entry.unitLabel}',
-        ),
-        trailing: Text(
-          entry.macros.kcal == null
-              ? '—'
-              : '${entry.macros.kcal!.round()} kcal',
-          style: Theme.of(context)
-              .textTheme
-              .titleMedium
-              ?.copyWith(color: AppColors.jam),
         ),
       ),
     );

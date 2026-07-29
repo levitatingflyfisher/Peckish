@@ -106,4 +106,39 @@ void main() {
     final second = await stream.firstWhere((rows) => rows.isNotEmpty);
     expect(second.single.label, 'Egg burrito');
   });
+
+  // History reads a RANGE of days in one query; days without entries are
+  // simply absent (the screen shows them as blanks, not zeros).
+  test('totalsForDays sums each asked day, and only asked days', () async {
+    await repo.log(entry());
+    await repo.log(entry(
+      id: 'e-2',
+      macros: const MacroSet(kcal: 114, proteinG: 7.1),
+    ));
+    await repo.log(entry(
+      id: 'e-3',
+      day: '2026-07-26',
+      macros: const MacroSet(kcal: 500),
+    ));
+    await repo.log(entry(
+      id: 'e-4',
+      day: '2026-07-20',
+      macros: const MacroSet(kcal: 999),
+    ));
+
+    final totals =
+        await repo.totalsForDays(['2026-07-25', '2026-07-26', '2026-07-27']);
+    expect(totals.keys, unorderedEquals(['2026-07-25', '2026-07-26']),
+        reason: 'an empty day is absent; an unasked day never leaks in');
+    expect(totals['2026-07-25']!.kcal, closeTo(363, 0.01));
+    expect(totals['2026-07-26']!.kcal, 500);
+  });
+
+  test('watchTotalsForDays streams live per-day updates', () async {
+    final stream = repo.watchTotalsForDays(['2026-07-25', '2026-07-26']);
+    expect(await stream.first, isEmpty);
+    await repo.log(entry());
+    final next = await stream.firstWhere((m) => m.isNotEmpty);
+    expect(next['2026-07-25']!.kcal, 249);
+  });
 }

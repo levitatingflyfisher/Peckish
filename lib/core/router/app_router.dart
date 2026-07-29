@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:peckish/features/about/presentation/about_screen.dart';
+import 'package:peckish/features/diary/presentation/history_screen.dart';
 import 'package:peckish/features/diary/presentation/today_screen.dart';
 import 'package:peckish/features/groceries/presentation/groceries_screen.dart';
 import 'package:peckish/features/plan/presentation/plan_screen.dart';
@@ -82,6 +83,16 @@ GoRouter appRouter(Ref ref) {
         path: '/sync',
         pageBuilder: (c, s) =>
             _fade(key: s.pageKey, child: const SyncScreen()),
+      ),
+      GoRoute(
+        path: '/history',
+        pageBuilder: (c, s) => _fade(key: s.pageKey, child: HistoryScreen()),
+      ),
+      GoRoute(
+        path: '/history/:day',
+        pageBuilder: (c, s) => _fade(
+            key: s.pageKey,
+            child: HistoryDayScreen(day: s.pathParameters['day']!)),
       ),
     ],
   );
