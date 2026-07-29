@@ -5,6 +5,7 @@ import 'package:sanctuary_backup_ui/sanctuary_backup_ui.dart';
 
 import 'package:peckish/core/providers/core_providers.dart';
 import 'package:peckish/features/ai/presentation/ai_settings_dialog.dart';
+import 'package:peckish/features/diary/presentation/targets_dialog.dart';
 import 'package:peckish/features/settings/data/export_serializer.dart';
 import 'package:peckish/features/settings/data/export_share.dart';
 import 'package:peckish/features/settings/data/plain_export.dart';
@@ -33,6 +34,18 @@ class SettingsScreen extends ConsumerWidget {
             value: prefs.value?.isDarkMode ?? false,
             onChanged: (dark) =>
                 ref.read(settingsRepositoryProvider).setDarkMode(dark),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+
+          Text('Your day', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: AppSpacing.sm),
+          ListTile(
+            leading: const Icon(Icons.flag_outlined),
+            title: const Text('Daily targets'),
+            subtitle: const Text(
+                'Optional numbers to aim for — a floor for protein, '
+                'a budget for the day.'),
+            onTap: () => showTargetsDialog(context, ref),
           ),
           const SizedBox(height: AppSpacing.lg),
 

@@ -4,8 +4,10 @@ import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 
 import 'package:peckish/core/providers/core_providers.dart';
+import 'package:peckish/features/diary/domain/daily_targets.dart';
 import 'package:peckish/features/diary/domain/diary_entry.dart';
 import 'package:peckish/features/diary/presentation/add_sheet.dart';
+import 'package:peckish/features/diary/presentation/targets_dialog.dart';
 import 'package:peckish/features/food/domain/macro_set.dart';
 import 'package:peckish/shared/theme/app_colors.dart';
 import 'package:peckish/shared/theme/app_spacing.dart';
@@ -45,8 +47,17 @@ class TodayScreen extends ConsumerWidget {
         children: [
           _TotalsCard(
             totals: totals.value ?? const MacroSet(),
-            targets: targets.value?.values ?? const MacroSet(),
+            targets: targets.value ?? const DailyTargets(),
           ),
+          if (!(targets.value?.isSet ?? true))
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                icon: const Icon(Icons.flag_outlined, size: 18),
+                label: const Text('Set daily targets'),
+                onPressed: () => showTargetsDialog(context, ref),
+              ),
+            ),
           const SizedBox(height: AppSpacing.lg),
           if ((recents.value ?? const []).isNotEmpty) ...[
             Row(
@@ -105,17 +116,26 @@ final _recentsProvider = StreamProvider.autoDispose((ref) => ref
 final _targetsProvider = StreamProvider.autoDispose(
     (ref) => ref.watch(targetsRepositoryProvider).watch());
 
+/// A target's role, worn on its sleeve: floors read as ≥, caps as ≤,
+/// plain "about" targets stay bare numbers.
+String _roleMark(TargetRole role) => switch (role) {
+      TargetRole.about => '',
+      TargetRole.atLeast => '≥',
+      TargetRole.under => '≤',
+    };
+
 class _TotalsCard extends StatelessWidget {
   const _TotalsCard({required this.totals, required this.targets});
 
   final MacroSet totals;
-  final MacroSet targets;
+  final DailyTargets targets;
 
   String _fmt(double? v) => v == null ? '0' : v.round().toString();
 
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    final kcalTarget = targets.values.kcal;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),
@@ -138,9 +158,10 @@ class _TotalsCard extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.only(bottom: 8),
                   child: Text(
-                    targets.kcal == null
+                    kcalTarget == null
                         ? 'kcal'
-                        : 'of ${_fmt(targets.kcal)} kcal',
+                        : 'of ${_roleMark(targets.resolvedKcalRole)}'
+                            '${_fmt(kcalTarget)} kcal',
                     style:
                         text.titleMedium?.copyWith(color: AppColors.stone),
                   ),
@@ -155,17 +176,20 @@ class _TotalsCard extends StatelessWidget {
                 _MacroChip(
                     label: 'Protein',
                     value: totals.proteinG,
-                    target: targets.proteinG,
+                    target: targets.values.proteinG,
+                    role: targets.resolvedProteinRole,
                     color: AppColors.sage),
                 _MacroChip(
                     label: 'Carbs',
                     value: totals.carbG,
-                    target: targets.carbG,
+                    target: targets.values.carbG,
+                    role: targets.resolvedCarbRole,
                     color: AppColors.butter),
                 _MacroChip(
                     label: 'Fat',
                     value: totals.fatG,
-                    target: targets.fatG,
+                    target: targets.values.fatG,
+                    role: targets.resolvedFatRole,
                     color: AppColors.clay),
               ],
             ),
@@ -181,18 +205,21 @@ class _MacroChip extends StatelessWidget {
     required this.label,
     required this.value,
     required this.target,
+    required this.role,
     required this.color,
   });
 
   final String label;
   final double? value;
   final double? target;
+  final TargetRole role;
   final Color color;
 
   @override
   Widget build(BuildContext context) {
     final v = value == null ? '—' : '${value!.round()}g';
-    final suffix = target == null ? '' : ' / ${target!.round()}g';
+    final suffix =
+        target == null ? '' : ' / ${_roleMark(role)}${target!.round()}g';
     return Chip(
       avatar: CircleAvatar(backgroundColor: color, radius: 6),
       label: Text('$label $v$suffix'),
