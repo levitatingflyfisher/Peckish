@@ -18,4 +18,19 @@ class UserPrefs {
   /// The day ('YYYY-MM-DD') the card was last dismissed for — it stays
   /// quiet for that day and returns with the next one.
   final String? suggestionsDismissedDay;
+
+  /// Value equality matters: the KV table also stores non-pref rows (the
+  /// sync clock's HLC lives there), so the repository de-duplicates its
+  /// stream with distinct() — otherwise every synced WRITE would re-emit
+  /// "the prefs changed" and rebuild everything watching them, mid-write.
+  @override
+  bool operator ==(Object other) =>
+      other is UserPrefs &&
+      other.isDarkMode == isDarkMode &&
+      other.suggestionsEnabled == suggestionsEnabled &&
+      other.suggestionsDismissedDay == suggestionsDismissedDay;
+
+  @override
+  int get hashCode =>
+      Object.hash(isDarkMode, suggestionsEnabled, suggestionsDismissedDay);
 }

@@ -1,5 +1,4 @@
 import 'package:crdt/crdt.dart';
-import 'package:drift/drift.dart';
 import 'package:peckish/core/storage/app_database.dart';
 import 'package:uuid/uuid.dart';
 
@@ -85,7 +84,14 @@ class SyncClock {
     return row?.value;
   }
 
-  Future<void> _write(String key, String value) =>
-      _db.into(_db.userPrefs).insertOnConflictUpdate(
-          UserPrefsCompanion(key: Value(key), value: Value(value)));
+  /// Deliberately a raw statement: drift's typed inserts broadcast a
+  /// user_prefs table notification, and the clock advances on EVERY
+  /// stamped write — each one would re-run every prefs watcher's query
+  /// mid-write (and wedge drift's executor under widget-test fake-async).
+  /// Nothing watches these keys — the clock reads itself with plain
+  /// selects — so a silent write is correct, not sneaky.
+  Future<void> _write(String key, String value) => _db.customStatement(
+        'INSERT OR REPLACE INTO user_prefs ("key", value) VALUES (?, ?)',
+        [key, value],
+      );
 }

@@ -23,10 +23,14 @@ class LocalSettingsRepository implements SettingsRepository {
 
   @override
   Stream<UserPrefs> watchUserPrefs() =>
+      // distinct() is load-bearing: this table also holds the sync clock's
+      // HLC row, which advances on every synced write. Without value-level
+      // de-duplication those writes masquerade as pref changes and rebuild
+      // every prefs watcher mid-write (found as a wedged quick-add save).
       _db.select(_db.userPrefs).watch().map((rows) {
         final map = {for (final r in rows) r.key: r.value};
         return _fromMap(map);
-      });
+      }).distinct();
 
   @override
   Future<void> setDarkMode(bool dark) =>

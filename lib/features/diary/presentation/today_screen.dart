@@ -9,7 +9,6 @@ import 'package:peckish/features/diary/domain/diary_entry.dart';
 import 'package:peckish/features/diary/presentation/add_sheet.dart';
 import 'package:peckish/features/diary/presentation/targets_dialog.dart';
 import 'package:peckish/features/diary/domain/suggestion_engine.dart';
-import 'package:peckish/features/food/domain/food_usage.dart';
 import 'package:peckish/features/food/domain/macro_set.dart';
 import 'package:peckish/shared/theme/app_colors.dart';
 import 'package:peckish/shared/theme/app_spacing.dart';
