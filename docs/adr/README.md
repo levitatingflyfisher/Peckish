@@ -10,3 +10,4 @@
 | [0006](0006-household-sync.md) | Household LAN sync: the kitchen is shared, the plate is yours |
 | [0007](0007-persistent-regulars.md) | Regulars are a persistent record, not a diary echo |
 | [0008](0008-target-roles-and-suggestions.md) | Targets carry roles (floor/cap/about); suggestions come from asymmetric-penalty search over regulars |
+| [0009](0009-on-device-rungs.md) | On-device rungs: ML Kit plate labeler + downloaded Qwen via flutter_gemma, both optional, Android-only |

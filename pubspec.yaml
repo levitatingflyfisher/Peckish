@@ -1,7 +1,7 @@
 name: peckish
 description: The family food app — recipe box, weekly dinner plan, self-writing grocery list, and a one-tap food diary. Local-first — OpenHearth.
 publish_to: 'none'
-version: 0.4.0+4
+version: 0.5.0+5
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
@@ -25,10 +25,15 @@ dependencies:
   shared_preferences: ^2.3.2
   path_provider: ^2.1.4
   # ── On-device rungs (Android; web/desktop get stub shims) ──────────────
-  # EXACT pin (the Reckon lesson): this MediaPipe build loads ZIP .task
-  # bundles only — raw LiteRT "TFL3" flatbuffers die with "unable to open
-  # zip archive". Bump deliberately, never by caret drift.
-  flutter_gemma: 0.13.2
+  # EXACT pin, chosen by elimination (the whole story in ADR-0009):
+  # 0.13.x drags sqlite3 ^3.1, which drift 2.28's WEB protocol can't
+  # compile against (and the drift 2.34 road needs build ^3 → a
+  # riverpod-3 migration); 0.12.6's own Kotlin no longer compiles (its
+  # MediaPipe dep drifted under it); 1.0 stable needs Flutter >=3.44.
+  # 1.0.0-rc.1 is the release that DROPPED the sqlite3/RAG machinery
+  # while still building on Flutter 3.38. Loads ZIP .task bundles only —
+  # never point it at raw "TFL3" flatbuffers. Bump deliberately.
+  flutter_gemma: 1.0.0-rc.1
   # Snap-your-plate rung 1: ML Kit's bundled ~400-label classifier — in
   # Play Services, zero download, offline at analysis time.
   google_mlkit_image_labeling: ^0.15.0
@@ -92,14 +97,7 @@ dev_dependencies:
   # consumed by test/fleet_conformance_test.dart.
   oh_fleet_conformance:
     path: ../packages/oh_fleet_conformance
-  sqlite3: ^3.1.0
-
-# flutter_gemma needs sqlite3 ^3.1.0; drift_flutter (the thin wiring
-# wrapper) still declares ^2.x while drift itself already accepts 3.x.
-# The Reckon-precedent override — the full drift test suite + web build
-# are the referee that the wrapper runs fine against 3.x.
-dependency_overrides:
-  sqlite3: ^3.1.0
+  sqlite3: ^2.9.4
 
 flutter:
   uses-material-design: true

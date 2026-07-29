@@ -1,6 +1,6 @@
 {
   "main_dart_js_gz_max_bytes": 1153415,
   "main_dart_js_gz_note": "2026-07-28 deliberate ratchet for v0.3 (Foods screen + persistent regulars + scanner rework): measured 1098491 bytes + 5%. Prior: 1039632 + 5% (2026-07-17).",
-  "apk_arm64_max_bytes": 28698761,
-  "apk_arm64_note": "2026-07-28 deliberate ratchet for v0.3: measured 27332154 bytes (+5%). The jump from the 2026-07-22 baseline (22841648) is the camera + zxing-cpp native libs that barcode scanning added in v0.2 (whose release skipped this re-measure) plus v0.3 itself."
+  "apk_arm64_max_bytes": 44374302,
+  "apk_arm64_note": "2026-07-29 deliberate ratchet for v0.5 (on-device rungs): measured 42261240 bytes (+5%). The jump from v0.4 (27463610) is the flutter_gemma/MediaPipe inference runtime + ML Kit labeling libs \u2014 ~15 MB even with the Reckon-verified jniLibs exclude list (text inference keeps two native families, not seven). Models are DOWNLOADS, never bundled; web pays 318 BYTES gz for the same release (stub shims)."
 }

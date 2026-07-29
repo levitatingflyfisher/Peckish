@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.5.0 — the on-device release
+
+Two new rungs that run entirely on the phone, ported from the fleet's
+proven spines (StillLife's CV, Reckon's local LLM). Both optional;
+everything else works exactly as before without them.
+
+- **Snap your plate.** A photo button on the guess sheet (Android): the
+  on-device classifier labels the plate and the labels become draft
+  lines through the bundled USDA food spine — real macros at real
+  portions, the classifier's honest confidence, no network, no model
+  download, no AI setup. Labels are hand-mapped or skipped, never
+  guessed; a photo with nothing edible is a calm state.
+- **"On this phone."** The AI guesstimate can now run a small downloaded
+  model (Qwen 2.5, 0.5B default / 1.5B option — Apache-2.0, from the
+  trusted litert-community org, no account or token) fully offline: not
+  one word leaves the device. Settings gains a small model manager —
+  download once (resumable, survives sleep and failed attempts), pick,
+  delete. Choosing the backend is the opt-in.
+- The guess sheet's tile now appears on plate-capable devices even with
+  no AI configured — the photo rung never needed the opt-in.
+- Android floor rises to 7.0 (minSdk 24, the MediaPipe requirement).
+
 ## 0.4.0 — the targets release
 
 Goals, graphs, and the card that helps you finish the day.

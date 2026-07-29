@@ -22,6 +22,22 @@
         tools:node="remove"/>
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         tools:node="remove"/>
+    <!-- The on-device ML runtimes (v0.5) drag in a WorkManager/push
+         cluster Peckish never uses: the plate labeler is BUNDLED (no
+         model-download service), nothing runs at boot or in the
+         foreground, there is no push messaging, and the screen-awake
+         download uses a window flag, not a wakelock. Strip the lot —
+         the APK keeps asking for exactly INTERNET + CAMERA. -->
+    <uses-permission android:name="android.permission.WAKE_LOCK"
+        tools:node="remove"/>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"
+        tools:node="remove"/>
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"
+        tools:node="remove"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"
+        tools:node="remove"/>
+    <uses-permission android:name="com.google.android.c2dm.permission.RECEIVE"
+        tools:node="remove"/>
     <!-- largeHeap: a resident half-GB language model plus a photo pipeline
          is exactly what the default heap cap was not sized for. -->
     <application

@@ -32,6 +32,10 @@ class _FakeSession implements InferenceModelSession {
   Future<void> stopGeneration() async {}
 
   @override
+  SessionMetrics getSessionMetrics() =>
+      throw UnimplementedError('metrics are not part of the guess path');
+
+  @override
   Future<void> close() async {}
 }
 
@@ -61,11 +65,18 @@ class _FakeModel extends InferenceModel {
     bool? enableVisionModality,
     bool? enableAudioModality,
     String? systemInstruction,
+    List<Tool> tools = const [],
     bool enableThinking = false,
   }) async {
     lastTemperature = temperature;
     return _FakeSession(reply);
   }
+
+  @override
+  PreferredBackend? get activeBackend => null;
+
+  @override
+  void addCloseListener(void Function() listener) {}
 
   @override
   Future<void> close() async => closed = true;
