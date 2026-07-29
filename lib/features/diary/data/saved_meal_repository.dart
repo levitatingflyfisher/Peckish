@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
 
 import 'package:peckish/core/storage/app_database.dart';
+import 'package:peckish/features/diary/data/diary_repository.dart';
 import 'package:peckish/features/diary/domain/diary_entry.dart';
 import 'package:peckish/features/diary/domain/saved_meal.dart';
 import 'package:peckish/features/food/domain/macro_set.dart';
@@ -127,31 +128,29 @@ class SavedMealRepository {
   }
 
   /// THE one-tap: copy every item into today's ledger, stamped [at]/[day],
-  /// source = tap, and float the staple by stamping lastUsedAt.
+  /// source = tap, and float the staple by stamping lastUsedAt. Goes through
+  /// DiaryRepository.log — the single write path — so each item also records
+  /// its regular.
   Future<void> logMeal(String id,
       {required DateTime at, required String day}) async {
     final meal =
         (await getAll(includeArchived: true)).firstWhere((m) => m.id == id);
+    final diary = DiaryRepository(_db);
     await _db.transaction(() async {
       for (final item in meal.items) {
-        await _db.into(_db.diaryEntries).insert(DiaryEntriesCompanion(
-              id: Value(_newId()),
-              day: Value(day),
-              at: Value(at),
-              foodKind: Value(FoodKindDb.values[item.food.kind.index]),
-              usdaFdcId: Value(item.food.usdaFdcId),
-              customFoodId: Value(item.food.customFoodId),
-              label: Value(item.label),
-              qty: Value(item.qty),
-              unitLabel: Value(item.unitLabel),
-              grams: Value(item.grams),
-              kcal: Value(item.macros.kcal),
-              proteinG: Value(item.macros.proteinG),
-              carbG: Value(item.macros.carbG),
-              fatG: Value(item.macros.fatG),
-              source: const Value(EntrySourceDb.tap),
-              createdAt: Value(at),
-            ));
+        await diary.log(DiaryEntry(
+          id: _newId(),
+          day: day,
+          at: at,
+          food: item.food,
+          label: item.label,
+          qty: item.qty,
+          unitLabel: item.unitLabel,
+          grams: item.grams,
+          macros: item.macros,
+          source: EntrySource.tap,
+          createdAt: at,
+        ));
       }
       await (_db.update(_db.savedMeals)..where((m) => m.id.equals(id)))
           .write(SavedMealsCompanion(lastUsedAt: Value(at)));

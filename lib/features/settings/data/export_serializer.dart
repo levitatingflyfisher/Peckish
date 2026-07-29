@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:peckish/features/diary/domain/diary_entry.dart';
 import 'package:peckish/features/diary/domain/saved_meal.dart';
 import 'package:peckish/features/food/domain/custom_food.dart';
+import 'package:peckish/features/food/domain/food_usage.dart';
 import 'package:peckish/features/food/domain/macro_set.dart';
 import 'package:peckish/features/groceries/domain/grocery_item.dart';
 import 'package:peckish/features/plan/domain/plan_entry.dart';
@@ -35,6 +36,7 @@ class PeckishExport {
   final List<Recipe> recipes;
   final List<PlanEntry> planEntries;
   final List<GroceryItem> groceryItems;
+  final List<FoodUsage> foodUsages;
   final MacroSet targets;
 
   const PeckishExport({
@@ -45,6 +47,7 @@ class PeckishExport {
     this.recipes = const [],
     this.planEntries = const [],
     this.groceryItems = const [],
+    this.foodUsages = const [],
     this.targets = const MacroSet(),
   });
 
@@ -60,6 +63,8 @@ class PeckishExport {
         'recipes': [for (final r in recipes) _recipeMap(r)],
         'planEntries': [for (final p in planEntries) _planMap(p)],
         'groceryItems': [for (final g in groceryItems) _groceryMap(g)],
+        // Added post-v0.2; an additive section, so schemaVersion stays put.
+        'foodUsages': [for (final u in foodUsages) _usageMap(u)],
         'targets': _macros(targets),
       };
 
@@ -102,6 +107,9 @@ class PeckishExport {
       ],
       groceryItems: [
         for (final g in _section(raw, 'groceryItems')) _groceryFrom(g),
+      ],
+      foodUsages: [
+        for (final u in _section(raw, 'foodUsages')) _usageFrom(u),
       ],
       targets: _macrosFrom(raw['targets']),
     );
@@ -257,6 +265,36 @@ class PeckishExport {
         sourceRecipeId: raw['sourceRecipeId'] as String?,
         createdAt: DateTime.parse(raw['createdAt'] as String),
       );
+
+  // The identityKey is derived (FoodRef.identityKey), never stored twice.
+  static Map<String, Object?> _usageMap(FoodUsage u) => {
+        'food': _refMap(u.food),
+        'label': u.label,
+        'qty': u.qty,
+        'unitLabel': u.unitLabel,
+        if (u.grams != null) 'grams': u.grams,
+        'macros': _macros(u.macros),
+        'useCount': u.useCount,
+        'lastUsedAt': u.lastUsedAt.toIso8601String(),
+        'hidden': u.hidden,
+      };
+
+  static FoodUsage _usageFrom(Map<String, dynamic> raw) {
+    final food = _refFrom(raw['food'] as Map<String, dynamic>);
+    final label = raw['label'] as String;
+    return FoodUsage(
+      identityKey: food.identityKey(label),
+      food: food,
+      label: label,
+      qty: (raw['qty'] as num).toDouble(),
+      unitLabel: raw['unitLabel'] as String,
+      grams: (raw['grams'] as num?)?.toDouble(),
+      macros: _macrosFrom(raw['macros']),
+      useCount: raw['useCount'] as int? ?? 1,
+      lastUsedAt: DateTime.parse(raw['lastUsedAt'] as String),
+      hidden: raw['hidden'] as bool? ?? false,
+    );
+  }
 
   static Map<String, Object?> _recipeMap(Recipe r) => {
         'id': r.id,

@@ -9,6 +9,7 @@ import 'package:peckish/features/diary/data/targets_repository.dart';
 import 'package:peckish/features/diary/domain/diary_entry.dart';
 import 'package:peckish/features/diary/domain/saved_meal.dart';
 import 'package:peckish/features/food/data/custom_food_repository.dart';
+import 'package:peckish/features/food/data/food_usage_repository.dart';
 import 'package:peckish/features/food/data/usda_food_repository.dart';
 import 'package:peckish/features/food/domain/custom_food.dart';
 import 'package:peckish/features/food/domain/macro_set.dart';
@@ -101,6 +102,8 @@ void main() {
     expect(await recipes.getAll(includeArchived: true), isEmpty);
     expect(await PlanRepository(db).entriesForDays(['2026-07-27']), isEmpty);
     expect(await groceries.getAll(), isEmpty);
+    expect(await FoodUsageRepository(db).getAll(), isEmpty,
+        reason: 'the regulars record is user data — erase means erase');
     expect((await TargetsRepository(db).get()).kcal, isNull);
     // reference spine and shell prefs survive
     expect(await usda.byId(1), isNotNull);

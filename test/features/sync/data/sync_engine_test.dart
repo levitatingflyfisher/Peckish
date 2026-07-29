@@ -138,9 +138,12 @@ void main() {
 
     final changeset = await SyncEngine(a).buildChangeset();
     final json = changeset.toJsonString();
-    expect(json, isNot(contains('Private lunch')));
+    expect(json, isNot(contains('Private lunch')),
+        reason: 'the label lands in diary AND food_usages — neither syncs');
     expect(json, isNot(contains('diary')));
     expect(json, isNot(contains('targets')));
+    expect(json, isNot(contains('sage')),
+        reason: "matches 'usage'/'foodUsages' — the regulars stay local");
   });
 
   test('a payload from a newer app version is refused before any write',

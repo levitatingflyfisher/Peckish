@@ -225,6 +225,38 @@ class GroceryItems extends Table with SyncColumns {
   Set<Column> get primaryKey => {id};
 }
 
+/// The persistent regulars record — the habit behind the one-tap rail.
+/// Every diary log upserts a row (count + newest snapshot); diary deletion
+/// never touches it: the ledger is what you ate, this is what you reach for.
+/// Keyed by FoodRef.identityKey. Local-only by design — it derives from the
+/// diary, and the plate is yours (no SyncColumns).
+@DataClassName('FoodUsageRow')
+class FoodUsages extends Table {
+  TextColumn get identityKey => text()();
+  IntColumn get foodKind => intEnum<FoodKindDb>()();
+  IntColumn get usdaFdcId => integer().nullable()();
+  TextColumn get customFoodId => text().nullable()();
+  TextColumn get label => text()();
+  RealColumn get qty => real()();
+  TextColumn get unitLabel => text()();
+  RealColumn get grams => real().nullable()();
+  RealColumn get kcal => real().nullable()();
+  RealColumn get proteinG => real().nullable()();
+  RealColumn get carbG => real().nullable()();
+  RealColumn get fatG => real().nullable()();
+  IntColumn get useCount => integer()();
+
+  /// When this food was last logged — the rail sorts newest-first on it.
+  DateTimeColumn get at => dateTime()();
+
+  /// "Remove from regulars": hides from the rail without erasing the habit;
+  /// logging the food again unhides it (a fresh use is a fresh signal).
+  BoolColumn get hidden => boolean().withDefault(const Constant(false))();
+
+  @override
+  Set<Column> get primaryKey => {identityKey};
+}
+
 /// Static personal targets — a single row (id = 1), all-null = no targets.
 /// Deliberately NOT adaptive: numbers change when the user changes them.
 @DataClassName('TargetsRow')
@@ -253,6 +285,7 @@ class Targets extends Table {
   RecipeIngredients,
   PlanEntries,
   GroceryItems,
+  FoodUsages,
   Targets,
 ])
 class AppDatabase extends _$AppDatabase {
@@ -270,7 +303,7 @@ class AppDatabase extends _$AppDatabase {
             ));
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   /// Wipe every user-data table in one transaction — the "Erase all data"
   /// path. Leaves the key→value shell prefs (theme) in place. This list grows
@@ -285,6 +318,7 @@ class AppDatabase extends _$AppDatabase {
         await delete(planEntries).go();
         await delete(groceryItems).go();
         await delete(customFoods).go();
+        await delete(foodUsages).go();
         await delete(targets).go();
         // The USDA spine (usdaFoods/usdaPortions) is reference data, not user
         // data — it survives, as do the shell prefs.
@@ -312,6 +346,17 @@ class AppDatabase extends _$AppDatabase {
               }
             }
           }
+          if (from < 3) {
+            // v3: the persistent regulars table, backfilled from the diary so
+            // the rail survives the update with the user's habits intact.
+            // Same non-transactional caution as v2: create + backfill run
+            // only when the table is genuinely absent, so a re-entered
+            // migration cannot double-count.
+            if (!await _tableExists(foodUsages.actualTableName)) {
+              await m.createTable(foodUsages);
+              await _backfillFoodUsages();
+            }
+          }
         },
         beforeOpen: (details) async {
           await customStatement('PRAGMA foreign_keys = ON');
@@ -326,5 +371,54 @@ class AppDatabase extends _$AppDatabase {
     final exists =
         info.any((row) => row.read<String>('name') == column.name);
     if (!exists) await m.addColumn(table, column);
+  }
+
+  Future<bool> _tableExists(String name) async {
+    final rows = await customSelect(
+      "SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?",
+      variables: [Variable.withString(name)],
+    ).get();
+    return rows.isNotEmpty;
+  }
+
+  /// One pass over the existing ledger: per food identity, the row count and
+  /// the newest entry's snapshot become the seeded regular. Ascending scan —
+  /// the last row seen per key is the newest.
+  Future<void> _backfillFoodUsages() async {
+    final rows = await (select(diaryEntries)
+          ..orderBy([(e) => OrderingTerm.asc(e.at)]))
+        .get();
+    final counts = <String, int>{};
+    final newest = <String, DiaryEntryRow>{};
+    for (final r in rows) {
+      final key = switch (r.foodKind) {
+        FoodKindDb.usda => 'u:${r.usdaFdcId}',
+        FoodKindDb.custom => 'c:${r.customFoodId}',
+        FoodKindDb.quick => 'q:${r.label.toLowerCase()}',
+      };
+      counts[key] = (counts[key] ?? 0) + 1;
+      newest[key] = r;
+    }
+    for (final MapEntry(key: key, value: r) in newest.entries) {
+      await into(foodUsages).insert(
+        FoodUsagesCompanion.insert(
+          identityKey: key,
+          foodKind: r.foodKind,
+          usdaFdcId: Value(r.usdaFdcId),
+          customFoodId: Value(r.customFoodId),
+          label: r.label,
+          qty: r.qty,
+          unitLabel: r.unitLabel,
+          grams: Value(r.grams),
+          kcal: Value(r.kcal),
+          proteinG: Value(r.proteinG),
+          carbG: Value(r.carbG),
+          fatG: Value(r.fatG),
+          useCount: counts[key]!,
+          at: r.at,
+        ),
+        mode: InsertMode.insertOrReplace,
+      );
+    }
   }
 }

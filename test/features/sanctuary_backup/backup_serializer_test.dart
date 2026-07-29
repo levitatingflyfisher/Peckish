@@ -9,6 +9,7 @@ import 'package:peckish/features/diary/data/targets_repository.dart';
 import 'package:peckish/features/diary/domain/diary_entry.dart';
 import 'package:peckish/features/diary/domain/saved_meal.dart';
 import 'package:peckish/features/food/data/custom_food_repository.dart';
+import 'package:peckish/features/food/data/food_usage_repository.dart';
 import 'package:peckish/features/food/domain/custom_food.dart';
 import 'package:peckish/features/food/domain/macro_set.dart';
 import 'package:peckish/features/sanctuary_backup/backup_config.dart';
@@ -60,10 +61,15 @@ void main() {
       ],
     ));
     await TargetsRepository(db).set(const MacroSet(kcal: 3200, proteinG: 180));
+    // A hidden regular: its count + hidden flag are NOT derivable from the
+    // diary replay — the backup must carry them through.
+    final usage = FoodUsageRepository(db);
+    await usage.setHidden('c:cf-1', hidden: true);
 
     final blob = await serializer.dumpAll();
     await db.eraseUserData();
     expect(await diary.entriesForDay('2026-07-25'), isEmpty);
+    expect(await usage.getAll(), isEmpty);
 
     await serializer.restoreAll(blob);
 
@@ -74,6 +80,10 @@ void main() {
     final meal = (await meals.getAll()).single;
     expect(meal.items.single.label, 'Orange chicken');
     expect((await TargetsRepository(db).get()).kcal, 3200);
+    final restored = await usage.getAll();
+    expect(restored.single.identityKey, 'c:cf-1');
+    expect(restored.single.hidden, isTrue,
+        reason: 'the exported regular overrides the replay-derived row');
   });
 
   test('restore refuses a blob from a different app', () async {
@@ -97,6 +107,7 @@ void main() {
     expect(copy, contains('diary'));
     expect(copy, contains('saved meal'));
     expect(copy, contains('custom food'));
+    expect(copy, contains('regular'));
     expect(copy, contains('recipe'));
     expect(copy, contains('plan'));
     expect(copy, contains('grocery'));

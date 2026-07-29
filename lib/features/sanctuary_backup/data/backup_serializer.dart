@@ -9,6 +9,7 @@ import '../../diary/data/diary_repository.dart';
 import '../../diary/data/saved_meal_repository.dart';
 import '../../diary/data/targets_repository.dart';
 import '../../food/data/custom_food_repository.dart';
+import '../../food/data/food_usage_repository.dart';
 import '../../groceries/domain/grocery_item.dart';
 import '../../plan/domain/plan_entry.dart';
 import '../../recipes/data/recipe_repository.dart';
@@ -72,6 +73,7 @@ class PeckishBackupSerializer
             createdAt: r.createdAt,
           ),
       ],
+      foodUsages: await FoodUsageRepository(_db).getAll(),
       targets: await TargetsRepository(_db).get(),
     );
   }
@@ -149,6 +151,13 @@ class PeckishBackupSerializer
               sourceRecipeId: Value(g.sourceRecipeId),
               createdAt: Value(g.createdAt),
             ));
+      }
+      // Last, after the diary replay: replayed logs re-derive usage rows,
+      // and the exported regulars (true counts + hidden flags — not
+      // derivable from the ledger) overwrite them wholesale.
+      final usage = FoodUsageRepository(_db);
+      for (final u in export.foodUsages) {
+        await usage.put(u);
       }
       await TargetsRepository(_db).set(export.targets);
     });

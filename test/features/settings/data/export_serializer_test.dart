@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:peckish/features/diary/domain/diary_entry.dart';
 import 'package:peckish/features/diary/domain/saved_meal.dart';
 import 'package:peckish/features/food/domain/custom_food.dart';
+import 'package:peckish/features/food/domain/food_usage.dart';
 import 'package:peckish/features/food/domain/macro_set.dart';
 import 'package:peckish/features/groceries/domain/grocery_item.dart';
 import 'package:peckish/features/plan/domain/plan_entry.dart';
@@ -103,6 +104,20 @@ PeckishExport fullExport() => PeckishExport(
           createdAt: DateTime.utc(2026, 7, 25),
         ),
       ],
+      foodUsages: [
+        FoodUsage(
+          identityKey: 'q:oatmeal',
+          food: const FoodRef.quick(),
+          label: 'Oatmeal',
+          qty: 1,
+          unitLabel: 'serving',
+          grams: null,
+          macros: const MacroSet(kcal: 150, proteinG: 5),
+          useCount: 17,
+          lastUsedAt: DateTime.utc(2026, 7, 25, 8),
+          hidden: true,
+        ),
+      ],
       targets: const MacroSet(kcal: 3200, proteinG: 180),
     );
 
@@ -141,6 +156,15 @@ void main() {
     expect(g.checked, isTrue);
     expect(g.sourceRecipeId, 'r-1');
 
+    // Regulars: counts + hidden flags are truth from the file, and the
+    // identityKey is re-derived from the food ref, never stored twice.
+    final u = decoded.foodUsages.single;
+    expect(u.identityKey, 'q:oatmeal');
+    expect(u.useCount, 17);
+    expect(u.hidden, isTrue);
+    expect(u.lastUsedAt, DateTime.utc(2026, 7, 25, 8));
+    expect(u.macros.kcal, 150);
+
     expect(decoded.targets.kcal, 3200);
     expect(decoded.targets.fatG, isNull);
   });
@@ -155,6 +179,8 @@ void main() {
     expect(decoded.recipes, isEmpty);
     expect(decoded.planEntries, isEmpty);
     expect(decoded.groceryItems, isEmpty);
+    expect(decoded.foodUsages, isEmpty,
+        reason: 'a v0.2 export has no regulars section — restores fine');
     expect(decoded.targets.kcal, isNull);
   });
 

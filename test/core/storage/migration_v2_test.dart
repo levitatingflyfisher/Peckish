@@ -33,6 +33,16 @@ void main() {
         '"aisle" INTEGER NOT NULL, "checked" INTEGER NOT NULL DEFAULT 0, '
         '"manual" INTEGER NOT NULL DEFAULT 0, "source_recipe_id" TEXT, '
         '"created_at" INTEGER NOT NULL, PRIMARY KEY ("id"))',
+    // Not synced, but read by the v3 step's regulars backfill — a real v1
+    // database always has it (drift creates every table at birth).
+    'CREATE TABLE "diary_entries" ("id" TEXT NOT NULL, "day" TEXT NOT NULL, '
+        '"at" INTEGER NOT NULL, "food_kind" INTEGER NOT NULL, '
+        '"usda_fdc_id" INTEGER, "custom_food_id" TEXT, '
+        '"label" TEXT NOT NULL, "qty" REAL NOT NULL, '
+        '"unit_label" TEXT NOT NULL, "grams" REAL, "kcal" REAL, '
+        '"protein_g" REAL, "carb_g" REAL, "fat_g" REAL, '
+        '"source" INTEGER NOT NULL, "created_at" INTEGER NOT NULL, '
+        'PRIMARY KEY ("id"))',
   ];
 
   sqlite3.Database seedV1() {

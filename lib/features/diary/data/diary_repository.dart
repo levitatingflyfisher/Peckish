@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 
 import 'package:peckish/core/storage/app_database.dart';
 import 'package:peckish/features/diary/domain/diary_entry.dart';
+import 'package:peckish/features/food/data/food_usage_repository.dart';
 import 'package:peckish/features/food/domain/macro_set.dart';
 
 /// The food ledger: append entries, sum days by query, edit and delete
@@ -12,8 +13,12 @@ class DiaryRepository {
 
   final AppDatabase _db;
 
-  Future<void> log(DiaryEntry entry) =>
-      _db.into(_db.diaryEntries).insert(_toRow(entry));
+  /// Every log also records the regular (count + newest snapshot) — one
+  /// write path for all sources, so the rail can never miss a habit.
+  Future<void> log(DiaryEntry entry) => _db.transaction(() async {
+        await _db.into(_db.diaryEntries).insert(_toRow(entry));
+        await FoodUsageRepository(_db).recordUsage(entry);
+      });
 
   Future<void> update(DiaryEntry entry) =>
       _db.update(_db.diaryEntries).replace(_toRow(entry));
@@ -33,25 +38,14 @@ class DiaryRepository {
   Stream<MacroSet> watchTotalsForDay(String day) =>
       watchEntriesForDay(day).map(_fold);
 
-  /// The one-tap rail: the most recently logged foods, deduped by food
-  /// identity (same USDA/custom food = same recent), newest first. Returned
-  /// as template entries — relog by copying with a fresh id/day/at.
-  Future<List<DiaryEntry>> recents({int limit = 12}) async {
-    final rows = await (_db.select(_db.diaryEntries)
-          ..orderBy([(e) => OrderingTerm.desc(e.at)])
-          ..limit(limit * 8))
-        .get();
-    final seen = <String>{};
-    final out = <DiaryEntry>[];
-    for (final row in rows) {
-      final entry = _toDomain(row);
-      if (seen.add(entry.food.identityKey(entry.label))) {
-        out.add(entry);
-        if (out.length >= limit) break;
-      }
-    }
-    return out;
-  }
+  /// The one-tap rail: the persistent regulars, newest first, as template
+  /// entries — relog by copying with a fresh id/day/at. Served from the
+  /// FoodUsages record, NOT the ledger, so deleting a day's lines never
+  /// empties the rail (the phone-test bug this replaced).
+  Future<List<DiaryEntry>> recents({int limit = 12}) async =>
+      (await FoodUsageRepository(_db).regulars(limit: limit))
+          .map((u) => u.asTemplateEntry())
+          .toList();
 
   SimpleSelectStatement<$DiaryEntriesTable, DiaryEntryRow> _dayQuery(
           String day) =>
