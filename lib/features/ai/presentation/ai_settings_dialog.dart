@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:peckish/features/ai/data/ai_config.dart';
+import 'package:peckish/features/ai/on_device/local_brain_factory.dart';
+import 'package:peckish/features/ai/on_device/model_spec.dart';
 import 'package:peckish/features/ai/presentation/guess_sheet.dart';
+import 'package:peckish/features/ai/presentation/local_models_section.dart';
 import 'package:peckish/shared/theme/app_spacing.dart';
 
 /// Configure (or turn off) the guesstimate brain. Saving a key or an
@@ -31,6 +34,11 @@ class _AiSettingsDialogState extends ConsumerState<_AiSettingsDialog> {
   late final _key = TextEditingController(text: widget.current.anthropicKey);
   late final _url = TextEditingController(text: widget.current.baseUrl);
   late final _model = TextEditingController(text: widget.current.model);
+
+  /// The chosen on-device model — rides the config's model slot on save.
+  late String _localModelId = widget.current.backend == AiBackend.onDevice
+      ? PeckishModelSpec.byId(widget.current.model).id
+      : PeckishModelSpec.byId(null).id;
 
   @override
   void dispose() {
@@ -91,6 +99,22 @@ class _AiSettingsDialogState extends ConsumerState<_AiSettingsDialog> {
                     ),
                     const SizedBox(height: AppSpacing.sm),
                   ],
+                  if (onDeviceLlmSupported) ...[
+                    const RadioListTile<AiBackend>(
+                      value: AiBackend.onDevice,
+                      contentPadding: EdgeInsets.zero,
+                      title: Text('On this phone'),
+                      subtitle: Text(
+                          'A small model, downloaded once — nothing ever '
+                          'leaves the device'),
+                    ),
+                    if (_backend == AiBackend.onDevice)
+                      LocalModelsSection(
+                        selectedId: _localModelId,
+                        onSelect: (id) =>
+                            setState(() => _localModelId = id),
+                      ),
+                  ],
                   const RadioListTile<AiBackend>(
                     value: AiBackend.anthropic,
                     contentPadding: EdgeInsets.zero,
@@ -130,7 +154,9 @@ class _AiSettingsDialogState extends ConsumerState<_AiSettingsDialog> {
           backend: _backend,
           anthropicKey: _key.text.trim(),
           baseUrl: _url.text.trim(),
-          model: _model.text.trim(),
+          model: _backend == AiBackend.onDevice
+              ? _localModelId
+              : _model.text.trim(),
         ));
     ref.invalidate(aiConfigProvider);
     if (mounted) Navigator.of(context).pop();
