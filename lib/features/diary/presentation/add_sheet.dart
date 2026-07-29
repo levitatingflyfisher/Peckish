@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 
 import 'package:peckish/core/providers/core_providers.dart';
+import 'package:peckish/features/ai/on_device/on_device_providers.dart';
+import 'package:peckish/features/ai/on_device/plate_scanner.dart';
 import 'package:peckish/features/ai/presentation/guess_sheet.dart';
 import 'package:peckish/features/diary/domain/diary_entry.dart';
 import 'package:peckish/features/food/domain/custom_food.dart';
@@ -71,12 +73,15 @@ class _IdleSheet extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final meals = ref.watch(_mealsProvider);
-    // The AI tile only exists once a household configured a brain — the
-    // shipped default has no key, no endpoint, and no tile. valueOrNull, not
-    // value: a failed secure-storage read means "no brain", never a crashed
-    // sheet (AsyncError.value rethrows).
+    // The tile exists once a household configured a brain — OR on a device
+    // that can label a plate photo (the zero-download CV rung needs no
+    // opt-in: classifier + bundled spine, nothing leaves the phone).
+    // valueOrNull, not value: a failed secure-storage read means "no
+    // brain", never a crashed sheet (AsyncError.value rethrows).
     final aiReady =
-        ref.watch(aiConfigProvider).valueOrNull?.configured ?? false;
+        (ref.watch(aiConfigProvider).valueOrNull?.configured ?? false) ||
+            (plateScanSupported &&
+                ref.watch(plateScannerProvider) != null);
     return ListView(
       controller: scroll,
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),

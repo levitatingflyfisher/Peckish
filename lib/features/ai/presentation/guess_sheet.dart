@@ -6,6 +6,10 @@ import 'package:peckish/features/ai/data/ai_config.dart';
 import 'package:peckish/features/ai/data/ai_config_repository.dart';
 import 'package:peckish/features/ai/data/guess_service.dart';
 import 'package:peckish/features/ai/domain/meal_guess.dart';
+import 'package:peckish/features/ai/on_device/on_device_providers.dart';
+import 'package:peckish/features/ai/on_device/plate_lookup.dart';
+import 'package:peckish/features/ai/on_device/plate_scan.dart';
+import 'package:peckish/features/ai/on_device/plate_scanner.dart';
 import 'package:peckish/features/diary/domain/diary_entry.dart';
 import 'package:peckish/shared/theme/app_spacing.dart';
 import 'package:uuid/uuid.dart';
@@ -79,15 +83,34 @@ class _GuessSheetState extends ConsumerState<_GuessSheet> {
           ),
           const SizedBox(height: AppSpacing.md),
           if (_draft == null) ...[
-            TextField(
-              controller: _controller,
-              autofocus: true,
-              minLines: 1,
-              maxLines: 3,
-              decoration: const InputDecoration(
-                hintText: 'e.g. chipotle bowl with double chicken',
-                border: OutlineInputBorder(),
-              ),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    autofocus: true,
+                    minLines: 1,
+                    maxLines: 3,
+                    decoration: const InputDecoration(
+                      hintText: 'e.g. chipotle bowl with double chicken',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ),
+                // The zero-download CV rung: classifier + bundled spine,
+                // no AI configuration involved.
+                if (plateScanSupported &&
+                    ref.watch(plateScannerProvider) != null)
+                  Padding(
+                    padding: const EdgeInsets.only(left: AppSpacing.sm),
+                    child: IconButton.filledTonal(
+                      icon: const Icon(Icons.photo_camera_outlined),
+                      tooltip: 'Snap your plate',
+                      onPressed: _busy ? null : _snapPlate,
+                    ),
+                  ),
+              ],
             ),
             if (_message != null)
               Padding(
@@ -156,6 +179,7 @@ class _GuessSheetState extends ConsumerState<_GuessSheet> {
       final service = GuessService(
         config: config,
         httpClient: ref.read(guessHttpClientProvider),
+        localBrain: ref.read(localBrainProvider),
       );
       final guess = await service.guess(description);
       if (!mounted) return;
@@ -173,6 +197,45 @@ class _GuessSheetState extends ConsumerState<_GuessSheet> {
       setState(() {
         _busy = false;
         _message = e.message;
+      });
+    }
+  }
+
+  /// Snap your plate: photo → on-device classifier → bundled-spine drafts.
+  /// Same confirm-before-commit flow as a text guess; a photo with nothing
+  /// recognizable is a calm state with a next step, never an error.
+  Future<void> _snapPlate() async {
+    setState(() {
+      _busy = true;
+      _message = null;
+    });
+    try {
+      final path = await ref.read(platePhotoPickerProvider)();
+      if (path == null) {
+        if (mounted) setState(() => _busy = false);
+        return; // user backed out of the picker — nothing to say
+      }
+      final scanner = ref.read(plateScannerProvider)!;
+      final labels = await scanner.labelsOf(path);
+      final usda = ref.read(usdaFoodRepositoryProvider);
+      final guess =
+          await PlateScan.fromLabels(labels, (q) => plateLookup(usda, q));
+      if (!mounted) return;
+      setState(() {
+        _busy = false;
+        if (guess.foods.isEmpty) {
+          _message = "Couldn't spot any food in that photo — describe the "
+              'meal below instead.';
+        } else {
+          _draft = List.of(guess.foods);
+        }
+      });
+    } on Exception {
+      if (!mounted) return;
+      setState(() {
+        _busy = false;
+        _message = "Couldn't read that photo — describe the meal below "
+            'instead.';
       });
     }
   }
