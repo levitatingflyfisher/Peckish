@@ -100,7 +100,7 @@ class SettingsScreen extends ConsumerWidget {
           ListTile(
             leading: const Icon(Icons.info_outline),
             title: const Text('About Peckish'),
-            onTap: () => context.go('/about'),
+            onTap: () => context.push('/about'),
           ),
         ],
       ),
