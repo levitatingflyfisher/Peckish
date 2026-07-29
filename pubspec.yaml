@@ -24,6 +24,21 @@ dependencies:
   intl: ^0.20.2
   shared_preferences: ^2.3.2
   path_provider: ^2.1.4
+  # ── On-device rungs (Android; web/desktop get stub shims) ──────────────
+  # EXACT pin (the Reckon lesson): this MediaPipe build loads ZIP .task
+  # bundles only — raw LiteRT "TFL3" flatbuffers die with "unable to open
+  # zip archive". Bump deliberately, never by caret drift.
+  flutter_gemma: 0.13.2
+  # Snap-your-plate rung 1: ML Kit's bundled ~400-label classifier — in
+  # Play Services, zero download, offline at analysis time.
+  google_mlkit_image_labeling: ^0.15.0
+  # Photo source for the plate rung (system picker/camera intent — adds no
+  # manifest permissions of its own).
+  image_picker: ^1.1.2
+  # Resumable model downloads (Range + .part + atomic rename).
+  dio: ^5.8.0
+  # GB-scale downloads must survive the screen sleeping.
+  wakelock_plus: ^1.5.2
   path: ^1.9.0
   share_plus: ^10.0.3
   lucide_flutter: ^1.7.0
@@ -77,7 +92,14 @@ dev_dependencies:
   # consumed by test/fleet_conformance_test.dart.
   oh_fleet_conformance:
     path: ../packages/oh_fleet_conformance
-  sqlite3: ^2.9.4
+  sqlite3: ^3.1.0
+
+# flutter_gemma needs sqlite3 ^3.1.0; drift_flutter (the thin wiring
+# wrapper) still declares ^2.x while drift itself already accepts 3.x.
+# The Reckon-precedent override — the full drift test suite + web build
+# are the referee that the wrapper runs fine against 3.x.
+dependency_overrides:
+  sqlite3: ^3.1.0
 
 flutter:
   uses-material-design: true
