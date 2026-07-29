@@ -55,10 +55,13 @@ void main() {
     expect(salad.customFoodId, 'cf-1');
   });
 
-  test('re-entry cannot double-count (table already present)', () async {
+  test('re-entry heals a mid-backfill crash instead of freezing it',
+      () async {
     final raw = seedV2();
-    // Simulate a half-run: the table exists and was backfilled once, but the
-    // version stamp never landed. A blind re-run would re-add the rows.
+    // Simulate a half-run: the table exists but the backfill died partway
+    // (one row, and with a stale count at that) and the version stamp never
+    // landed. The re-run must complete the picture — recomputed from the
+    // diary, no double-counting — not skip and freeze the gap forever.
     raw.execute('CREATE TABLE "food_usages" ("identity_key" TEXT NOT NULL, '
         '"food_kind" INTEGER NOT NULL, "usda_fdc_id" INTEGER, '
         '"custom_food_id" TEXT, "label" TEXT NOT NULL, "qty" REAL NOT NULL, '
@@ -68,14 +71,16 @@ void main() {
         '"hidden" INTEGER NOT NULL DEFAULT 0, PRIMARY KEY ("identity_key"))');
     raw.execute("INSERT INTO food_usages (identity_key, food_kind, label, "
         "qty, unit_label, kcal, use_count, at) VALUES "
-        "('q:oats', 2, 'Oats', 1, 'serving', 160, 2, 200)");
+        "('q:oats', 2, 'Oats', 1, 'serving', 150, 1, 100)");
 
     final db = AppDatabase(NativeDatabase.opened(raw));
     addTearDown(db.close);
 
     final rows = await (db.select(db.foodUsages)).get();
-    expect(rows, hasLength(1), reason: 'no re-backfill on re-entry');
-    expect(rows.single.useCount, 2);
+    expect(rows, hasLength(2), reason: 'the missing regular is healed in');
+    expect(rows.singleWhere((r) => r.label == 'Oats').useCount, 2,
+        reason: 'recomputed from the diary, not incremented on top');
+    expect(rows.singleWhere((r) => r.label == 'Salad').customFoodId, 'cf-1');
   });
 
   test('a fresh v3 database has the table from birth', () async {

@@ -84,6 +84,28 @@ void main() {
     await unmount(tester);
   });
 
+  testWidgets('a double-tapped Log it lands exactly one line',
+      (tester) async {
+    await tester.pumpWidget(host(db));
+    await tester.pumpAndSettle();
+    await openQuickAdd(tester);
+
+    await enterByLabel(tester, 'What was it?', 'Leftover curry');
+    await enterByLabel(tester, 'kcal', '400');
+    await tester.runAsync(() async {
+      // Two taps in the same frame — the fidgety-thumb case.
+      await tester.tap(find.text('Log it'));
+      await tester.tap(find.text('Log it'), warnIfMissed: false);
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    });
+    await tester.pumpAndSettle();
+
+    // One entry row (plus its rail chip) — not two of each.
+    expect(find.text('Leftover curry'), findsNWidgets(2));
+    expect(find.text('400 kcal'), findsOneWidget);
+    await unmount(tester);
+  });
+
   testWidgets('Cancel returns to the + sheet instead of closing it',
       (tester) async {
     await tester.pumpWidget(host(db));

@@ -221,6 +221,20 @@ void main() {
     await unmount(tester);
   });
 
+  testWidgets('a remembered Type choice never mounts the camera, even briefly',
+      (tester) async {
+    await tester.runAsync(() => ScanModeStore(db).save(ScanMode.type));
+    await tester.pumpWidget(host(client(), camera: true));
+    // The very first frame — the remembered choice hasn't arrived yet, and
+    // the camera must not warm up in the gap.
+    expect(find.byType(ScannerView), findsNothing,
+        reason: 'no camera warm-up for a user who chose typing');
+    await tester.pumpAndSettle();
+    expect(find.byType(ScannerView), findsNothing);
+    expect(find.byType(BarcodeSketch), findsOneWidget);
+    await unmount(tester);
+  });
+
   testWidgets('logging from the confirm sheet returns you all the way home',
       (tester) async {
     // ScanScreen is pushed, not home — so the pop after a successful log

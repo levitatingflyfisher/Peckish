@@ -349,13 +349,17 @@ class AppDatabase extends _$AppDatabase {
           if (from < 3) {
             // v3: the persistent regulars table, backfilled from the diary so
             // the rail survives the update with the user's habits intact.
-            // Same non-transactional caution as v2: create + backfill run
-            // only when the table is genuinely absent, so a re-entered
-            // migration cannot double-count.
+            // Same non-transactional caution as v2, but self-HEALING: the
+            // backfill recomputes counts from the diary and upserts
+            // (insertOrReplace), so a re-entered migration — table created,
+            // backfill died partway, stamp never landed — completes the
+            // picture instead of freezing the gap. It cannot double-count,
+            // and no post-migration user write can exist yet to clobber
+            // (the stamp lands before the app ever runs at v3).
             if (!await _tableExists(foodUsages.actualTableName)) {
               await m.createTable(foodUsages);
-              await _backfillFoodUsages();
             }
+            await _backfillFoodUsages();
           }
         },
         beforeOpen: (details) async {

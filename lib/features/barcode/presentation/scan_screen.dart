@@ -35,26 +35,34 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
   bool _busy = false; // lookup in flight → spinner + disabled field
   bool _sheetOpen = false; // confirm sheet up → repeat scans are swallowed
   String? _message;
-  late ScanMode _mode;
+
+  /// Null while the remembered choice loads (camera platforms): the camera
+  /// must not warm up in that gap for a user who chose typing.
+  ScanMode? _mode;
+
+  /// A tap in the load gap wins over the arriving remembered value.
+  bool _userChose = false;
 
   bool get _hasCamera => widget.debugCameraOverride ?? ScannerView.available;
 
   @override
   void initState() {
     super.initState();
-    _mode = _hasCamera ? ScanMode.camera : ScanMode.type;
-    if (_hasCamera) unawaited(_restoreMode());
+    if (_hasCamera) {
+      unawaited(_restoreMode());
+    } else {
+      _mode = ScanMode.type;
+    }
   }
 
-  /// The remembered choice arrives a frame late; camera-first is the safe
-  /// default while it loads.
   Future<void> _restoreMode() async {
     final saved = await ref.read(scanModeStoreProvider).load();
-    if (!mounted || saved == null || saved == _mode) return;
-    setState(() => _mode = saved);
+    if (!mounted || _userChose) return;
+    setState(() => _mode = saved ?? ScanMode.camera);
   }
 
   void _setMode(ScanMode mode) {
+    _userChose = true;
     if (mode == _mode) return;
     setState(() {
       _mode = mode;
@@ -102,14 +110,18 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
                       label: Text('Type it'),
                       icon: Icon(Icons.keyboard_outlined)),
                 ],
-                selected: {_mode},
+                selected: {if (_mode != null) _mode!},
+                emptySelectionAllowed: true,
                 onSelectionChanged: (s) => _setMode(s.first),
               ),
             ),
           Expanded(
-            child: _mode == ScanMode.camera
-                ? _cameraPane(theme)
-                : _typePane(),
+            child: switch (_mode) {
+              ScanMode.camera => _cameraPane(theme),
+              ScanMode.type => _typePane(),
+              // The one frame before the remembered choice arrives.
+              null => const SizedBox.shrink(),
+            },
           ),
           SafeArea(
             top: false,

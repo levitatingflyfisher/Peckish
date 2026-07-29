@@ -312,6 +312,10 @@ class _QuickAddDialogState extends ConsumerState<_QuickAddDialog> {
   final _fat = TextEditingController();
   bool _remember = false;
 
+  /// A double-tapped Log it must land ONE line — the second pop would
+  /// otherwise cascade past the + sheet into whatever is beneath it.
+  bool _saving = false;
+
   @override
   void dispose() {
     _label.dispose();
@@ -333,7 +337,8 @@ class _QuickAddDialogState extends ConsumerState<_QuickAddDialog> {
 
   Future<void> _log() async {
     final name = _label.text.trim();
-    if (name.isEmpty) return;
+    if (name.isEmpty || _saving) return;
+    _saving = true;
     final now = DateTime.now();
     final macros = MacroSet(
       kcal: _num(_kcal),
