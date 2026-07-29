@@ -49,8 +49,18 @@ class TodayScreen extends ConsumerWidget {
           ),
           const SizedBox(height: AppSpacing.lg),
           if ((recents.value ?? const []).isNotEmpty) ...[
-            Text('Your regulars',
-                style: Theme.of(context).textTheme.titleMedium),
+            Row(
+              children: [
+                Expanded(
+                  child: Text('Your regulars',
+                      style: Theme.of(context).textTheme.titleMedium),
+                ),
+                TextButton(
+                  onPressed: () => context.push('/foods'),
+                  child: const Text('See all'),
+                ),
+              ],
+            ),
             const SizedBox(height: AppSpacing.sm),
             _RecentsRail(recents: recents.value!),
             const SizedBox(height: AppSpacing.lg),

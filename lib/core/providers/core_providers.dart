@@ -11,6 +11,7 @@ import 'package:peckish/features/diary/data/diary_repository.dart';
 import 'package:peckish/features/diary/data/saved_meal_repository.dart';
 import 'package:peckish/features/diary/data/targets_repository.dart';
 import 'package:peckish/features/food/data/custom_food_repository.dart';
+import 'package:peckish/features/food/data/food_usage_repository.dart';
 import 'package:peckish/features/food/data/usda_food_repository.dart';
 import 'package:peckish/features/groceries/data/grocery_repository.dart';
 import 'package:peckish/features/plan/data/plan_repository.dart';
@@ -48,6 +49,10 @@ UsdaFoodRepository usdaFoodRepository(Ref ref) =>
 @riverpod
 CustomFoodRepository customFoodRepository(Ref ref) =>
     CustomFoodRepository(ref.watch(appDatabaseProvider));
+
+@riverpod
+FoodUsageRepository foodUsageRepository(Ref ref) =>
+    FoodUsageRepository(ref.watch(appDatabaseProvider));
 
 @riverpod
 DiaryRepository diaryRepository(Ref ref) =>
