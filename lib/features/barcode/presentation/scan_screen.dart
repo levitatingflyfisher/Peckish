@@ -1,8 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:peckish/features/barcode/data/off_client.dart';
 import 'package:peckish/features/barcode/domain/barcode_code.dart';
+import 'package:peckish/features/barcode/presentation/barcode_sketch.dart';
 import 'package:peckish/features/barcode/presentation/product_sheet.dart';
+import 'package:peckish/features/barcode/presentation/scan_mode_store.dart';
 import 'package:peckish/features/barcode/presentation/scanner_view.dart';
 import 'package:peckish/shared/theme/app_spacing.dart';
 
@@ -10,11 +14,17 @@ import 'package:peckish/shared/theme/app_spacing.dart';
 final offClientProvider = Provider<OffClient>((ref) => OffClient());
 
 /// Scan a barcode (camera, where there is one) or type the digits under the
-/// bars (everywhere). One code = one request to Open Food Facts = one
-/// confirm-before-commit sheet. Failures are states with next steps, not
-/// errors.
+/// bars (everywhere). Camera platforms get a Scan/Type toggle — Type it
+/// unmounts the camera entirely — and the choice is remembered. One code =
+/// one request to Open Food Facts = one confirm-before-commit sheet.
+/// Failures are states with next steps, not errors.
 class ScanScreen extends ConsumerStatefulWidget {
-  const ScanScreen({super.key});
+  const ScanScreen({super.key, this.debugCameraOverride});
+
+  /// Tests force the camera layout on the camera-less VM; real builds
+  /// leave this null and follow [ScannerView.available].
+  @visibleForTesting
+  final bool? debugCameraOverride;
 
   @override
   ConsumerState<ScanScreen> createState() => _ScanScreenState();
@@ -25,6 +35,44 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
   bool _busy = false; // lookup in flight → spinner + disabled field
   bool _sheetOpen = false; // confirm sheet up → repeat scans are swallowed
   String? _message;
+  late ScanMode _mode;
+
+  bool get _hasCamera => widget.debugCameraOverride ?? ScannerView.available;
+
+  @override
+  void initState() {
+    super.initState();
+    _mode = _hasCamera ? ScanMode.camera : ScanMode.type;
+    if (_hasCamera) unawaited(_restoreMode());
+  }
+
+  /// The remembered choice arrives a frame late; camera-first is the safe
+  /// default while it loads.
+  Future<void> _restoreMode() async {
+    final saved = await ref.read(scanModeStoreProvider).load();
+    if (!mounted || saved == null || saved == _mode) return;
+    setState(() => _mode = saved);
+  }
+
+  void _setMode(ScanMode mode) {
+    if (mode == _mode) return;
+    setState(() {
+      _mode = mode;
+      _message = null;
+    });
+    unawaited(ref.read(scanModeStoreProvider).save(mode));
+  }
+
+  /// Camera couldn't start (permission, hardware): land on typing with one
+  /// calm line. Deliberately not persisted — a transient failure shouldn't
+  /// overwrite the user's choice.
+  void _onCameraError(Exception _) {
+    if (!mounted) return;
+    setState(() {
+      _mode = ScanMode.type;
+      _message = "The camera couldn't start here — type the numbers instead.";
+    });
+  }
 
   @override
   void dispose() {
@@ -39,32 +87,30 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
       appBar: AppBar(title: const Text('Scan a barcode')),
       body: Column(
         children: [
-          if (ScannerView.available)
-            Expanded(child: ScannerView(onCode: _handleRaw))
-          else
-            Expanded(
-              child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(AppSpacing.xl),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.qr_code_scanner,
-                          size: 64,
-                          color: theme.colorScheme.primary
-                              .withValues(alpha: 0.4)),
-                      const SizedBox(height: AppSpacing.md),
-                      Text(
-                        'No camera scanning here — type the numbers '
-                        'printed under the bars instead.',
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.bodyMedium,
-                      ),
-                    ],
-                  ),
-                ),
+          if (_hasCamera)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.lg, AppSpacing.md, AppSpacing.lg, 0),
+              child: SegmentedButton<ScanMode>(
+                segments: const [
+                  ButtonSegment(
+                      value: ScanMode.camera,
+                      label: Text('Scan'),
+                      icon: Icon(Icons.photo_camera_outlined)),
+                  ButtonSegment(
+                      value: ScanMode.type,
+                      label: Text('Type it'),
+                      icon: Icon(Icons.keyboard_outlined)),
+                ],
+                selected: {_mode},
+                onSelectionChanged: (s) => _setMode(s.first),
               ),
             ),
+          Expanded(
+            child: _mode == ScanMode.camera
+                ? _cameraPane(theme)
+                : _typePane(),
+          ),
           SafeArea(
             top: false,
             child: Padding(
@@ -113,6 +159,33 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
       ),
     );
   }
+
+  Widget _cameraPane(ThemeData theme) => Column(
+        children: [
+          Expanded(
+            child: ScannerView(onCode: _handleRaw, onError: _onCameraError),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, 0),
+            child: Text(
+              // The v0.2 lesson: with no shutter button, people wait for
+              // one. Say out loud that none is needed.
+              'Hold the barcode in view — it reads on its own. '
+              'Dim light? Try the flash.',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodySmall,
+            ),
+          ),
+        ],
+      );
+
+  Widget _typePane() => const Center(
+        child: Padding(
+          padding: EdgeInsets.all(AppSpacing.xl),
+          child: BarcodeSketch(),
+        ),
+      );
 
   Future<void> _handleRaw(String raw) async {
     // The camera can fire the same code many times — during a lookup AND

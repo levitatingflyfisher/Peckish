@@ -9,7 +9,10 @@ import 'package:http/testing.dart';
 import 'package:peckish/core/providers/core_providers.dart';
 import 'package:peckish/core/storage/app_database.dart';
 import 'package:peckish/features/barcode/data/off_client.dart';
+import 'package:peckish/features/barcode/presentation/barcode_sketch.dart';
+import 'package:peckish/features/barcode/presentation/scan_mode_store.dart';
 import 'package:peckish/features/barcode/presentation/scan_screen.dart';
+import 'package:peckish/features/barcode/presentation/scanner_view.dart';
 import 'package:peckish/shared/theme/app_theme.dart';
 
 // Drift widget-test rules apply — see the canonical comment in
@@ -46,12 +49,17 @@ void main() {
         );
       }));
 
-  Widget host(OffClient offClient) => ProviderScope(
+  // camera:true forces the camera layout on this camera-less VM; the
+  // ScannerView it mounts builds to nothing here, which is exactly what
+  // lets the mode plumbing be tested without hardware.
+  Widget host(OffClient offClient, {bool? camera}) => ProviderScope(
         overrides: [
           appDatabaseProvider.overrideWithValue(db),
           offClientProvider.overrideWithValue(offClient),
         ],
-        child: MaterialApp(theme: AppTheme.light, home: const ScanScreen()),
+        child: MaterialApp(
+            theme: AppTheme.light,
+            home: ScanScreen(debugCameraOverride: camera)),
       );
 
   Future<void> unmount(WidgetTester tester) async {
@@ -142,6 +150,74 @@ void main() {
     await tester.pumpAndSettle();
     expect(requests, 2, reason: 'a fresh scan after dismissal is welcome');
     expect(find.text('Log it'), findsOneWidget);
+    await unmount(tester);
+  });
+
+  testWidgets('camera platforms: toggle + camera pane that reads by itself',
+      (tester) async {
+    await tester.pumpWidget(host(client(), camera: true));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SegmentedButton<ScanMode>), findsOneWidget);
+    expect(find.byType(ScannerView), findsOneWidget);
+    expect(find.textContaining('reads on its own'), findsOneWidget);
+    expect(find.byType(BarcodeSketch), findsNothing);
+    await unmount(tester);
+  });
+
+  testWidgets('"Type it" removes the camera from the tree and shows the '
+      'sketch', (tester) async {
+    await tester.pumpWidget(host(client(), camera: true));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Type it'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ScannerView), findsNothing,
+        reason: 'Type mode must dispose the camera, not hide it');
+    expect(find.byType(BarcodeSketch), findsOneWidget);
+    await unmount(tester);
+  });
+
+  testWidgets('the chosen mode survives leaving and reopening the screen',
+      (tester) async {
+    await tester.pumpWidget(host(client(), camera: true));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Type it'));
+    await tester.pumpAndSettle();
+    await unmount(tester); // the 1s pump also flushes the pref write
+
+    await tester.pumpWidget(host(client(), camera: true));
+    await tester.pumpAndSettle();
+    expect(find.byType(ScannerView), findsNothing);
+    expect(find.byType(BarcodeSketch), findsOneWidget);
+    await unmount(tester);
+  });
+
+  testWidgets('a camera that cannot start falls back to typing, calmly',
+      (tester) async {
+    await tester.pumpWidget(host(client(), camera: true));
+    await tester.pumpAndSettle();
+
+    final view = tester.widget<ScannerView>(find.byType(ScannerView));
+    view.onError!(Exception('CameraAccessDenied'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ScannerView), findsNothing);
+    expect(find.byType(BarcodeSketch), findsOneWidget);
+    expect(find.textContaining("couldn't start"), findsOneWidget);
+    expect(find.textContaining('CameraAccessDenied'), findsNothing,
+        reason: 'a calm line, never raw exception text');
+    await unmount(tester);
+  });
+
+  testWidgets('no camera: no toggle, the sketch teaches the small digits',
+      (tester) async {
+    await tester.pumpWidget(host(client()));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SegmentedButton<ScanMode>), findsNothing);
+    expect(find.byType(BarcodeSketch), findsOneWidget);
     await unmount(tester);
   });
 }
