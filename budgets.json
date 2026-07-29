@@ -1,6 +1,6 @@
 {
-  "main_dart_js_gz_max_bytes": 1091614,
-  "main_dart_js_gz_note": "baseline 1039632 bytes (gzip -c build/web/main.dart.js | wc -c, 2026-07-17) + 5%",
-  "apk_arm64_max_bytes": 23983731,
-  "apk_arm64_note": "2026-07-22 deliberate ratchet DOWN: first real split-per-abi arm64 build = 22841648 bytes (+5%). Replaces the 2026-07-17 universal-APK-derived guess (25771293), which the split measurement proved slack."
+  "main_dart_js_gz_max_bytes": 1153415,
+  "main_dart_js_gz_note": "2026-07-28 deliberate ratchet for v0.3 (Foods screen + persistent regulars + scanner rework): measured 1098491 bytes + 5%. Prior: 1039632 + 5% (2026-07-17).",
+  "apk_arm64_max_bytes": 28698761,
+  "apk_arm64_note": "2026-07-28 deliberate ratchet for v0.3: measured 27332154 bytes (+5%). The jump from the 2026-07-22 baseline (22841648) is the camera + zxing-cpp native libs that barcode scanning added in v0.2 (whose release skipped this re-measure) plus v0.3 itself."
 }

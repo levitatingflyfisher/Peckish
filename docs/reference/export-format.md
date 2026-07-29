@@ -13,6 +13,7 @@
   "recipes":      [ { "id", "title", "servings?", "sourceUrl?", "instructions", "declaredPerServing?", "createdAt", "archived", "ingredients": [...] } ],
   "planEntries":  [ { "id", "day", "slot", "kind", "refId?", "note?" } ],
   "groceryItems": [ { "id", "name", "aisle", "checked", "manual", "sourceRecipeId?", "createdAt" } ],
+  "foodUsages":   [ { "food", "label", "qty", "unitLabel", "grams?", "macros", "useCount", "lastUsedAt", "hidden" } ],
   "targets":      { "kcal?", "proteinG?", "carbG?", "fatG?" }
 }
 ```
@@ -22,5 +23,10 @@
   `{"kind":"quick"}`.
 - Absent sections restore as empty; unknown keys are ignored (additive keys
   never bump `schemaVersion`).
+- `foodUsages` (added in 0.3, additive) is the persistent regulars record.
+  Its identity key is re-derived from `food` + `label` on import, never
+  stored twice. On restore the diary replay re-derives usage first, then
+  these rows overwrite it — counts and `hidden` flags aren't derivable from
+  the ledger.
 - The encrypted `.ohbk` payload is this same document, wrapped by the
   sanctuary envelope (AEAD context `peckish-backup/v1`).
