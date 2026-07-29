@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_zxing/flutter_zxing.dart';
+import 'package:peckish/features/barcode/presentation/scanner_tuning.dart';
 
 /// The camera scanner (FLOSS zxing-cpp via FFI — no Google ML Kit blob).
 /// Only Android/iOS have camera support in flutter_zxing; everywhere else
@@ -18,10 +19,20 @@ class ScannerView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!available) return const SizedBox.shrink();
+    // All decode settings live in ScannerTuning (tested; this pass-through
+    // cannot be, since ReaderWidget needs a real camera to build).
     return ReaderWidget(
-      codeFormat: Format.any,
-      showGallery: false,
-      tryInverted: true,
+      codeFormat: ScannerTuning.codeFormat,
+      tryHarder: ScannerTuning.tryHarder,
+      tryInverted: ScannerTuning.tryInverted,
+      tryRotate: ScannerTuning.tryRotate,
+      tryDownscale: ScannerTuning.tryDownscale,
+      scanDelay: ScannerTuning.scanDelay,
+      scanDelaySuccess: ScannerTuning.scanDelaySuccess,
+      cropPercent: ScannerTuning.cropPercent,
+      showGallery: ScannerTuning.showGallery,
+      showFlashlight: ScannerTuning.showFlashlight,
+      showToggleCamera: ScannerTuning.showToggleCamera,
       onScan: (code) {
         final text = code.text;
         if (code.isValid && text != null && text.isNotEmpty) onCode(text);

@@ -22,7 +22,8 @@ class ScanScreen extends ConsumerStatefulWidget {
 
 class _ScanScreenState extends ConsumerState<ScanScreen> {
   final _controller = TextEditingController();
-  bool _busy = false;
+  bool _busy = false; // lookup in flight → spinner + disabled field
+  bool _sheetOpen = false; // confirm sheet up → repeat scans are swallowed
   String? _message;
 
   @override
@@ -80,7 +81,7 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
                     ),
                   TextField(
                     controller: _controller,
-                    enabled: !_busy,
+                    enabled: !_busy && !_sheetOpen,
                     keyboardType: TextInputType.number,
                     decoration: InputDecoration(
                       labelText: 'Barcode numbers',
@@ -114,7 +115,9 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
   }
 
   Future<void> _handleRaw(String raw) async {
-    if (_busy) return; // the camera can fire the same code many times
+    // The camera can fire the same code many times — during a lookup AND
+    // under an open sheet.
+    if (_busy || _sheetOpen) return;
     final code = BarcodeCode.tryParse(raw);
     if (code == null) {
       setState(() => _message =
@@ -130,8 +133,16 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
       final product =
           await ref.read(offClientProvider).fetchProduct(code);
       if (!mounted) return;
-      setState(() => _busy = false);
+      // Latch held across the sheet's whole lifetime: the camera keeps
+      // decoding underneath and must not stack a second sheet. Kept apart
+      // from _busy so no spinner runs under the open sheet.
+      setState(() {
+        _busy = false;
+        _sheetOpen = true;
+      });
       await showProductSheet(context, product);
+      if (!mounted) return;
+      setState(() => _sheetOpen = false);
     } on OffProductNotFound {
       if (!mounted) return;
       setState(() {

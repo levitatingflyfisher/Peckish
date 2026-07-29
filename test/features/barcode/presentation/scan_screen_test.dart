@@ -98,4 +98,50 @@ void main() {
     expect(find.byType(SnackBar), findsNothing);
     await unmount(tester);
   });
+
+  // The camera keeps decoding under an open sheet; a repeat of the same code
+  // must be swallowed, not stacked as a second sheet + second request.
+  // Invoking the field's onSubmitted directly is the camera's exact path.
+  void fireLikeCamera(WidgetTester tester, String code) {
+    final field = tester.widget<TextField>(find.byWidgetPredicate((w) =>
+        w is TextField && w.decoration?.labelText == 'Barcode numbers'));
+    field.onSubmitted!(code);
+  }
+
+  testWidgets('a second scan while the sheet is open is ignored',
+      (tester) async {
+    await tester.pumpWidget(host(client()));
+    await tester.pumpAndSettle();
+
+    await submit(tester, '3017620422003');
+    expect(requests, 1);
+    expect(find.text('Log it'), findsOneWidget);
+
+    fireLikeCamera(tester, '3017620422003');
+    await tester.pumpAndSettle();
+    expect(requests, 1, reason: 'the latch must hold while the sheet is up');
+    expect(find.text('Log it'), findsOneWidget,
+        reason: 'no stacked second sheet');
+    await unmount(tester);
+  });
+
+  testWidgets('the latch releases once the sheet is dismissed',
+      (tester) async {
+    await tester.pumpWidget(host(client()));
+    await tester.pumpAndSettle();
+
+    await submit(tester, '3017620422003');
+    expect(requests, 1);
+
+    // Swipe-away (tap the barrier) without logging.
+    await tester.tapAt(const Offset(10, 10));
+    await tester.pumpAndSettle();
+    expect(find.text('Log it'), findsNothing);
+
+    fireLikeCamera(tester, '3017620422003');
+    await tester.pumpAndSettle();
+    expect(requests, 2, reason: 'a fresh scan after dismissal is welcome');
+    expect(find.text('Log it'), findsOneWidget);
+    await unmount(tester);
+  });
 }
