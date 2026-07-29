@@ -72,9 +72,11 @@ class _IdleSheet extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final meals = ref.watch(_mealsProvider);
     // The AI tile only exists once a household configured a brain — the
-    // shipped default has no key, no endpoint, and no tile.
+    // shipped default has no key, no endpoint, and no tile. valueOrNull, not
+    // value: a failed secure-storage read means "no brain", never a crashed
+    // sheet (AsyncError.value rethrows).
     final aiReady =
-        ref.watch(aiConfigProvider).value?.configured ?? false;
+        ref.watch(aiConfigProvider).valueOrNull?.configured ?? false;
     return ListView(
       controller: scroll,
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
@@ -283,63 +285,126 @@ class _PortionSheet extends ConsumerWidget {
 }
 
 Future<void> _showQuickAdd(BuildContext context, WidgetRef ref) async {
-  final label = TextEditingController();
-  final kcal = TextEditingController();
-  final protein = TextEditingController();
-  await showDialog<void>(
+  // Pops with true only when a line was logged — Cancel returns to the +
+  // sheet instead of closing it (the sheet is where you'd try again).
+  final logged = await showDialog<bool>(
     context: context,
-    builder: (dialogContext) => AlertDialog(
+    builder: (_) => const _QuickAddDialog(),
+  );
+  if (logged == true && context.mounted) Navigator.of(context).pop();
+}
+
+/// Quick add: a name plus any of the four numbers you know — every macro is
+/// enterable, none is required. "Remember this food" turns the one-off line
+/// into a custom food so search (and My Foods) finds it next time.
+class _QuickAddDialog extends ConsumerStatefulWidget {
+  const _QuickAddDialog();
+
+  @override
+  ConsumerState<_QuickAddDialog> createState() => _QuickAddDialogState();
+}
+
+class _QuickAddDialogState extends ConsumerState<_QuickAddDialog> {
+  final _label = TextEditingController();
+  final _kcal = TextEditingController();
+  final _protein = TextEditingController();
+  final _carbs = TextEditingController();
+  final _fat = TextEditingController();
+  bool _remember = false;
+
+  @override
+  void dispose() {
+    _label.dispose();
+    _kcal.dispose();
+    _protein.dispose();
+    _carbs.dispose();
+    _fat.dispose();
+    super.dispose();
+  }
+
+  static double? _num(TextEditingController c) =>
+      double.tryParse(c.text.replaceAll(',', '.'));
+
+  TextField _numField(TextEditingController c, String label) => TextField(
+        controller: c,
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        decoration: InputDecoration(labelText: label),
+      );
+
+  Future<void> _log() async {
+    final name = _label.text.trim();
+    if (name.isEmpty) return;
+    final now = DateTime.now();
+    final macros = MacroSet(
+      kcal: _num(_kcal),
+      proteinG: _num(_protein),
+      carbG: _num(_carbs),
+      fatG: _num(_fat),
+    );
+
+    var food = const FoodRef.quick();
+    if (_remember) {
+      final id = const Uuid().v4();
+      await ref.read(customFoodRepositoryProvider).create(CustomFood(
+            id: id,
+            name: name,
+            servingLabel: 'serving',
+            perServing: macros,
+            createdAt: now,
+          ));
+      food = FoodRef.custom(id);
+    }
+
+    await ref.read(diaryRepositoryProvider).log(DiaryEntry(
+          id: const Uuid().v4(),
+          day: DiaryEntry.dayOf(now),
+          at: now,
+          food: food,
+          label: name,
+          qty: 1,
+          unitLabel: 'serving',
+          grams: null,
+          macros: macros,
+          source: EntrySource.manual,
+          createdAt: now,
+        ));
+    if (mounted) Navigator.of(context).pop(true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
       title: const Text('Quick add'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextField(
-              controller: label,
-              decoration: const InputDecoration(labelText: 'What was it?')),
-          TextField(
-              controller: kcal,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'kcal')),
-          TextField(
-              controller: protein,
-              keyboardType: TextInputType.number,
-              decoration:
-                  const InputDecoration(labelText: 'Protein g (optional)')),
-        ],
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+                controller: _label,
+                decoration:
+                    const InputDecoration(labelText: 'What was it?')),
+            _numField(_kcal, 'kcal'),
+            _numField(_protein, 'Protein g'),
+            _numField(_carbs, 'Carbs g'),
+            _numField(_fat, 'Fat g'),
+            const SizedBox(height: AppSpacing.sm),
+            CheckboxListTile(
+              value: _remember,
+              onChanged: (v) => setState(() => _remember = v ?? false),
+              contentPadding: EdgeInsets.zero,
+              controlAffinity: ListTileControlAffinity.leading,
+              title: const Text('Remember this food'),
+              subtitle: const Text('Shows up in search next time'),
+            ),
+          ],
+        ),
       ),
       actions: [
         TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
+            onPressed: () => Navigator.of(context).pop(false),
             child: const Text('Cancel')),
-        FilledButton(
-          onPressed: () async {
-            final name = label.text.trim();
-            if (name.isEmpty) return;
-            final now = DateTime.now();
-            await ref.read(diaryRepositoryProvider).log(DiaryEntry(
-                  id: const Uuid().v4(),
-                  day: DiaryEntry.dayOf(now),
-                  at: now,
-                  food: const FoodRef.quick(),
-                  label: name,
-                  qty: 1,
-                  unitLabel: 'serving',
-                  grams: null,
-                  macros: MacroSet(
-                    kcal: double.tryParse(kcal.text),
-                    proteinG: double.tryParse(protein.text),
-                  ),
-                  source: EntrySource.manual,
-                  createdAt: now,
-                ));
-            if (dialogContext.mounted) {
-              Navigator.of(dialogContext).pop();
-            }
-          },
-          child: const Text('Log it'),
-        ),
+        FilledButton(onPressed: _log, child: const Text('Log it')),
       ],
-    ),
-  );
-  if (context.mounted) Navigator.of(context).pop();
+    );
+  }
 }
