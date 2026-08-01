@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.10.1 — the camera button is legible again
+
+- **"Snap your plate" was washed out.** Its camera glyph painted in the
+  accent colour against the button's own tinted fill, because the shared
+  design package sets an app-wide icon colour and Flutter resolves that
+  above a filled icon button's own default. The glyph now uses the
+  contrast colour the button was always meant to have. Fixed at the
+  source — the design package ships `OhIconButton` for these variants, and
+  a fleet conformance check (C8) now fails this app's suite if a bare
+  filled icon button comes back.
+
 ## 0.10.0 — the app finally does what it already promised
 
 - **Nothing you log or delete is final anymore.** Tap a regular by mistake

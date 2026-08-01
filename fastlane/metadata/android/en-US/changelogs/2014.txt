@@ -1,0 +1,3 @@
+Peckish 0.10.1 — the camera button on the guess sheet is legible again.
+
+• "Snap your plate" was painting its camera glyph in the accent colour against its own tinted fill, which left it washed out and hard to see. It now uses the contrast colour the button was always meant to have.
