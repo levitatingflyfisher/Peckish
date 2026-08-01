@@ -82,8 +82,7 @@ void main() {
 
   test(
       'a present final file counts as downloaded regardless of the declared '
-      'approximate size (the Reckon scar: never delete real models)',
-      () async {
+      'approximate size (the Reckon scar: never delete real models)', () async {
     await writeBytes(finalFile(), 2 * 1024 * 1024);
     expect(await service.isDownloaded(spec), isTrue);
     expect(finalFile().existsSync(), isTrue);
@@ -93,6 +92,16 @@ void main() {
     await writeBytes(finalFile(), 1024);
     expect(await service.isDownloaded(spec), isFalse);
     expect(finalFile().existsSync(), isFalse);
+  });
+
+  test('hasPartial reports a resumable half-download honestly', () async {
+    expect(await service.hasPartial(spec), isFalse);
+    final part = File('${tempDir.path}/${spec.fileName}.part');
+    await writeBytes(part, 1024 * 1024);
+    expect(await service.hasPartial(spec), isTrue);
+    await writeBytes(finalFile(), 2 * 1024 * 1024);
+    expect(await service.hasPartial(spec), isFalse,
+        reason: 'a finished model outranks its leftover .part');
   });
 
   test('delete removes both the final file and any leftover .part', () async {

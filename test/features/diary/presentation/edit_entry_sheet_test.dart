@@ -24,8 +24,7 @@ void main() {
 
   setUp(() => db = AppDatabase(NativeDatabase.memory()));
 
-  Future<void> seed(WidgetTester tester, {String? day}) =>
-      tester.runAsync(() {
+  Future<void> seed(WidgetTester tester, {String? day}) => tester.runAsync(() {
         final now = DateTime.now();
         final d = day ?? DiaryEntry.dayOf(now);
         final at = DateTime.parse('${d}T08:30:00');
@@ -56,8 +55,7 @@ void main() {
 
   Future<void> enterByLabel(
       WidgetTester tester, String label, String value) async {
-    await tester.enterText(
-        find.widgetWithText(TextField, label).last, value);
+    await tester.enterText(find.widgetWithText(TextField, label).last, value);
     await tester.pump();
   }
 
@@ -69,15 +67,13 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('tapping a line opens the sheet on its numbers',
-      (tester) async {
+  testWidgets('tapping a line opens the sheet on its numbers', (tester) async {
     await seed(tester);
     await tester.pumpWidget(todayHost());
     await tester.pumpAndSettle();
 
     await tester.tap(find.descendant(
-        of: find.byType(EntryTile),
-        matching: find.text('Egg burrito')));
+        of: find.byType(EntryTile), matching: find.text('Egg burrito')));
     await tester.pumpAndSettle();
 
     expect(find.text('Fix this line'), findsOneWidget);
@@ -93,8 +89,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(find.descendant(
-        of: find.byType(EntryTile),
-        matching: find.text('Egg burrito')));
+        of: find.byType(EntryTile), matching: find.text('Egg burrito')));
     await tester.pumpAndSettle();
     await enterByLabel(tester, 'Qty', '2');
 
@@ -114,8 +109,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(find.descendant(
-        of: find.byType(EntryTile),
-        matching: find.text('Egg burrito')));
+        of: find.byType(EntryTile), matching: find.text('Egg burrito')));
     await tester.pumpAndSettle();
     await enterByLabel(tester, 'kcal', '300');
     await save(tester);
@@ -124,15 +118,13 @@ void main() {
     await unmount(tester);
   });
 
-  testWidgets('Cancel walks away without touching the ledger',
-      (tester) async {
+  testWidgets('Cancel walks away without touching the ledger', (tester) async {
     await seed(tester);
     await tester.pumpWidget(todayHost());
     await tester.pumpAndSettle();
 
     await tester.tap(find.descendant(
-        of: find.byType(EntryTile),
-        matching: find.text('Egg burrito')));
+        of: find.byType(EntryTile), matching: find.text('Egg burrito')));
     await tester.pumpAndSettle();
     await enterByLabel(tester, 'kcal', '999');
     await tester.tap(find.text('Cancel'));
@@ -140,6 +132,72 @@ void main() {
 
     expect(find.text('249 kcal'), findsWidgets);
     expect(find.text('999 kcal'), findsNothing);
+    await unmount(tester);
+  });
+
+  testWidgets(
+      'Delete in the edit sheet asks, then removes the line with an Undo',
+      (tester) async {
+    // Swipe was the only, undiscoverable way to delete a line — the sheet
+    // you land on by TAPPING a line now offers the same forgiving path.
+    await seed(tester);
+    await tester.pumpWidget(todayHost());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.descendant(
+        of: find.byType(EntryTile), matching: find.text('Egg burrito')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Delete'));
+    await tester.pumpAndSettle();
+    expect(find.text('Delete Egg burrito?'), findsOneWidget,
+        reason: 'the same confirm the swipe path uses — this is not a '
+            'second, weaker delete');
+
+    await tester.tap(find.text('Delete').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Fix this line'), findsNothing,
+        reason: 'confirming closes the edit sheet too');
+    expect(
+      find.descendant(
+          of: find.byType(EntryTile), matching: find.text('Egg burrito')),
+      findsNothing,
+    );
+    expect(find.text('Removed Egg burrito'), findsOneWidget);
+
+    await tester.tap(find.text('Undo'));
+    await tester.pumpAndSettle();
+    expect(
+      find.descendant(
+          of: find.byType(EntryTile), matching: find.text('Egg burrito')),
+      findsOneWidget,
+      reason: 'Undo re-seats the exact line that was removed',
+    );
+    await unmount(tester);
+  });
+
+  testWidgets('Cancelling the delete confirm leaves the edit sheet open',
+      (tester) async {
+    await seed(tester);
+    await tester.pumpWidget(todayHost());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.descendant(
+        of: find.byType(EntryTile), matching: find.text('Egg burrito')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Delete'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Cancel').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Fix this line'), findsOneWidget,
+        reason: 'backing out of the confirm returns to the edit sheet');
+    expect(
+      find.descendant(
+          of: find.byType(EntryTile), matching: find.text('Egg burrito')),
+      findsOneWidget,
+    );
     await unmount(tester);
   });
 
@@ -157,8 +215,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(find.descendant(
-        of: find.byType(EntryTile),
-        matching: find.text('Egg burrito')));
+        of: find.byType(EntryTile), matching: find.text('Egg burrito')));
     await tester.pumpAndSettle();
     expect(find.text('Fix this line'), findsOneWidget);
     await unmount(tester);

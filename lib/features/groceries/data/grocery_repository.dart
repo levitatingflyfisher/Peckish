@@ -48,6 +48,27 @@ class GroceryRepository {
         ));
   }
 
+  /// Re-insert a whole item verbatim (the backup-restore path): every field
+  /// survives as exported, and the write is stamped like any other so the
+  /// restored row can travel to peers instead of only ever filling holes.
+  Future<void> upsert(GroceryItem item) async {
+    final s = await _clock.stamp();
+    await _db.into(_db.groceryItems).insertOnConflictUpdate(
+          GroceryItemsCompanion(
+            id: Value(item.id),
+            name: Value(item.name),
+            aisle: Value(GroceryAisleDb.values[item.aisle.index]),
+            checked: Value(item.checked),
+            manual: Value(item.manual),
+            sourceRecipeId: Value(item.sourceRecipeId),
+            createdAt: Value(item.createdAt),
+            hlc: Value(s.hlc),
+            nodeId: Value(s.nodeId),
+            isDeleted: const Value(false),
+          ),
+        );
+  }
+
   Future<void> setChecked(String id, {required bool checked}) async {
     final s = await _clock.stamp();
     await (_db.update(_db.groceryItems)..where((g) => g.id.equals(id)))
@@ -90,9 +111,8 @@ class GroceryRepository {
     return rows.map(_toDomain).toList();
   }
 
-  Stream<List<GroceryItem>> watchAll() => (_db.select(_db.groceryItems))
-      .watch()
-      .asyncMap((_) => getAll());
+  Stream<List<GroceryItem>> watchAll() =>
+      (_db.select(_db.groceryItems)).watch().asyncMap((_) => getAll());
 
   /// Rebuild the generated portion of the list from the recipes planned on
   /// [days]. Identical ingredient lines across recipes aggregate into one
@@ -141,8 +161,7 @@ class GroceryRepository {
         final norm = entry.key;
         final id = derivedId(norm);
         wantedIds.add(id);
-        if (liveCheckedNorms.contains(norm) ||
-            liveManualNorms.contains(norm)) {
+        if (liveCheckedNorms.contains(norm) || liveManualNorms.contains(norm)) {
           continue;
         }
         final name = entry.value > 1

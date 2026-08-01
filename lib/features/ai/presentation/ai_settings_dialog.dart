@@ -3,9 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:peckish/features/ai/data/ai_config.dart';
 import 'package:peckish/features/ai/on_device/local_brain_factory.dart';
 import 'package:peckish/features/ai/on_device/model_spec.dart';
+import 'package:peckish/features/ai/stove/stove_brain_factory.dart';
 import 'package:peckish/features/ai/presentation/guess_sheet.dart';
 import 'package:peckish/features/ai/presentation/local_models_section.dart';
 import 'package:peckish/shared/theme/app_spacing.dart';
+import 'package:peckish/shared/widgets/input_modal.dart';
 
 /// Configure (or turn off) the guesstimate brain. Saving a key or an
 /// endpoint IS the opt-in; Off deletes the stored key. The copy is the
@@ -14,8 +16,8 @@ import 'package:peckish/shared/theme/app_spacing.dart';
 Future<void> showAiSettingsDialog(BuildContext context, WidgetRef ref) async {
   final current = await ref.read(aiConfigProvider.future);
   if (!context.mounted) return;
-  await showDialog<void>(
-    context: context,
+  await showInputDialog<void>(
+    context,
     builder: (_) => _AiSettingsDialog(current: current),
   );
 }
@@ -34,6 +36,15 @@ class _AiSettingsDialogState extends ConsumerState<_AiSettingsDialog> {
   late final _key = TextEditingController(text: widget.current.anthropicKey);
   late final _url = TextEditingController(text: widget.current.baseUrl);
   late final _model = TextEditingController(text: widget.current.model);
+  late final _stoveHost = TextEditingController(text: widget.current.stoveHost);
+  late final _stovePort =
+      TextEditingController(text: widget.current.stovePort?.toString());
+  late final _stovePhrase =
+      TextEditingController(text: widget.current.stovePhrase);
+
+  /// A calm word about the phrase, shown under the stove fields; null when
+  /// there is nothing to say.
+  String? _stovePhraseError;
 
   /// The chosen on-device model — rides the config's model slot on save.
   late String _localModelId = widget.current.backend == AiBackend.onDevice
@@ -45,6 +56,9 @@ class _AiSettingsDialogState extends ConsumerState<_AiSettingsDialog> {
     _key.dispose();
     _url.dispose();
     _model.dispose();
+    _stoveHost.dispose();
+    _stovePort.dispose();
+    _stovePhrase.dispose();
     super.dispose();
   }
 
@@ -99,20 +113,65 @@ class _AiSettingsDialogState extends ConsumerState<_AiSettingsDialog> {
                     ),
                     const SizedBox(height: AppSpacing.sm),
                   ],
+                  if (stoveSupported) ...[
+                    const RadioListTile<AiBackend>(
+                      value: AiBackend.stove,
+                      contentPadding: EdgeInsets.zero,
+                      title: Text('Household stove'),
+                      subtitle:
+                          Text('A home server you own — asks travel encrypted '
+                              'on your own Wi-Fi'),
+                    ),
+                    if (_backend == AiBackend.stove) ...[
+                      TextField(
+                        controller: _stoveHost,
+                        decoration: const InputDecoration(
+                          labelText: 'Stove address',
+                          hintText: '192.168.1.20',
+                        ),
+                      ),
+                      TextField(
+                        controller: _stovePort,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Port',
+                          hintText: '${AiConfig.defaultStovePort}',
+                        ),
+                      ),
+                      TextField(
+                        controller: _stovePhrase,
+                        autocorrect: false,
+                        enableSuggestions: false,
+                        decoration: InputDecoration(
+                          labelText: 'Household phrase',
+                          hintText: 'the twelve words',
+                          errorText: _stovePhraseError,
+                          errorMaxLines: 3,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      Text(
+                        'The same household phrase you use for backups '
+                        'works here — the stove only ever learns its own '
+                        'key.',
+                        style: theme.textTheme.bodySmall,
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                    ],
+                  ],
                   if (onDeviceLlmSupported) ...[
                     const RadioListTile<AiBackend>(
                       value: AiBackend.onDevice,
                       contentPadding: EdgeInsets.zero,
                       title: Text('On this phone'),
-                      subtitle: Text(
-                          'A small model, downloaded once — nothing ever '
-                          'leaves the device'),
+                      subtitle:
+                          Text('A small model, downloaded once — nothing ever '
+                              'leaves the device'),
                     ),
                     if (_backend == AiBackend.onDevice)
                       LocalModelsSection(
                         selectedId: _localModelId,
-                        onSelect: (id) =>
-                            setState(() => _localModelId = id),
+                        onSelect: (id) => setState(() => _localModelId = id),
                       ),
                   ],
                   const RadioListTile<AiBackend>(
@@ -150,6 +209,18 @@ class _AiSettingsDialogState extends ConsumerState<_AiSettingsDialog> {
   }
 
   Future<void> _save() async {
+    // Words the way people type them; BIP39 is lowercase single-spaced.
+    final phrase =
+        _stovePhrase.text.trim().toLowerCase().split(RegExp(r'\s+')).join(' ');
+    if (_backend == AiBackend.stove && phrase.isNotEmpty) {
+      // The same derivation the ask path uses; a typo must be a calm line
+      // here, never a mis-keyed save that the stove refuses forever.
+      final problem = await stovePhraseProblem(phrase);
+      if (problem != null) {
+        if (mounted) setState(() => _stovePhraseError = problem);
+        return;
+      }
+    }
     await ref.read(aiConfigRepositoryProvider).save(AiConfig(
           backend: _backend,
           anthropicKey: _key.text.trim(),
@@ -157,6 +228,9 @@ class _AiSettingsDialogState extends ConsumerState<_AiSettingsDialog> {
           model: _backend == AiBackend.onDevice
               ? _localModelId
               : _model.text.trim(),
+          stoveHost: _stoveHost.text.trim(),
+          stovePort: int.tryParse(_stovePort.text.trim()),
+          stovePhrase: phrase,
         ));
     ref.invalidate(aiConfigProvider);
     if (mounted) Navigator.of(context).pop();

@@ -33,8 +33,8 @@ class ReplayChallengeStore {
     this.maxOutstanding = 256,
     Random? random,
     DateTime Function()? clock,
-  }) : _random = random ?? Random.secure(),
-       _clock = clock ?? DateTime.now;
+  })  : _random = random ?? Random.secure(),
+        _clock = clock ?? DateTime.now;
 
   /// Issues a fresh 16-byte challenge, records it, and returns it base64-encoded
   /// (the token carried in the status response and echoed in the import header).

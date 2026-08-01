@@ -2,27 +2,43 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:peckish/core/providers/core_providers.dart';
 import 'package:peckish/features/barcode/domain/off_product.dart';
+import 'package:peckish/features/diary/domain/day_stamp.dart';
 import 'package:peckish/features/diary/domain/diary_entry.dart';
+import 'package:peckish/features/diary/presentation/day_format.dart';
 import 'package:peckish/features/food/domain/custom_food.dart';
+import 'package:peckish/shared/theme/app_colors.dart';
 import 'package:peckish/shared/theme/app_spacing.dart';
+import 'package:peckish/shared/widgets/input_modal.dart';
 import 'package:uuid/uuid.dart';
 
 /// Confirm-before-commit for a scanned product: nothing touches the ledger
 /// until the user confirms the grams. What lands is a snapshot scaled to
 /// that amount, provenance `scan`. Resolves true when a line was logged,
 /// null/false on dismiss — the scan screen pops itself on a log.
-Future<bool?> showProductSheet(BuildContext context, OffProduct product) =>
-    showModalBottomSheet<bool>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (_) => _ProductSheet(product: product),
+///
+/// [sourceNote] names where the answer came from ("From your phone — USDA
+/// database" / "From openfoodfacts.org") — the per-answer face of
+/// ADR-0010's per-source crediting.
+///
+/// [day] is the past day this scan feeds (null = today). A tin still in the
+/// recycling is the most reliable evidence there is about a day you forgot
+/// to log, so a scan belongs on any day — the sheet just says which one.
+Future<bool?> showProductSheet(BuildContext context, OffProduct product,
+        {String? sourceNote, String? day}) =>
+    showInputSheet<bool>(
+      context,
+      builder: (_) =>
+          _ProductSheet(product: product, sourceNote: sourceNote, day: day),
     );
 
 class _ProductSheet extends ConsumerStatefulWidget {
-  const _ProductSheet({required this.product});
+  const _ProductSheet({required this.product, this.sourceNote, this.day});
 
   final OffProduct product;
+  final String? sourceNote;
+
+  /// Null = today; otherwise the past day this scan feeds.
+  final String? day;
 
   @override
   ConsumerState<_ProductSheet> createState() => _ProductSheetState();
@@ -65,7 +81,27 @@ class _ProductSheetState extends ConsumerState<_ProductSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(product.displayName, style: theme.textTheme.titleLarge),
+          Row(
+            children: [
+              Expanded(
+                child: Text(product.displayName,
+                    style: theme.textTheme.titleLarge),
+              ),
+              const SheetCloseButton(),
+            ],
+          ),
+          if (widget.day != null)
+            Padding(
+              padding: const EdgeInsets.only(top: AppSpacing.xs),
+              child: Text('Adding to ${prettyDay(widget.day!)}',
+                  style: theme.textTheme.titleMedium
+                      ?.copyWith(color: AppColors.paprika)),
+            ),
+          if (widget.sourceNote != null)
+            Padding(
+              padding: const EdgeInsets.only(top: AppSpacing.xs),
+              child: Text(widget.sourceNote!, style: theme.textTheme.bodySmall),
+            ),
           if (product.servingLabel != null)
             Padding(
               padding: const EdgeInsets.only(top: AppSpacing.xs),
@@ -76,8 +112,7 @@ class _ProductSheetState extends ConsumerState<_ProductSheet> {
           TextField(
             controller: _grams,
             autofocus: true,
-            keyboardType:
-                const TextInputType.numberWithOptions(decimal: true),
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
             decoration: const InputDecoration(
               labelText: 'Amount',
               suffixText: 'g',
@@ -87,7 +122,7 @@ class _ProductSheetState extends ConsumerState<_ProductSheet> {
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
-            '≈ ${_slot(scaled.kcal, 'kcal', round: true)} · '
+            'About ${_slot(scaled.kcal, 'kcal', round: true)} · '
             'protein ${_slot(scaled.proteinG, 'g')} · '
             'carbs ${_slot(scaled.carbG, 'g')} · '
             'fat ${_slot(scaled.fatG, 'g')}',
@@ -99,7 +134,7 @@ class _ProductSheetState extends ConsumerState<_ProductSheet> {
             contentPadding: EdgeInsets.zero,
             controlAffinity: ListTileControlAffinity.leading,
             title: const Text('Save to My Foods'),
-            subtitle: const Text('So next time is one tap'),
+            subtitle: const Text('Scanning it again logs it straight away'),
           ),
           const SizedBox(height: AppSpacing.sm),
           SizedBox(
@@ -129,15 +164,21 @@ class _ProductSheetState extends ConsumerState<_ProductSheet> {
             servingLabel: product.servingLabel ?? '100 g',
             perServing: product.per100g.forGrams(servingGrams).clamped(),
             createdAt: DateTime.now(),
+            // The code comes home with the food, so scanning this tin
+            // again answers off your own shelf instead of asking the
+            // network a question it already answered.
+            barcode: product.barcode,
           ));
       food = FoodRef.custom(id);
     }
 
-    final now = DateTime.now();
+    // The CustomFood above was created NOW (that's when you saved it); only
+    // the diary line moves to the day being fed.
+    final stamp = dayStamp(widget.day);
     await ref.read(diaryRepositoryProvider).log(DiaryEntry(
           id: const Uuid().v4(),
-          day: DiaryEntry.dayOf(now),
-          at: now,
+          day: stamp.day,
+          at: stamp.at,
           food: food,
           label: product.displayName,
           qty: grams,
@@ -145,7 +186,7 @@ class _ProductSheetState extends ConsumerState<_ProductSheet> {
           grams: grams,
           macros: macros,
           source: EntrySource.scan,
-          createdAt: now,
+          createdAt: DateTime.now(),
         ));
 
     if (context.mounted) Navigator.of(context).pop(true);

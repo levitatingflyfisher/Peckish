@@ -88,8 +88,8 @@ void main() {
   test('checked items survive regen and are not re-added as duplicates',
       () async {
     await repo.regenerateFromPlan(['2026-07-27']);
-    final onion = (await repo.getAll())
-        .firstWhere((i) => i.name.contains('onion'));
+    final onion =
+        (await repo.getAll()).firstWhere((i) => i.name.contains('onion'));
     await repo.setChecked(onion.id, checked: true);
     await repo.regenerateFromPlan(['2026-07-27']);
     final onions = (await repo.getAll())

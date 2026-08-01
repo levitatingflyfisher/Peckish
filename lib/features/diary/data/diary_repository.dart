@@ -31,6 +31,13 @@ class DiaryRepository {
   Future<void> delete(String id) =>
       (_db.delete(_db.diaryEntries)..where((e) => e.id.equals(id))).go();
 
+  /// Undo for a swipe-delete: re-seat the exact row EntryTile captured
+  /// before deleting it — same id/day/at/macros/source, a plain re-insert,
+  /// not a soft-delete resurrection. Never touches the usage table:
+  /// undoing a delete is not a fresh use of the food (see [log]).
+  Future<void> restore(DiaryEntry entry) =>
+      _db.into(_db.diaryEntries).insert(_toRow(entry));
+
   Future<List<DiaryEntry>> entriesForDay(String day) async =>
       (await (_dayQuery(day)).get()).map(_toDomain).toList();
 

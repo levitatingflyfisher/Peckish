@@ -3,11 +3,6 @@ import 'package:peckish/shared/extensions/datetime_ext.dart';
 
 void main() {
   group('DateTimeExt', () {
-    test('toDateDay returns YYYY-MM-DD', () {
-      final dt = DateTime(2026, 3, 28, 14, 30);
-      expect(dt.toDateDay(), '2026-03-28');
-    });
-
     test('toYearMonth returns YYYY-MM', () {
       final dt = DateTime(2026, 3, 28);
       expect(dt.toYearMonth(), '2026-03');
@@ -53,7 +48,8 @@ void main() {
     });
 
     test('same calendar day (any times) is zero', () {
-      expect(daysBetweenDates(DateTime(2026, 3, 8, 1), DateTime(2026, 3, 8, 23)),
+      expect(
+          daysBetweenDates(DateTime(2026, 3, 8, 1), DateTime(2026, 3, 8, 23)),
           0);
     });
   });

@@ -4,11 +4,51 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:peckish/core/providers/core_providers.dart';
 import 'package:peckish/core/storage/app_database.dart';
+import 'package:peckish/features/diary/data/diary_repository.dart';
+import 'package:peckish/features/diary/domain/diary_entry.dart';
 import 'package:peckish/features/diary/presentation/today_screen.dart';
+import 'package:peckish/features/food/data/custom_food_repository.dart';
+import 'package:peckish/features/food/data/usda_food_repository.dart';
+import 'package:peckish/features/food/domain/custom_food.dart';
+import 'package:peckish/features/food/domain/macro_set.dart';
+import 'package:peckish/features/food/domain/usda_food.dart';
 import 'package:peckish/shared/theme/app_theme.dart';
 
 // See groceries_screen_test.dart for the three drift widget-test rules
 // (runAsync-seed before pump, UI-state assertions only, unmount not close).
+
+/// The + sheet debounces its search (~250ms of quiet before the query
+/// runs); tests that type into the search field pump past it before
+/// expecting results.
+const searchDebounce = Duration(milliseconds: 300);
+
+/// Counts real search-query round trips, so the debounce test can prove
+/// that fast typing costs ONE query, not one per keystroke.
+class _CountingUsdaRepository extends UsdaFoodRepository {
+  _CountingUsdaRepository(super.db);
+
+  int searchCalls = 0;
+
+  @override
+  Future<List<UsdaFood>> search(String query, {int limit = 40}) {
+    searchCalls += 1;
+    return super.search(query, limit: limit);
+  }
+}
+
+/// Counts custom-foods table reads, so the cache test can prove the table
+/// is read once per sheet open — not once per keystroke.
+class _CountingCustomRepository extends CustomFoodRepository {
+  _CountingCustomRepository(super.db);
+
+  int getAllCalls = 0;
+
+  @override
+  Future<List<CustomFood>> getAll({bool includeArchived = false}) {
+    getAllCalls += 1;
+    return super.getAll(includeArchived: includeArchived);
+  }
+}
 
 Widget host(AppDatabase db) => ProviderScope(
       overrides: [
@@ -25,7 +65,16 @@ Future<void> unmount(WidgetTester tester) async {
   await tester.pump(const Duration(seconds: 1));
 }
 
-/// FAB → + sheet → Quick add dialog.
+/// + → the speed-dial → Find food, the sheet's only door since v0.10 put
+/// every other route on the dial itself.
+Future<void> openSheet(WidgetTester tester) async {
+  await tester.tap(find.byType(FloatingActionButton));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Find food'));
+  await tester.pumpAndSettle();
+}
+
+/// + → the speed-dial → Quick add, opened directly (no sheet underneath).
 Future<void> openQuickAdd(WidgetTester tester) async {
   await tester.tap(find.byType(FloatingActionButton));
   await tester.pumpAndSettle();
@@ -35,14 +84,66 @@ Future<void> openQuickAdd(WidgetTester tester) async {
 
 Future<void> enterByLabel(
     WidgetTester tester, String label, String value) async {
-  await tester.enterText(
-      find.widgetWithText(TextField, label).last, value);
+  await tester.enterText(find.widgetWithText(TextField, label).last, value);
 }
 
 void main() {
   late AppDatabase db;
 
   setUp(() => db = AppDatabase(NativeDatabase.memory()));
+
+  group('the sheet opens ready to tap, not ready to type', () {
+    // The v0.9 phone finding: the sheet assumed you came to search. You
+    // mostly came to tap something you already eat. v0.10 moved every
+    // OTHER way in (Quick add, Scan, Type a code, Guess it) onto the
+    // speed-dial — see speed_dial_fab_test.dart for that coverage — so
+    // reaching this sheet at all is now a deliberate second tap (Find
+    // food), and once here it is pure find-and-relog.
+    testWidgets('opening the + sheet does not raise the keyboard',
+        (tester) async {
+      await tester.pumpWidget(host(db));
+      await tester.pumpAndSettle();
+      await openSheet(tester);
+
+      expect(tester.testTextInput.isVisible, isFalse,
+          reason: 'a keyboard nobody asked for covers the very list of '
+              'foods the sheet exists to offer');
+      await unmount(tester);
+    });
+
+    testWidgets('the regulars sit on the first screenful, nothing above them',
+        (tester) async {
+      await tester.runAsync(() async {
+        final at = DateTime.now().subtract(const Duration(days: 2));
+        await DiaryRepository(db).log(DiaryEntry(
+          id: 'seed',
+          day: DiaryEntry.dayOf(at),
+          at: at,
+          food: const FoodRef.custom('porridge'),
+          label: 'Porridge',
+          qty: 1,
+          unitLabel: 'bowl',
+          grams: null,
+          macros: const MacroSet(kcal: 320),
+          source: EntrySource.tap,
+          createdAt: at,
+        ));
+      });
+      await tester.pumpWidget(host(db));
+      await tester.pumpAndSettle();
+      await openSheet(tester);
+
+      // Today's own rail carries the same heading behind the sheet —
+      // .last is the sheet's copy.
+      final regularsInSheet = find.text('Your regulars').last;
+      expect(
+          tester.getTopLeft(regularsInSheet).dy,
+          lessThan(
+              tester.view.physicalSize.height / tester.view.devicePixelRatio),
+          reason: 'the regulars must not need a scroll to reach');
+      await unmount(tester);
+    });
+  });
 
   testWidgets('Quick add offers all four macros, not just protein',
       (tester) async {
@@ -84,8 +185,7 @@ void main() {
     await unmount(tester);
   });
 
-  testWidgets('a double-tapped Log it lands exactly one line',
-      (tester) async {
+  testWidgets('a double-tapped Log it lands exactly one line', (tester) async {
     await tester.pumpWidget(host(db));
     await tester.pumpAndSettle();
     await openQuickAdd(tester);
@@ -106,8 +206,11 @@ void main() {
     await unmount(tester);
   });
 
-  testWidgets('Cancel returns to the + sheet instead of closing it',
-      (tester) async {
+  testWidgets('Cancel just closes Quick add — opened directly, nothing to '
+      'return to', (tester) async {
+    // v0.10: Quick add moved onto the speed-dial. It no longer opens FROM
+    // the + sheet, so Cancel has no sheet underneath to fall back to —
+    // it lands wherever the dial was opened from.
     await tester.pumpWidget(host(db));
     await tester.pumpAndSettle();
     await openQuickAdd(tester);
@@ -115,9 +218,9 @@ void main() {
     await tester.tap(find.text('Cancel'));
     await tester.pumpAndSettle();
 
-    // The + sheet is still up (its search field and tiles are visible).
-    expect(find.text('Search foods — works offline'), findsOneWidget);
-    expect(find.text('Quick add'), findsOneWidget);
+    expect(find.text('Log it'), findsNothing);
+    expect(find.text('Search foods — works offline'), findsNothing,
+        reason: 'no sheet was ever opened on this path');
     await unmount(tester);
   });
 
@@ -142,21 +245,71 @@ void main() {
     });
     await tester.pumpAndSettle();
 
-    // Probes: dialog and sheet must both be gone before we reopen.
+    // Probe: the dialog itself must be gone before we reopen.
     expect(find.text('Log it'), findsNothing,
         reason: 'quick-add dialog should have closed');
-    expect(find.text('Search foods — works offline'), findsNothing,
-        reason: '+ sheet should have closed after logging');
 
-    // Reopen the sheet and search: the remembered food shows as a custom
-    // (home icon) result.
-    await tester.tap(find.byType(FloatingActionButton));
-    await tester.pumpAndSettle();
+    // Open the sheet (Find food, on the dial) and search: the remembered
+    // food shows as a custom (home icon) result.
+    await openSheet(tester);
     await tester.enterText(find.byType(TextField).first, 'grandma');
+    await tester.pump(searchDebounce);
     await tester.pumpAndSettle();
     expect(find.byIcon(Icons.home_outlined), findsOneWidget);
     // Rail chip + today's row (behind the sheet) + the search result.
     expect(find.text('Grandma rolls'), findsNWidgets(3));
+    await unmount(tester);
+  });
+
+  testWidgets(
+      'fast typing runs ONE debounced query, and customs are read once '
+      'per sheet open', (tester) async {
+    final usda = _CountingUsdaRepository(db);
+    final customs = _CountingCustomRepository(db);
+    await tester.runAsync(() => customs.create(CustomFood(
+          id: 'cf-1',
+          name: 'Grandma rolls',
+          servingLabel: 'serving',
+          perServing: const MacroSet(kcal: 180),
+          createdAt: DateTime(2026, 7, 1),
+        )));
+
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        appDatabaseProvider.overrideWithValue(db),
+        spineReadyProvider.overrideWith((ref) async {}),
+        usdaFoodRepositoryProvider.overrideWith((ref) => usda),
+        customFoodRepositoryProvider.overrideWith((ref) => customs),
+      ],
+      child: MaterialApp(theme: AppTheme.light, home: const TodayScreen()),
+    ));
+    await tester.pumpAndSettle();
+    await openSheet(tester);
+    final customsReadsAtOpen = customs.getAllCalls;
+
+    // Three keystrokes, all inside the debounce window.
+    await tester.enterText(find.byType(TextField).first, 'g');
+    await tester.pump(const Duration(milliseconds: 50));
+    await tester.enterText(find.byType(TextField).first, 'gr');
+    await tester.pump(const Duration(milliseconds: 50));
+    await tester.enterText(find.byType(TextField).first, 'gra');
+    await tester.pump(searchDebounce);
+    await tester.pumpAndSettle();
+
+    // The settled query found the custom, via ONE query round trip.
+    expect(find.byIcon(Icons.home_outlined), findsOneWidget);
+    expect(usda.searchCalls, 1,
+        reason: 'three quick keystrokes must settle into one query');
+
+    // A later keystroke queries again — but never re-reads the customs
+    // table: that was cached at sheet open and is filtered in memory.
+    await tester.enterText(find.byType(TextField).first, 'gran');
+    await tester.pump(searchDebounce);
+    await tester.pumpAndSettle();
+    expect(usda.searchCalls, 2);
+    expect(customs.getAllCalls, customsReadsAtOpen,
+        reason: 'keystrokes must filter the in-memory customs cache, '
+            'not re-read the table');
     await unmount(tester);
   });
 }

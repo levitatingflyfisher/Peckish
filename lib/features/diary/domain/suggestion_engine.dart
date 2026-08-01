@@ -90,8 +90,7 @@ class SuggestionEngine {
     }
 
     // Familiar first, capped, and only foods with something to add.
-    final pool = [...regulars]
-      ..sort((a, b) {
+    final pool = [...regulars]..sort((a, b) {
         final byUse = b.useCount.compareTo(a.useCount);
         return byUse != 0 ? byUse : a.label.compareTo(b.label);
       });
@@ -194,8 +193,8 @@ class SuggestionEngine {
       if (target <= 0) continue;
       final value = a.of(end) ?? 0;
       final ok = switch (a.role) {
-        TargetRole.about =>
-          value >= target * (1 - tolerance) && value <= target * (1 + tolerance),
+        TargetRole.about => value >= target * (1 - tolerance) &&
+            value <= target * (1 + tolerance),
         TargetRole.atLeast => value >= target * (1 - tolerance),
         TargetRole.under => value <= target * (1 + tolerance),
       };

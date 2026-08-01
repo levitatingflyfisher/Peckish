@@ -9,23 +9,26 @@ import 'package:peckish/features/diary/presentation/today_screen.dart';
 import 'package:peckish/features/groceries/presentation/groceries_screen.dart';
 import 'package:peckish/features/plan/presentation/plan_screen.dart';
 import 'package:peckish/features/recipes/presentation/recipes_screen.dart';
+import 'package:peckish/features/barcode/presentation/barcode_db_screen.dart';
 import 'package:peckish/features/barcode/presentation/scan_screen.dart';
 import 'package:peckish/features/food/presentation/foods_screen.dart';
+import 'package:peckish/features/settings/presentation/privacy_screen.dart';
 import 'package:peckish/features/settings/presentation/settings_screen.dart';
 import 'package:peckish/features/sync/presentation/sync_screen.dart';
 
 part 'app_router.g.dart';
 
-CustomTransitionPage<T> _fade<T>({required LocalKey key, required Widget child}) =>
+CustomTransitionPage<T> _fade<T>(
+        {required LocalKey key, required Widget child}) =>
     CustomTransitionPage<T>(
       key: key,
       child: child,
       transitionDuration: const Duration(milliseconds: 250),
-      transitionsBuilder: (_, a, __, c) =>
-          FadeTransition(opacity: CurvedAnimation(parent: a, curve: Curves.easeOut), child: c),
+      transitionsBuilder: (_, a, __, c) => FadeTransition(
+          opacity: CurvedAnimation(parent: a, curve: Curves.easeOut), child: c),
     );
 
-/// Four-tab shell. Deliberately NO onboarding gate: Peckish opens straight
+/// Five-tab shell. Deliberately NO onboarding gate: Peckish opens straight
 /// onto Today — the daily loop costs at most two taps, and first-run guidance
 /// is inline invitation, never a wall.
 @Riverpod(keepAlive: true)
@@ -57,6 +60,14 @@ GoRouter appRouter(Ref ref) {
             pageBuilder: (c, s) =>
                 _fade(key: s.pageKey, child: const GroceriesScreen()),
           ),
+          // A tab, not an app-bar icon: the month you just lived is
+          // something you reach for, and the corner beside Settings is
+          // where things go to be forgotten.
+          GoRoute(
+            path: '/history',
+            pageBuilder: (c, s) =>
+                _fade(key: s.pageKey, child: const HistoryScreen()),
+          ),
         ],
       ),
       GoRoute(
@@ -71,23 +82,44 @@ GoRouter appRouter(Ref ref) {
       ),
       GoRoute(
         path: '/scan',
+        // ?day=YYYY-MM-DD when the scan was opened from a past day's +
+        // sheet; absent means today, which is every other entry point.
+        // ?type=1 came through the "Type a barcode" door and opens with the
+        // camera parked — a starting posture, not a remembered mode.
+        pageBuilder: (c, s) => _fade(
+            key: s.pageKey,
+            child: ScanScreen(
+              day: s.uri.queryParameters['day'],
+              startTyping: s.uri.queryParameters['type'] == '1',
+            )),
+      ),
+      GoRoute(
+        path: '/barcode-db',
         pageBuilder: (c, s) =>
-            _fade(key: s.pageKey, child: const ScanScreen()),
+            _fade(key: s.pageKey, child: const BarcodeDbScreen()),
       ),
       GoRoute(
         path: '/foods',
-        pageBuilder: (c, s) =>
-            _fade(key: s.pageKey, child: const FoodsScreen()),
+        // ?day= carries the day the user opened this from. Without it the
+        // screen logs to today, which is what a past day's "See all" used
+        // to do — the rail landed on the right day and the screen behind
+        // it did not.
+        pageBuilder: (c, s) => _fade(
+          key: s.pageKey,
+          child: FoodsScreen(day: s.uri.queryParameters['day']),
+        ),
       ),
       GoRoute(
         path: '/sync',
-        pageBuilder: (c, s) =>
-            _fade(key: s.pageKey, child: const SyncScreen()),
+        pageBuilder: (c, s) => _fade(key: s.pageKey, child: const SyncScreen()),
       ),
       GoRoute(
-        path: '/history',
-        pageBuilder: (c, s) => _fade(key: s.pageKey, child: HistoryScreen()),
+        path: '/privacy',
+        pageBuilder: (c, s) =>
+            _fade(key: s.pageKey, child: const PrivacyScreen()),
       ),
+      // One day stays OUTSIDE the shell: a drill-down wears a back arrow,
+      // not a nav bar.
       GoRoute(
         path: '/history/:day',
         pageBuilder: (c, s) => _fade(
@@ -106,11 +138,13 @@ class _TabShell extends StatelessWidget {
   final String location;
   final Widget child;
 
-  static const _tabs = ['/', '/plan', '/recipes', '/groceries'];
+  static const _tabs = ['/', '/plan', '/recipes', '/groceries', '/history'];
 
   @override
   Widget build(BuildContext context) {
-    final index = _tabs.indexOf(location).clamp(0, 3);
+    // Bounded by the list itself — a hardcoded ceiling silently lights up
+    // the wrong destination the day a tab is added.
+    final index = _tabs.indexOf(location).clamp(0, _tabs.length - 1);
     return Scaffold(
       body: child,
       bottomNavigationBar: NavigationBar(
@@ -133,6 +167,10 @@ class _TabShell extends StatelessWidget {
               icon: Icon(Icons.shopping_basket_outlined),
               selectedIcon: Icon(Icons.shopping_basket),
               label: 'Groceries'),
+          NavigationDestination(
+              icon: Icon(Icons.insights_outlined),
+              selectedIcon: Icon(Icons.insights),
+              label: 'History'),
         ],
       ),
     );

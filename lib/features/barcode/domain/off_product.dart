@@ -24,9 +24,10 @@ class OffProduct {
   final double? servingGrams;
 
   /// 'Nutella (Ferrero)' — or just the name when no brand is published.
-  String get displayName => brand == null || brand!.isEmpty || name.contains(brand!)
-      ? name
-      : '$name ($brand)';
+  String get displayName =>
+      brand == null || brand!.isEmpty || name.contains(brand!)
+          ? name
+          : '$name ($brand)';
 
   /// Parses the v3 `{code, product: {...}}` envelope. Absent numbers stay
   /// null (unknown, never zero); an EU kJ-only label converts to kcal.
@@ -34,7 +35,8 @@ class OffProduct {
     final barcode = json['code']?.toString() ?? '';
     final product = json['product'];
     final p = product is Map ? product : const {};
-    final nutriments = p['nutriments'] is Map ? p['nutriments'] as Map : const {};
+    final nutriments =
+        p['nutriments'] is Map ? p['nutriments'] as Map : const {};
 
     double? num100(String key) => _toDouble(nutriments['${key}_100g']);
     var kcal = num100('energy-kcal');

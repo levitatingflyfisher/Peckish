@@ -37,7 +37,11 @@ class SchemaOrgRecipeParser {
   const SchemaOrgRecipeParser();
 
   static final _scriptPattern = RegExp(
-    r'<script[^>]*type\s*=\s*["' "'" r']application/ld\+json["' "'" r'][^>]*>(.*?)</script>',
+    r'<script[^>]*type\s*=\s*["'
+    "'"
+    r']application/ld\+json["'
+    "'"
+    r'][^>]*>(.*?)</script>',
     dotAll: true,
     caseSensitive: false,
   );

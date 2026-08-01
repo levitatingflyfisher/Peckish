@@ -9,12 +9,14 @@ import 'package:peckish/features/food/domain/macro_set.dart';
 import 'package:peckish/features/groceries/domain/grocery_item.dart';
 import 'package:peckish/features/plan/domain/plan_entry.dart';
 import 'package:peckish/features/recipes/domain/recipe.dart';
-import 'package:peckish/shared/extensions/datetime_ext.dart';
 
 /// The date-stamped filename for a data export, e.g.
 /// `peckish-export-2026-07-25.json`. Takes the date explicitly (not
 /// `DateTime.now`) so tests are deterministic; the UI passes `DateTime.now()`.
-String exportFileName(DateTime date) => 'peckish-export-${date.toDateDay()}.json';
+/// Day keys have ONE producer app-wide — [DiaryEntry.dayOf] — so the stamp
+/// here can never drift from the day strings inside the export.
+String exportFileName(DateTime date) =>
+    'peckish-export-${DiaryEntry.dayOf(date)}.json';
 
 /// The whole on-device USER dataset, ready to serialize to a portable JSON
 /// document the user can keep or move. The bundled USDA spine is reference
@@ -120,7 +122,9 @@ class PeckishExport {
       Map<String, dynamic> raw, String key) {
     final v = raw[key];
     if (v == null) return const [];
-    if (v is! List) throw FormatException("export section '$key' is not a list");
+    if (v is! List) {
+      throw FormatException("export section '$key' is not a list");
+    }
     return v.cast<Map<String, dynamic>>();
   }
 
@@ -173,6 +177,9 @@ class PeckishExport {
         'perServing': _macros(f.perServing),
         'createdAt': f.createdAt.toIso8601String(),
         'archived': f.archived,
+        // Omitted for a food that never came off a package, so an export
+        // stays as small as the data actually is.
+        if (f.barcode != null) 'barcode': f.barcode,
       };
 
   static CustomFood _foodFrom(Map<String, dynamic> raw) => CustomFood(
@@ -182,6 +189,9 @@ class PeckishExport {
         perServing: _macrosFrom(raw['perServing']),
         createdAt: DateTime.parse(raw['createdAt'] as String),
         archived: raw['archived'] as bool? ?? false,
+        // Absent in every export written before v0.9 — those foods simply
+        // have no code, which is exactly what they had before.
+        barcode: raw['barcode'] as String?,
       );
 
   static Map<String, Object?> _refMap(FoodRef ref) => {
@@ -221,9 +231,8 @@ class PeckishExport {
         unitLabel: raw['unitLabel'] as String,
         grams: (raw['grams'] as num?)?.toDouble(),
         macros: _macrosFrom(raw['macros']),
-        source: EntrySource.values
-            .firstWhere((s) => s.name == raw['source'],
-                orElse: () => EntrySource.manual),
+        source: EntrySource.values.firstWhere((s) => s.name == raw['source'],
+            orElse: () => EntrySource.manual),
         createdAt: DateTime.parse(raw['createdAt'] as String),
       );
 

@@ -16,9 +16,7 @@ class PlanRepository {
 
   Future<void> upsert(PlanEntry entry) async {
     final s = await _clock.stamp();
-    await _db
-        .into(_db.planEntries)
-        .insertOnConflictUpdate(PlanEntriesCompanion(
+    await _db.into(_db.planEntries).insertOnConflictUpdate(PlanEntriesCompanion(
           id: Value(entry.id),
           day: Value(entry.day),
           slot: Value(PlanSlotDb.values[entry.slot.index]),
@@ -39,6 +37,31 @@ class PlanRepository {
       hlc: Value(s.hlc),
       nodeId: Value(s.nodeId),
     ));
+  }
+
+  /// Every live cell, for the export/backup snapshot. Mirrors
+  /// `GroceryRepository.getAll`: the tombstone filter lives HERE, so a
+  /// backup can never carry a deletion out as a live row. Titles stay
+  /// unresolved — they are read-side display only and the export omits them.
+  Future<List<PlanEntry>> getAll() async {
+    final rows = await (_db.select(_db.planEntries)
+          ..where((p) => p.isDeleted.equals(false))
+          ..orderBy([
+            (p) => OrderingTerm.asc(p.day),
+            (p) => OrderingTerm.asc(p.slot),
+          ]))
+        .get();
+    return [
+      for (final r in rows)
+        PlanEntry(
+          id: r.id,
+          day: r.day,
+          slot: PlanSlot.values[r.slot.index],
+          kind: PlanKind.values[r.kind.index],
+          refId: r.refId,
+          note: r.note,
+        ),
+    ];
   }
 
   Future<List<PlanEntry>> entriesForDays(List<String> days) async {
@@ -96,8 +119,7 @@ class PlanRepository {
           refId: r.refId,
           note: r.note,
           title: switch (r.kind) {
-            PlanKindDb.recipe =>
-              recipeTitles[r.refId] ?? '(deleted recipe)',
+            PlanKindDb.recipe => recipeTitles[r.refId] ?? '(deleted recipe)',
             PlanKindDb.meal => mealNames[r.refId] ?? '(deleted meal)',
             PlanKindDb.note => r.note ?? '',
           },

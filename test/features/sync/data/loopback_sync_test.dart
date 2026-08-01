@@ -90,8 +90,7 @@ void main() {
       engine: SyncEngine(clientDb),
       secret: () async => 'a-different-secret-entirely!',
     );
-    await expectLater(
-        stranger.syncWith('127.0.0.1', server.port),
+    await expectLater(stranger.syncWith('127.0.0.1', server.port),
         throwsA(isA<CryptoException>()));
     expect(await CustomFoodRepository(clientDb).getAll(), isEmpty);
   });

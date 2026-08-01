@@ -20,10 +20,10 @@ class OffLookupException implements Exception {
   String toString() => message;
 }
 
-/// The second of the app's two sanctioned network flows: one user-initiated
-/// scan = one GET to Open Food Facts, parsed, discarded. Nothing is bundled
-/// (OFF's ODbL share-alike never entangles the app) and nothing identifies
-/// the user — the User-Agent names the app and its repo, per OFF's
+/// The scan flow's explicit online fallback (ADR-0010): a lookup runs only
+/// from the user's "Ask openfoodfacts.org" tap — one tap = one GET, parsed,
+/// discarded. The offline slices answer first; nothing here identifies the
+/// user — the User-Agent names the app and its repo, per OFF's
 /// identify-your-integration convention.
 class OffClient {
   OffClient({http.Client? client}) : _client = client ?? http.Client();

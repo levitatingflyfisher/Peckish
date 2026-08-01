@@ -4,7 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:peckish/core/providers/core_providers.dart';
 import 'package:peckish/features/diary/domain/diary_entry.dart';
 import 'package:peckish/features/food/domain/macro_set.dart';
+import 'package:peckish/shared/extensions/qty_format.dart';
+import 'package:peckish/shared/theme/app_colors.dart';
 import 'package:peckish/shared/theme/app_spacing.dart';
+import 'package:peckish/shared/widgets/confirm_dialog.dart';
+import 'package:peckish/shared/widgets/num_field.dart';
+import 'package:peckish/shared/widgets/input_modal.dart';
 
 /// Fix a logged line in place — the "logged one, actually ate two" errand.
 /// Changing the qty rescales the numbers from the line's own per-unit
@@ -12,8 +17,8 @@ import 'package:peckish/shared/theme/app_spacing.dart';
 /// runs when the qty field itself changes). Saving goes through
 /// [DiaryRepository.update], so the regulars snapshot heals too.
 Future<void> showEditEntrySheet(BuildContext context, DiaryEntry entry) =>
-    showDialog<void>(
-      context: context,
+    showInputDialog<void>(
+      context,
       builder: (_) => _EditEntryDialog(entry: entry),
     );
 
@@ -39,9 +44,7 @@ class _EditEntryDialogState extends ConsumerState<_EditEntryDialog> {
   /// programmatic writes.
   bool _rescaling = false;
 
-  static String _show(double? v) => v == null
-      ? ''
-      : (v % 1 == 0 ? v.toInt().toString() : v.toStringAsFixed(1));
+  static String _show(double? v) => v == null ? '' : formatQty(v);
 
   @override
   void initState() {
@@ -61,7 +64,7 @@ class _EditEntryDialogState extends ConsumerState<_EditEntryDialog> {
   /// behind the user's back.
   void _rescale() {
     if (_rescaling) return;
-    final newQty = double.tryParse(_qty.text.replaceAll(',', '.'));
+    final newQty = parseFlexibleDouble(_qty.text);
     final origQty = widget.entry.qty;
     if (newQty == null || newQty <= 0 || origQty <= 0) return;
     final scaled = widget.entry.macros * (newQty / origQty);
@@ -84,8 +87,7 @@ class _EditEntryDialogState extends ConsumerState<_EditEntryDialog> {
     super.dispose();
   }
 
-  static double? _num(TextEditingController c) =>
-      double.tryParse(c.text.replaceAll(',', '.'));
+  static double? _num(TextEditingController c) => parseFlexibleDouble(c.text);
 
   Future<void> _save() async {
     if (_saving) return;
@@ -115,18 +117,37 @@ class _EditEntryDialogState extends ConsumerState<_EditEntryDialog> {
     if (mounted) Navigator.of(context).pop();
   }
 
-  Widget _field(TextEditingController c, String label,
-          {bool number = true}) =>
-      Padding(
-        padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-        child: TextField(
-          controller: c,
-          keyboardType: number
-              ? const TextInputType.numberWithOptions(decimal: true)
-              : TextInputType.text,
-          decoration: InputDecoration(
-              labelText: label, border: const OutlineInputBorder()),
+  /// Swipe used to be the only, undiscoverable way to delete a line — this
+  /// gives the sheet you land on by TAPPING one the same forgiving path:
+  /// the same confirm the swipe uses, then Undo re-seats the exact row.
+  Future<void> _delete() async {
+    final entry = widget.entry;
+    final sure = await showConfirmDialog(
+      context,
+      title: 'Delete ${entry.label}?',
+      message: "This line comes off the ledger — Undo puts it straight "
+          'back if you change your mind.',
+    );
+    if (!sure || !mounted) return;
+    final repo = ref.read(diaryRepositoryProvider);
+    final messenger = ScaffoldMessenger.of(context);
+    await repo.delete(entry.id);
+    if (!mounted) return;
+    Navigator.of(context).pop();
+    messenger
+      ..clearSnackBars()
+      ..showSnackBar(SnackBar(
+        content: Text('Removed ${entry.label}'),
+        action: SnackBarAction(
+          label: 'Undo',
+          onPressed: () => repo.restore(entry),
         ),
+      ));
+  }
+
+  Widget _numField(TextEditingController c, String label) => Padding(
+        padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+        child: NumField(controller: c, label: label, outlined: true),
       );
 
   @override
@@ -138,21 +159,39 @@ class _EditEntryDialogState extends ConsumerState<_EditEntryDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _field(_label, 'What was it?', number: false),
-            _field(_qty, 'Qty'),
-            _field(_kcal, 'kcal'),
-            _field(_protein, 'Protein g'),
-            _field(_carbs, 'Carbs g'),
-            _field(_fat, 'Fat g'),
+            Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+              child: TextField(
+                controller: _label,
+                decoration: const InputDecoration(
+                    labelText: 'What was it?', border: OutlineInputBorder()),
+              ),
+            ),
+            _numField(_qty, 'Qty'),
+            _numField(_kcal, 'kcal'),
+            _numField(_protein, 'Protein g'),
+            _numField(_carbs, 'Carbs g'),
+            _numField(_fat, 'Fat g'),
           ],
         ),
       ),
+      actionsAlignment: MainAxisAlignment.spaceBetween,
       actions: [
         TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          onPressed: _delete,
+          style: TextButton.styleFrom(foregroundColor: AppColors.clay),
+          child: const Text('Delete'),
         ),
-        FilledButton(onPressed: _save, child: const Text('Save')),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(onPressed: _save, child: const Text('Save')),
+          ],
+        ),
       ],
     );
   }

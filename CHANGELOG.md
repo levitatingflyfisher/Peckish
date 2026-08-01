@@ -1,5 +1,178 @@
 # Changelog
 
+## 0.10.0 — the app finally does what it already promised
+
+- **Nothing you log or delete is final anymore.** Tap a regular by mistake
+  and the toast that confirms it now offers Undo. Swipe a line away and the
+  app asks first — the same calm confirm every other delete already
+  used — then offers Undo too, putting the exact line back. This document's
+  own law has said "forgiveness over prevention applies to data too" since
+  before the code kept it.
+- **The + is a speed-dial now.** Tap it and every way to add food — Find
+  food, Quick add, Scan, Type a code, and Guess it once a brain is ready —
+  extends upward from the thumb, nearest-first by frequency, instead of
+  sitting at the top of a sheet you had to reach across the whole screen
+  for. Find food goes back to being exactly that: search plus your
+  regulars plus saved meals, nothing else competing for the first
+  screenful.
+- **Foods is one searchable screen.** Regulars, My Foods, and saved meals
+  used to read as three almost-alphabetical lists; now each section says
+  how it's actually sorted ("by last use", "A to Z"), the regulars list
+  caps at the first screenful with a "Show all", and a search field on top
+  finds anything across all three plus the offline USDA spine.
+- **A day's own lines show all four macros**, not kcal alone — the same
+  numbers the totals card above them was already adding up.
+- **The camera asks for its sharpest frame.** A curved, glossy, crinkled
+  wrapper deserves better than a mid-tier preview nobody chose on purpose.
+- **The on-device model survives a bad delegate.** A GPU path that fails
+  or hangs retries once on CPU; every native call now carries a deadline,
+  so a stuck model becomes a calm message instead of a forever-spinner. A
+  new "Check the model" button in Settings runs a real prompt through
+  whatever is resident and shows a copyable pass/fail line — backend,
+  timing, device ABI, and the actual error underneath, for the next
+  "doesn't work" report.
+
+## 0.9.1 — nothing you typed gets thrown away
+
+- **A stray tap no longer discards a form.** Swipe over to another app to
+  read a number off a photo, swipe back, and Android does not bring the
+  keyboard with it — so the sheet shrinks and the field you had already
+  aimed at moves. The tap lands on the dimmed background and used to take
+  the whole entry with it. Every screen that holds something you typed now
+  ignores that tap and shows an **×** instead. Dragging the sheet down and
+  the back button still close it, and a confirmation — which holds nothing
+  you typed — still closes when you tap away, because that is the right
+  gesture for "never mind".
+
+## 0.9.0 — the second-tap release
+
+0.8 made every past day *reachable*. This one makes the things you do
+there cost what they should — usually one tap — and fixes what a phone
+test found once the screens were being used in earnest.
+
+- **The food you always eat is one tap on every day.** Your regulars sit
+  on Today, on any past day, and at the top of the **+** sheet, above
+  quick add and the scanner — each aimed at the day it was opened on.
+  Filling a gap in last week used to mean typing a search, the slowest
+  route in the app for the food you eat most.
+- **History is a tab.** The month you just lived is the second-most
+  looked-at screen in the app; it was an icon in the corner beside
+  Settings, which is where things go to be forgotten.
+- **A past day shows its own four numbers.** The same kcal figure and
+  per-macro breakdown Today shows, against the same targets — so you can
+  read exactly what you ate on the 19th instead of inferring it from a
+  dot on a chart.
+- **A food you saved answers its own barcode.** Ticking "Save to My
+  Foods" now brings the code home with the food, so scanning that tin
+  again logs it straight away — no confirm sheet, no lookup, and the
+  network is never asked a question the phone already answered.
+- **One scan screen, and the camera stands down.** The Scan/Type toggle
+  is gone: the digits field was always live in camera mode, so
+  remembering a preference could only ever cost you a click. The camera
+  now switches itself off the moment there is something to deal with — a
+  lookup running, a question to answer, the confirm sheet open — and
+  shows the digits it read instead, which a photo picked from the gallery
+  never had.
+- **The month arrows stay put** while the month scrolls under them, so
+  they are still there when you have reached the calendar.
+- **Targets stopped printing as boxes.** Peckish bundles its own type and
+  neither font has ≥ or ≤, so every target anyone ever set rendered a
+  tofu box: "of □2200 kcal". Caps read "max" and floors "min" now, in
+  letters the fonts actually have.
+- **Numbers stop being sheared** at large accessibility text sizes: the
+  day's total no longer splits across two lines, and a macro label no
+  longer loses its target off the right-hand edge.
+
+## 0.8.0 — the missed-day release
+
+Every way of logging now works on a day you already lived, and history
+finally looks like something you can reach into.
+
+- **A scan can fix yesterday.** Barcode, the AI guess, and the plate
+  photo all work from a past day's **+** — the sheet names the day it's
+  feeding before you confirm. v0.6 hid these on past days as "now-flows";
+  that was wrong, since the tin still in your recycling is the best record
+  you have of the day you forgot to log.
+- **History is a month you can read.** A trend line for the macro you
+  pick, with your target ruled across it — a gap in the line is a day you
+  didn't log, never a zero. Under it, a real calendar: every past day is a
+  tappable cell showing that day's number, and the heading says out loud
+  that tapping is how you fix a day. Arrows walk back through the months.
+- **Ask the household stove.** Settings → AI gains a third place for the
+  guess to think: a model running on your own desktop, reached over an
+  encrypted channel keyed by the same household phrase you use for
+  backups. The phone's small parser gives up on rambling meals; the
+  desktop's larger one doesn't — and the honest privacy answer is
+  unchanged, because nothing left the house.
+
+## 0.7.1 — the potato pass
+
+No new features — the same app, faster, smaller, and truer, tuned to
+run well on a modest phone.
+
+- **Boots faster, every time.** The app no longer re-reads its bundled
+  food database on every launch (that was hundreds of milliseconds of
+  freeze, forever). The diary and portion lookups gained indexes, so
+  the app stays quick as your history grows.
+- **Search feels calmer.** Typing in the food search no longer races
+  itself on every keystroke; results settle instead of flickering.
+- **The chart tells the truth.** A day logged exactly at your target
+  now sits exactly on the target line (bars drew slightly low before).
+  The axis picker also survives very large system font sizes.
+- **Downloads are sturdier.** Leaving a download screen now truly
+  pauses the transfer (before, a hidden transfer could keep running and
+  a later Resume could corrupt it); a checksum failure explains itself
+  instead of reading like a Wi-Fi drop; an install interrupted at the
+  last moment resumes without re-downloading; and two downloads at once
+  keep the screen awake for as long as either needs it.
+- **Restore is exact.** Items you'd deleted from the plan or grocery
+  list no longer reappear when restoring a backup.
+- **Smaller.** The app shed dead code and an unused icon font — the
+  APK is smaller than last release, and the web app loads less.
+
+## 0.7.0 — barcode sovereignty
+
+Scans are answered by your phone. The network became a question.
+
+- **Offline barcode databases.** Settings → Offline barcode lookup
+  offers two downloads: US packaged foods from USDA (440,275 barcodes,
+  22 MB, public domain) and an optional Open Food Facts US slice
+  (927,505 products, 47 MB, ODbL — its attribution travels inside the
+  file). Each is verified against a published checksum before install.
+- **A scan never touches the network by itself.** With a database on
+  your phone, scans are answered locally — in a dead zone, in airplane
+  mode, anywhere. A miss shows one button: "Ask openfoodfacts.org."
+  Only that tap sends the digits. The old automatic lookup is gone.
+- **Every answer names its source** — from your phone's USDA database,
+  from your phone's Open Food Facts slice, or from openfoodfacts.org.
+- **The privacy map got truer.** "What leaves your device" now says:
+  barcode scans, usually nothing.
+
+## 0.6.0 — the hearth release
+
+Phone-test feedback, all five points.
+
+- **It looks like OpenHearth now.** The damson-plum-on-parchment theme
+  is gone. Peckish wears the shared openhearth_design system whole —
+  hearth terracotta on warm linen, the ember-family dark theme, the
+  fleet's own type and buttons — and a test now forbids raw hex in the
+  theme layer. Launcher and web icons re-hued to match.
+- **A missed day is fixable.** Every history day has its own + that adds
+  to THAT day (quick add, search, portions, saved meals). The sheet says
+  which day it's feeding; barcode and AI stay in the present tense.
+- **The chart grew up.** Pick an axis — kcal, protein, carbs, fat — and
+  the bars, value labels, and the target line (wearing its role mark)
+  follow. Every bar opens its day.
+- **Honest without Google.** On a phone without Play services the plate
+  labeler bows out by name and points at everything that still works —
+  which is everything else, including the downloaded on-device model.
+  New in Settings: "What leaves your device", the whole network map on
+  one screen (most rows say "nothing" — that's why data-off just works).
+- **Downloads tell the truth.** An interrupted model download now shows
+  "Paused — Resume", and Resume picks up from the same byte (it always
+  did; now it says so). Leaving the app pauses a transfer; the progress
+  survives on disk.
+
 ## 0.5.0 — the on-device release
 
 Two new rungs that run entirely on the phone, ported from the fleet's

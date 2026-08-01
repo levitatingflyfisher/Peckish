@@ -98,8 +98,8 @@ void main() {
     await db.eraseUserData();
 
     expect(await diary.entriesForDay('2026-07-25'), isEmpty);
-    expect(await CustomFoodRepository(db).getAll(includeArchived: true),
-        isEmpty);
+    expect(
+        await CustomFoodRepository(db).getAll(includeArchived: true), isEmpty);
     expect(await meals.getAll(includeArchived: true), isEmpty);
     expect(await recipes.getAll(includeArchived: true), isEmpty);
     expect(await PlanRepository(db).entriesForDays(['2026-07-27']), isEmpty);

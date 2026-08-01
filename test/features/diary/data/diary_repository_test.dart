@@ -11,7 +11,8 @@ DiaryEntry entry({
   String day = '2026-07-25',
   String label = 'Egg burrito',
   double qty = 1,
-  MacroSet macros = const MacroSet(kcal: 249, proteinG: 10.9, carbG: 20.1, fatG: 13.7),
+  MacroSet macros =
+      const MacroSet(kcal: 249, proteinG: 10.9, carbG: 20.1, fatG: 13.7),
   int? usdaFdcId = 2707343,
   DateTime? at,
 }) =>
@@ -19,9 +20,7 @@ DiaryEntry entry({
       id: id,
       day: day,
       at: at ?? DateTime(2026, 7, 25, 8, 30),
-      food: usdaFdcId != null
-          ? FoodRef.usda(usdaFdcId)
-          : const FoodRef.quick(),
+      food: usdaFdcId != null ? FoodRef.usda(usdaFdcId) : const FoodRef.quick(),
       label: label,
       qty: qty,
       unitLabel: 'serving',
@@ -84,6 +83,38 @@ void main() {
     expect(await repo.entriesForDay('2026-07-25'), isEmpty);
   });
 
+  // The swipe-delete undo path: entry_tile.dart captures the row before
+  // deleting it and hands it straight back here on Undo.
+  test('restore re-seats a deleted entry verbatim', () async {
+    final original = entry();
+    await repo.log(original);
+    await repo.delete('e-1');
+    expect(await repo.entriesForDay('2026-07-25'), isEmpty);
+
+    await repo.restore(original);
+    final rows = await repo.entriesForDay('2026-07-25');
+    expect(rows, hasLength(1));
+    final restored = rows.single;
+    expect(restored.id, original.id);
+    expect(restored.day, original.day);
+    expect(restored.at, original.at);
+    expect(restored.label, original.label);
+    expect(restored.qty, original.qty);
+    expect(restored.macros.kcal, original.macros.kcal);
+    expect(restored.macros.proteinG, original.macros.proteinG);
+    expect(restored.source, original.source);
+  });
+
+  test('restore never touches the usage table', () async {
+    await repo.log(entry());
+    final before = (await FoodUsageRepository(db).getAll()).single;
+    await repo.delete('e-1');
+    await repo.restore(entry());
+    final after = (await FoodUsageRepository(db).getAll()).single;
+    expect(after.useCount, before.useCount,
+        reason: 'undoing a delete is not a fresh use of the food');
+  });
+
   test('recents dedupes by food identity, most recent first', () async {
     await repo.log(entry(at: DateTime(2026, 7, 25, 8, 0)));
     await repo.log(entry(
@@ -138,8 +169,7 @@ void main() {
   // The single-write-path law, edit half: an update flows into the
   // regulars snapshot when it touches the newest use — but an edit is not
   // a new use, so the count never moves and a hidden regular stays hidden.
-  test('update heals the regular snapshot without bumping the count',
-      () async {
+  test('update heals the regular snapshot without bumping the count', () async {
     await repo.log(entry(qty: 1));
     await repo.update(entry(
       qty: 2,

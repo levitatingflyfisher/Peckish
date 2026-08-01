@@ -1,7 +1,7 @@
-import 'dart:async';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
+import 'package:domovoi/domovoi.dart' as domovoi;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
@@ -55,16 +55,21 @@ class ModelDownloadService {
     return true;
   }
 
+  /// A half-finished transfer is waiting on disk (and the final file
+  /// isn't there yet): the UI shows Resume instead of Download. Leaving
+  /// the app pauses a transfer — the .part is the progress that survives.
+  Future<bool> hasPartial(PeckishModelSpec spec) async {
+    if (await isDownloaded(spec)) return false;
+    final part = await _partFile(spec);
+    return part.existsSync();
+  }
+
   /// Downloads [spec], yielding `(receivedBytes, totalBytes)` tuples
   /// (total is `-1` when the server omits Content-Length).
   ///
-  /// Resumable: an interrupted attempt's `.part` is continued with an HTTP
-  /// Range request instead of restarting from zero (what kept happening
-  /// when a phone slept mid-download). The partial is deliberately KEPT on
-  /// error so the next attempt picks up where this one stopped. A 416
-  /// (partial larger than the resource) discards and restarts; a host that
-  /// ignores Range (200 instead of 206) also discards — appending onto
-  /// stale bytes would corrupt the file.
+  /// The `.part` resume / 416-restart / 200-ignores-Range discipline
+  /// belongs to domovoi's transfer engine — see its docs for the story.
+  /// The stream starts on subscribe and the listener leaving cancels it.
   Stream<(int, int)> download(PeckishModelSpec spec) async* {
     if (spec.requiresToken) {
       throw StateError(
@@ -72,76 +77,16 @@ class ModelDownloadService {
     }
     final file = await modelFile(spec);
     final part = await _partFile(spec);
-    final controller = StreamController<(int, int)>();
-
-    Future<void> run() async {
-      final resumeFrom = part.existsSync() ? await part.length() : 0;
-      final reqHeaders = <String, dynamic>{
-        if (resumeFrom > 0) 'Range': 'bytes=$resumeFrom-',
-      };
-
-      Response<dynamic> response;
-      var restarted = false;
-      try {
-        response = await _dio.download(
-          spec.downloadUrl,
-          part.path,
-          options: Options(headers: reqHeaders),
-          onReceiveProgress: (received, total) {
-            // dio reports progress relative to THIS request; offset it so
-            // the UI tracks the whole file when resuming.
-            controller.add((
-              resumeFrom + received,
-              total < 0 ? -1 : resumeFrom + total,
-            ));
-          },
-          // Keep the partial on error so a later attempt can resume.
-          deleteOnError: false,
-          fileAccessMode:
-              resumeFrom > 0 ? FileAccessMode.append : FileAccessMode.write,
-        );
-      } on DioException catch (err) {
-        if (resumeFrom > 0 &&
-            err.response?.statusCode ==
-                HttpStatus.requestedRangeNotSatisfiable) {
-          if (part.existsSync()) await part.delete();
-          response = await _dio.download(
-            spec.downloadUrl,
-            part.path,
-            onReceiveProgress: (received, total) =>
-                controller.add((received, total)),
-            deleteOnError: false,
-          );
-          restarted = true;
-        } else {
-          rethrow;
-        }
-      }
-
-      if (!restarted &&
-          resumeFrom > 0 &&
-          response.statusCode == HttpStatus.ok) {
-        if (part.existsSync()) await part.delete();
-        await _dio.download(
-          spec.downloadUrl,
-          part.path,
-          onReceiveProgress: (received, total) =>
-              controller.add((received, total)),
-          deleteOnError: false,
-        );
-      }
-
-      // Atomic promotion — only now may [isDownloaded] say true.
-      if (file.existsSync()) await file.delete();
-      await part.rename(file.path);
-    }
-
-    unawaited(run().then((_) => controller.close(), onError: (Object e) {
-      controller.addError(e);
-      controller.close();
-    }));
-
-    yield* controller.stream;
+    yield* domovoi.resumableDownloadStream(
+      dio: _dio,
+      url: spec.downloadUrl,
+      partFile: part,
+      promote: () async {
+        // Atomic promotion — only now may [isDownloaded] say true.
+        if (file.existsSync()) await file.delete();
+        await part.rename(file.path);
+      },
+    );
   }
 
   /// Deletes the local model file (and any leftover `.part`).

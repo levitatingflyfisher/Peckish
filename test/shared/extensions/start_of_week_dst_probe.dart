@@ -11,5 +11,6 @@ void main() {
   // startOfWeek walked back from Sunday midnight by 6 * 24h therefore lands
   // on Monday 01:00, not Monday midnight.
   // ignore: avoid_print
-  print('startOfWeek=${DateTime(2026, 4, 5, 12).startOfWeek.toIso8601String()}');
+  print(
+      'startOfWeek=${DateTime(2026, 4, 5, 12).startOfWeek.toIso8601String()}');
 }

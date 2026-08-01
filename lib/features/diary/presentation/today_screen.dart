@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:uuid/uuid.dart';
 
 import 'package:peckish/core/providers/core_providers.dart';
 import 'package:peckish/features/diary/domain/daily_targets.dart';
 import 'package:peckish/features/diary/domain/diary_entry.dart';
-import 'package:peckish/features/diary/presentation/add_sheet.dart';
+import 'package:peckish/features/diary/domain/relog.dart';
 import 'package:peckish/features/diary/presentation/entry_tile.dart';
+import 'package:peckish/features/diary/presentation/regulars_rail.dart';
+import 'package:peckish/features/diary/presentation/speed_dial_fab.dart';
+import 'package:peckish/features/diary/presentation/totals_card.dart';
 import 'package:peckish/features/diary/presentation/targets_dialog.dart';
 import 'package:peckish/features/diary/domain/suggestion_engine.dart';
 import 'package:peckish/features/food/domain/macro_set.dart';
@@ -25,18 +27,14 @@ class TodayScreen extends ConsumerWidget {
     final today = DiaryEntry.dayOf(DateTime.now());
     final entries = ref.watch(_entriesProvider(today));
     final totals = ref.watch(_totalsProvider(today));
-    final recents = ref.watch(_recentsProvider);
     final targets = ref.watch(_targetsProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Today'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.insights_outlined),
-            tooltip: 'History',
-            onPressed: () => context.push('/history'),
-          ),
+          // History lives on the nav bar now — the corner is for Settings
+          // alone.
           IconButton(
             icon: const Icon(Icons.settings_outlined),
             tooltip: 'Settings',
@@ -44,15 +42,11 @@ class TodayScreen extends ConsumerWidget {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        tooltip: 'Add food',
-        onPressed: () => showAddSheet(context),
-        child: const Icon(Icons.add),
-      ),
+      floatingActionButton: const SpeedDialFab(),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.lg),
         children: [
-          _TotalsCard(
+          TotalsCard(
             totals: totals.value ?? const MacroSet(),
             targets: targets.value ?? const DailyTargets(),
           ),
@@ -65,9 +59,7 @@ class TodayScreen extends ConsumerWidget {
                 onPressed: () => showTargetsDialog(context, ref),
               ),
             ),
-          if (ref.watch(_suggestionsProvider(today)) case final advice?
-              when advice.status == SuggestionStatus.ideas ||
-                  advice.status == SuggestionStatus.complete) ...[
+          if (ref.watch(_suggestionsProvider(today)) case final advice?) ...[
             const SizedBox(height: AppSpacing.lg),
             _RoundOutCard(
               day: today,
@@ -76,23 +68,10 @@ class TodayScreen extends ConsumerWidget {
             ),
           ],
           const SizedBox(height: AppSpacing.lg),
-          if ((recents.value ?? const []).isNotEmpty) ...[
-            Row(
-              children: [
-                Expanded(
-                  child: Text('Your regulars',
-                      style: Theme.of(context).textTheme.titleMedium),
-                ),
-                TextButton(
-                  onPressed: () => context.push('/foods'),
-                  child: const Text('See all'),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            _RecentsRail(recents: recents.value!),
-            const SizedBox(height: AppSpacing.lg),
-          ],
+          // Aimed at no day in particular, which means today — the same
+          // rail a past day gets, pointed at now.
+          const RegularsRail(),
+          const SizedBox(height: AppSpacing.lg),
           Text('Logged today', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: AppSpacing.sm),
           if ((entries.value ?? const []).isEmpty)
@@ -115,26 +94,31 @@ class TodayScreen extends ConsumerWidget {
   }
 }
 
-final _entriesProvider = StreamProvider.autoDispose
-    .family((ref, String day) =>
-        ref.watch(diaryRepositoryProvider).watchEntriesForDay(day));
-final _totalsProvider = StreamProvider.autoDispose.family(
-    (ref, String day) =>
-        ref.watch(diaryRepositoryProvider).watchTotalsForDay(day));
-/// Live view of the persistent regulars — reacts to hides/unhides made
-/// anywhere (the Foods screen), not just to diary writes.
-final _usagesProvider = StreamProvider.autoDispose((ref) => ref
+final _entriesProvider = StreamProvider.autoDispose.family((ref, String day) =>
+    ref.watch(diaryRepositoryProvider).watchEntriesForDay(day));
+
+/// Totals fold out of the already-watched entries — one drift watch serves
+/// the totals card, the day list, and the suggestion engine. Seeded with
+/// the all-null set (never zero): a kcal-only day keeps protein unknown.
+final _totalsProvider = Provider.autoDispose
+    .family<AsyncValue<MacroSet>, String>((ref, day) => ref
+        .watch(_entriesProvider(day))
+        .whenData((entries) =>
+            entries.fold(const MacroSet(), (sum, e) => sum + e.macros)));
+
+/// The engine's pool: the most-used visible regulars, capped in SQL at the
+/// engine's own ceiling.
+final _enginePoolProvider = StreamProvider.autoDispose((ref) => ref
     .watch(foodUsageRepositoryProvider)
-    .watchAll()
-    .map((all) => [for (final u in all.where((u) => !u.hidden)) u]));
-final _recentsProvider = Provider.autoDispose((ref) => ref
-    .watch(_usagesProvider)
-    .whenData((us) => [for (final u in us.take(12)) u.asTemplateEntry()]));
+    .watchTopUsed(limit: SuggestionEngine.maxRegulars));
 final _targetsProvider = StreamProvider.autoDispose(
     (ref) => ref.watch(targetsRepositoryProvider).watch());
 
-/// The round-out-your-day advice, or null when the card has nothing to
-/// show: feature off, dismissed for this day, or inputs still loading.
+/// The round-out-your-day advice, or null whenever the card should not
+/// exist: feature off, dismissed for this day, inputs still loading, or
+/// the engine with nothing worth saying (no targets, or quiet). This
+/// provider is the single decider — the widget renders whatever non-null
+/// advice arrives, no second guard.
 final _suggestionsProvider =
     Provider.autoDispose.family<DaySuggestions?, String>((ref, day) {
   final prefs = ref.watch(userPrefsProvider).valueOrNull;
@@ -142,177 +126,16 @@ final _suggestionsProvider =
   if (prefs.suggestionsDismissedDay == day) return null;
   final targets = ref.watch(_targetsProvider).valueOrNull;
   final totals = ref.watch(_totalsProvider(day)).valueOrNull;
-  final usages = ref.watch(_usagesProvider).valueOrNull;
-  if (targets == null || totals == null || usages == null) return null;
-  return const SuggestionEngine()
-      .suggest(targets: targets, eaten: totals, regulars: usages);
+  final pool = ref.watch(_enginePoolProvider).valueOrNull;
+  if (targets == null || totals == null || pool == null) return null;
+  final advice = const SuggestionEngine()
+      .suggest(targets: targets, eaten: totals, regulars: pool);
+  return switch (advice.status) {
+    SuggestionStatus.ideas || SuggestionStatus.complete => advice,
+    _ => null,
+  };
 });
 
-/// A target's role, worn on its sleeve: floors read as ≥, caps as ≤,
-/// plain "about" targets stay bare numbers.
-String _roleMark(TargetRole role) => switch (role) {
-      TargetRole.about => '',
-      TargetRole.atLeast => '≥',
-      TargetRole.under => '≤',
-    };
-
-class _TotalsCard extends StatelessWidget {
-  const _TotalsCard({required this.totals, required this.targets});
-
-  final MacroSet totals;
-  final DailyTargets targets;
-
-  String _fmt(double? v) => v == null ? '0' : v.round().toString();
-
-  @override
-  Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
-    final kcalTarget = targets.values.kcal;
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Flexible(
-                  child: Text(
-                    _fmt(totals.kcal),
-                    style: text.displayMedium?.copyWith(
-                      color: AppColors.jam,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.xs),
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Text(
-                    kcalTarget == null
-                        ? 'kcal'
-                        : 'of ${_roleMark(targets.resolvedKcalRole)}'
-                            '${_fmt(kcalTarget)} kcal',
-                    style:
-                        text.titleMedium?.copyWith(color: AppColors.stone),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Wrap(
-              spacing: AppSpacing.sm,
-              runSpacing: AppSpacing.xs,
-              children: [
-                _MacroChip(
-                    label: 'Protein',
-                    value: totals.proteinG,
-                    target: targets.values.proteinG,
-                    role: targets.resolvedProteinRole,
-                    color: AppColors.sage),
-                _MacroChip(
-                    label: 'Carbs',
-                    value: totals.carbG,
-                    target: targets.values.carbG,
-                    role: targets.resolvedCarbRole,
-                    color: AppColors.butter),
-                _MacroChip(
-                    label: 'Fat',
-                    value: totals.fatG,
-                    target: targets.values.fatG,
-                    role: targets.resolvedFatRole,
-                    color: AppColors.clay),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _MacroChip extends StatelessWidget {
-  const _MacroChip({
-    required this.label,
-    required this.value,
-    required this.target,
-    required this.role,
-    required this.color,
-  });
-
-  final String label;
-  final double? value;
-  final double? target;
-  final TargetRole role;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    final v = value == null ? '—' : '${value!.round()}g';
-    final suffix =
-        target == null ? '' : ' / ${_roleMark(role)}${target!.round()}g';
-    return Chip(
-      avatar: CircleAvatar(backgroundColor: color, radius: 6),
-      label: Text('$label $v$suffix'),
-      visualDensity: VisualDensity.comfortable,
-    );
-  }
-}
-
-class _RecentsRail extends ConsumerWidget {
-  const _RecentsRail({required this.recents});
-
-  final List<DiaryEntry> recents;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return SizedBox(
-      height: 56,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: recents.length,
-        separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.sm),
-        itemBuilder: (context, i) {
-          final template = recents[i];
-          return ActionChip(
-            avatar: const Icon(Icons.replay, size: 18),
-            label: Text(template.label, overflow: TextOverflow.ellipsis),
-            labelPadding:
-                const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-            onPressed: () async {
-              final now = DateTime.now();
-              await ref.read(diaryRepositoryProvider).log(DiaryEntry(
-                    id: const Uuid().v4(),
-                    day: DiaryEntry.dayOf(now),
-                    at: now,
-                    food: template.food,
-                    label: template.label,
-                    qty: template.qty,
-                    unitLabel: template.unitLabel,
-                    grams: template.grams,
-                    macros: template.macros,
-                    source: EntrySource.tap,
-                    createdAt: now,
-                  ));
-              if (context.mounted) {
-                ScaffoldMessenger.of(context)
-                  ..clearSnackBars()
-                  ..showSnackBar(
-                      SnackBar(content: Text('Logged ${template.label}')));
-              }
-            },
-          );
-        },
-      ),
-    );
-  }
-}
-
-/// "Round out your day" — the engine's advice, worn lightly. Ideas come
-/// with a one-tap Log; a finished day gets one warm line; dismissal lasts
-/// exactly one day. The card never scolds: when nothing helps, the engine
-/// goes quiet and this widget is never even built.
 class _RoundOutCard extends ConsumerWidget {
   const _RoundOutCard({
     required this.day,
@@ -345,22 +168,12 @@ class _RoundOutCard extends ConsumerWidget {
 
   Future<void> _log(WidgetRef ref, Suggestion s) async {
     final diary = ref.read(diaryRepositoryProvider);
+    // One stamp for the whole idea: a combo is one decision, even if the
+    // loop below straddles a midnight.
+    final now = DateTime.now();
     for (final item in s.items) {
-      final now = DateTime.now();
-      final u = item.usage;
-      await diary.log(DiaryEntry(
-        id: const Uuid().v4(),
-        day: DiaryEntry.dayOf(now),
-        at: now,
-        food: u.food,
-        label: u.label,
-        qty: u.qty * item.count,
-        unitLabel: u.unitLabel,
-        grams: u.grams == null ? null : u.grams! * item.count,
-        macros: u.macros * item.count.toDouble(),
-        source: EntrySource.tap,
-        createdAt: now,
-      ));
+      await diary.log(relogEntry(item.usage.asTemplateEntry(),
+          day: day, count: item.count, now: now));
     }
   }
 

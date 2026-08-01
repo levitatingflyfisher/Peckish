@@ -4,7 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:peckish/core/providers/core_providers.dart';
 import 'package:peckish/features/diary/domain/daily_targets.dart';
 import 'package:peckish/features/food/domain/macro_set.dart';
+import 'package:peckish/shared/extensions/qty_format.dart';
 import 'package:peckish/shared/theme/app_spacing.dart';
+import 'package:peckish/shared/widgets/num_field.dart';
+import 'package:peckish/shared/widgets/input_modal.dart';
 
 /// The daily-targets editor. The minimal path is two typed numbers —
 /// calories and protein — because the role defaults already say what most
@@ -13,8 +16,8 @@ import 'package:peckish/shared/theme/app_spacing.dart';
 Future<void> showTargetsDialog(BuildContext context, WidgetRef ref) async {
   final current = await ref.read(targetsRepositoryProvider).get();
   if (!context.mounted) return;
-  await showDialog<void>(
-    context: context,
+  await showInputDialog<void>(
+    context,
     builder: (_) => _TargetsDialog(initial: current),
   );
 }
@@ -43,8 +46,7 @@ class _TargetsDialogState extends ConsumerState<_TargetsDialog> {
   void initState() {
     super.initState();
     final t = widget.initial;
-    String show(double? v) =>
-        v == null ? '' : (v % 1 == 0 ? v.toInt().toString() : v.toString());
+    String show(double? v) => v == null ? '' : formatQty(v);
     _kcal = TextEditingController(text: show(t.values.kcal));
     _protein = TextEditingController(text: show(t.values.proteinG));
     _carbs = TextEditingController(text: show(t.values.carbG));
@@ -64,8 +66,7 @@ class _TargetsDialogState extends ConsumerState<_TargetsDialog> {
     super.dispose();
   }
 
-  static double? _num(TextEditingController c) =>
-      double.tryParse(c.text.replaceAll(',', '.'));
+  static double? _num(TextEditingController c) => parseFlexibleDouble(c.text);
 
   Widget _row(TextEditingController c, String label, TargetRole role,
           ValueChanged<TargetRole> onRole) =>
@@ -74,25 +75,17 @@ class _TargetsDialogState extends ConsumerState<_TargetsDialog> {
         child: Row(
           children: [
             Expanded(
-              child: TextField(
-                controller: c,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                decoration: InputDecoration(
-                    labelText: label, border: const OutlineInputBorder()),
-              ),
+              child: NumField(controller: c, label: label, outlined: true),
             ),
             const SizedBox(width: AppSpacing.sm),
             DropdownButton<TargetRole>(
               value: role,
               underline: const SizedBox.shrink(),
               items: const [
-                DropdownMenuItem(
-                    value: TargetRole.about, child: Text('About')),
+                DropdownMenuItem(value: TargetRole.about, child: Text('About')),
                 DropdownMenuItem(
                     value: TargetRole.atLeast, child: Text('At least')),
-                DropdownMenuItem(
-                    value: TargetRole.under, child: Text('Under')),
+                DropdownMenuItem(value: TargetRole.under, child: Text('Under')),
               ],
               onChanged: (r) => r == null ? null : onRole(r),
             ),
@@ -143,8 +136,7 @@ class _TargetsDialogState extends ConsumerState<_TargetsDialog> {
                 (r) => setState(() => _proteinRole = r)),
             _row(_carbs, 'Carbs g', _carbRole,
                 (r) => setState(() => _carbRole = r)),
-            _row(_fat, 'Fat g', _fatRole,
-                (r) => setState(() => _fatRole = r)),
+            _row(_fat, 'Fat g', _fatRole, (r) => setState(() => _fatRole = r)),
           ],
         ),
       ),

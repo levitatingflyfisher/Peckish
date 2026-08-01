@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:peckish/features/ai/data/ai_config.dart';
 import 'package:peckish/features/ai/data/ai_config_repository.dart';
+import 'package:peckish/features/ai/data/stove_secret_store.dart';
 import 'package:peckish/features/ai/on_device/model_download_service_io.dart';
 import 'package:peckish/features/ai/on_device/on_device_providers.dart';
 import 'package:peckish/features/ai/presentation/ai_settings_dialog.dart';
@@ -52,8 +53,8 @@ void main() {
       documentsDirectory: () async => tempDir,
     );
     SharedPreferences.setMockInitialValues({});
-    repo = AiConfigRepository(
-        await SharedPreferences.getInstance(), _MemoryKeys());
+    repo = AiConfigRepository(await SharedPreferences.getInstance(),
+        _MemoryKeys(), InMemoryStoveSecretStore());
   });
 
   tearDown(() async {
@@ -161,6 +162,30 @@ void main() {
     await unmount(tester);
   });
 
+  testWidgets('an interrupted download says Paused and offers Resume',
+      (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    await tester.runAsync(() async {
+      await File('${tempDir.path}/qwen25-0-5b-it-q8.task.part')
+          .writeAsBytes(Uint8List(1024 * 1024));
+    });
+    await open(tester);
+    await tester.runAsync(() async {
+      await tester.tap(find.text('On this phone'));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    });
+    await tester.pumpAndSettle();
+    await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 100)));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Resume'), findsOneWidget,
+        reason: 'leaving the app pauses a download; the .part survives '
+            'and Resume picks up from the same byte');
+    expect(find.textContaining('Paused'), findsOneWidget);
+    await unmount(tester);
+  });
+
   testWidgets('delete asks first, then the model is gone', (tester) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
     await tester.runAsync(() async {
@@ -184,8 +209,8 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 50));
     });
     await tester.pumpAndSettle();
-    await tester
-        .runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200)));
+    await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 200)));
     await tester.pumpAndSettle();
 
     expect(find.text('Downloaded'), findsNothing);

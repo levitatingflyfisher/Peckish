@@ -10,8 +10,7 @@ import 'package:sqlite3/sqlite3.dart' as sqlite3;
 // migration that already added some columns adds only the missing rest.
 void main() {
   // targets exactly as drift created it at v1..v3.
-  const targetsDdl =
-      'CREATE TABLE "targets" ("id" INTEGER NOT NULL DEFAULT 1, '
+  const targetsDdl = 'CREATE TABLE "targets" ("id" INTEGER NOT NULL DEFAULT 1, '
       '"kcal" REAL, "protein_g" REAL, "carb_g" REAL, "fat_g" REAL, '
       'PRIMARY KEY ("id"))';
 
@@ -33,10 +32,8 @@ void main() {
     final db = AppDatabase(NativeDatabase.opened(seedV3()));
     addTearDown(db.close);
 
-    expect(
-        await columnsOf(db),
-        containsAll(
-            ['kcal_role', 'protein_role', 'carb_role', 'fat_role']));
+    expect(await columnsOf(db),
+        containsAll(['kcal_role', 'protein_role', 'carb_role', 'fat_role']));
 
     final row = await db
         .customSelect('SELECT kcal, protein_g, kcal_role FROM targets')
@@ -56,18 +53,14 @@ void main() {
     final db = AppDatabase(NativeDatabase.opened(raw));
     addTearDown(db.close);
 
-    expect(
-        await columnsOf(db),
-        containsAll(
-            ['kcal_role', 'protein_role', 'carb_role', 'fat_role']));
+    expect(await columnsOf(db),
+        containsAll(['kcal_role', 'protein_role', 'carb_role', 'fat_role']));
   });
 
   test('a fresh database has the role columns from birth', () async {
     final db = AppDatabase(NativeDatabase.memory());
     addTearDown(db.close);
-    expect(
-        await columnsOf(db),
-        containsAll(
-            ['kcal_role', 'protein_role', 'carb_role', 'fat_role']));
+    expect(await columnsOf(db),
+        containsAll(['kcal_role', 'protein_role', 'carb_role', 'fat_role']));
   });
 }

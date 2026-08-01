@@ -34,6 +34,7 @@ class ScannerView extends StatelessWidget {
       scanDelay: ScannerTuning.scanDelay,
       scanDelaySuccess: ScannerTuning.scanDelaySuccess,
       cropPercent: ScannerTuning.cropPercent,
+      resolution: ScannerTuning.resolution,
       showGallery: ScannerTuning.showGallery,
       showFlashlight: ScannerTuning.showFlashlight,
       showToggleCamera: ScannerTuning.showToggleCamera,

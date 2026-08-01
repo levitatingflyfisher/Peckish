@@ -1,7 +1,9 @@
 # Design philosophy
 
 **The two-tap law.** A regular meal logs in one tap (the recents rail);
-anything else in two (the + sheet). If a flow grows a third obligatory tap,
+anything else in two (+ opens the speed-dial, one more tap picks the route —
+Find food, Quick add, Scan, Type a code, Guess it). If a flow grows a third
+obligatory tap,
 the flow is wrong. This came from watching a sibling app (Furrow) invert its
 own loop — the grid that should have been *output* became the input surface.
 
@@ -22,6 +24,12 @@ survive regeneration; checked items survive and suppress duplicates;
 unchecked generated lines follow the plan wholesale. The aisle classifier is
 deliberately dumb — a roughly-sorted list beats an unsorted one, and the
 user out-ranks the classifier by simply not caring.
+
+**The network is a question, never a reflex.** Nothing looks anything up
+by itself: a pasted URL fetches, a tapped Download downloads, a scanned
+barcode that misses the phone's own databases shows a button that names
+where the digits would go. The privacy screen (Settings → What leaves your
+device) is the contract; ADR-0010 is the fullest expression.
 
 **CRUD completeness is table stakes.** Everything visible can be edited,
 deleted, archived, or reset. Forgiveness over prevention applies to data.

@@ -1,4 +1,5 @@
-import 'package:flutter_zxing/flutter_zxing.dart' show Format;
+import 'package:flutter_zxing/flutter_zxing.dart'
+    show Format, ResolutionPreset;
 
 /// Decode settings for the camera scanner, kept as plain consts so they can
 /// be pinned by tests on a camera-less CI box (ReaderWidget itself needs
@@ -43,4 +44,13 @@ abstract final class ScannerTuning {
 
   /// Nobody scans groceries with the selfie camera.
   static const bool showToggleCamera = false;
+
+  /// Root cause #6: crinkled-wrapper failures are consistent with a soft
+  /// low-res feed. ReaderWidget's own default (ResolutionPreset.high,
+  /// ~720p) is not truly "unset" — nothing here ever overrode it, so a
+  /// curved, glossy, crinkled label was decoded from a mid-tier frame
+  /// nobody actually chose. The sharpest frame the lens has is the right
+  /// default for text this fiddly; explicit, so a future change is a
+  /// decision, not a forgotten default.
+  static const ResolutionPreset resolution = ResolutionPreset.max;
 }

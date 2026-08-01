@@ -73,9 +73,6 @@ migrate_working_dir/
 # Web
 **/web/flutter_service_worker.js
 
-# Generated drift/riverpod sources are committed so a fresh checkout builds and
-# tests without a build_runner pass; regenerate with
-# `dart run build_runner build --delete-conflicting-outputs`.
 .superpowers/
 
 # IDE
@@ -93,3 +90,6 @@ test/visual/failures/
 
 # Generated sources — CI + local run build_runner
 *.g.dart
+
+# ADR-0010 barcode-slice build area (GB-scale source data, never committed)
+tool/barcode_db/work/

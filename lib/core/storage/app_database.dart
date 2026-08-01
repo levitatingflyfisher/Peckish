@@ -74,6 +74,12 @@ class CustomFoods extends Table with SyncColumns {
   DateTimeColumn get createdAt => dateTime()();
   BoolColumn get archived => boolean().withDefault(const Constant(false))();
 
+  /// The barcode this food was saved from, normalized per ADR-0010 (leading
+  /// zeros stripped), or null for a food that was never scanned. Present so
+  /// that scanning the tin again answers from the household's own shelf
+  /// instead of asking the network a question it already answered.
+  TextColumn get barcode => text().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -312,7 +318,7 @@ class AppDatabase extends _$AppDatabase {
             ));
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   /// Wipe every user-data table in one transaction — the "Erase all data"
   /// path. Leaves the key→value shell prefs (theme) in place. This list grows
@@ -343,11 +349,23 @@ class AppDatabase extends _$AppDatabase {
             // a mid-failure re-entry lands in half-migrated state), so each
             // ALTER is guarded by a column-existence check.
             final syncedTables = <(TableInfo, List<GeneratedColumn>)>[
-              (customFoods, [customFoods.hlc, customFoods.nodeId, customFoods.isDeleted]),
-              (savedMeals, [savedMeals.hlc, savedMeals.nodeId, savedMeals.isDeleted]),
+              (
+                customFoods,
+                [customFoods.hlc, customFoods.nodeId, customFoods.isDeleted]
+              ),
+              (
+                savedMeals,
+                [savedMeals.hlc, savedMeals.nodeId, savedMeals.isDeleted]
+              ),
               (recipes, [recipes.hlc, recipes.nodeId, recipes.isDeleted]),
-              (planEntries, [planEntries.hlc, planEntries.nodeId, planEntries.isDeleted]),
-              (groceryItems, [groceryItems.hlc, groceryItems.nodeId, groceryItems.isDeleted]),
+              (
+                planEntries,
+                [planEntries.hlc, planEntries.nodeId, planEntries.isDeleted]
+              ),
+              (
+                groceryItems,
+                [groceryItems.hlc, groceryItems.nodeId, groceryItems.isDeleted]
+              ),
             ];
             for (final (table, columns) in syncedTables) {
               for (final column in columns) {
@@ -382,19 +400,52 @@ class AppDatabase extends _$AppDatabase {
               await _addColumnIfMissing(m, targets, column);
             }
           }
+          if (from < 5) {
+            // v5: the barcode a custom food was saved from. Nothing to
+            // backfill — foods saved before this release never recorded
+            // one, and they keep working exactly as they did.
+            await _addColumnIfMissing(m, customFoods, customFoods.barcode);
+          }
         },
         beforeOpen: (details) async {
           await customStatement('PRAGMA foreign_keys = ON');
+          // Idempotent, so existing installs get them without a schema
+          // bump: the diary is filtered by day on every Today/History
+          // build and portions by fdc_id on every USDA pick — both were
+          // full scans that grew with the install's age. Table-guarded in
+          // the _addColumnIfMissing spirit: migration fixtures open
+          // partial schemas.
+          await _indexIfTableExists(
+              'diary_entries',
+              'CREATE INDEX IF NOT EXISTS idx_diary_entries_day '
+                  'ON diary_entries (day)');
+          await _indexIfTableExists(
+              'usda_portions',
+              'CREATE INDEX IF NOT EXISTS idx_usda_portions_fdc_id '
+                  'ON usda_portions (fdc_id)');
         },
       );
 
+  Future<void> _indexIfTableExists(String table, String createIndex) async {
+    final exists = await customSelect(
+      "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?",
+      variables: [Variable(table)],
+    ).get();
+    if (exists.isNotEmpty) await customStatement(createIndex);
+  }
+
   Future<void> _addColumnIfMissing(
       Migrator m, TableInfo table, GeneratedColumn column) async {
+    // Table-guarded as well as column-guarded: migration fixtures open
+    // partial schemas, and a database damaged in the field can too. An
+    // ALTER against a table that isn't there throws — which would turn a
+    // missing table into an app that cannot open at all, instead of one
+    // that opens and reports the real problem.
+    if (!await _tableExists(table.actualTableName)) return;
     final info = await customSelect(
       'PRAGMA table_info(${table.actualTableName})',
     ).get();
-    final exists =
-        info.any((row) => row.read<String>('name') == column.name);
+    final exists = info.any((row) => row.read<String>('name') == column.name);
     if (!exists) await m.addColumn(table, column);
   }
 

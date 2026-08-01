@@ -67,10 +67,9 @@ class GroceriesScreen extends ConsumerWidget {
                       style: Theme.of(context)
                           .textTheme
                           .titleMedium
-                          ?.copyWith(color: AppColors.jam)),
+                          ?.copyWith(color: AppColors.paprika)),
                 ),
-                for (final item in byAisle[aisle]!)
-                  _ItemRow(item: item),
+                for (final item in byAisle[aisle]!) _ItemRow(item: item),
               ],
           const SizedBox(height: 96),
         ],

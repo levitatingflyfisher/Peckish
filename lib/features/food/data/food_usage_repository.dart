@@ -42,8 +42,7 @@ class FoodUsageRepository {
       return;
     }
     final newer = !e.at.isBefore(existing.at);
-    await (_db.update(_db.foodUsages)
-          ..where((u) => u.identityKey.equals(key)))
+    await (_db.update(_db.foodUsages)..where((u) => u.identityKey.equals(key)))
         .write(FoodUsagesCompanion(
       useCount: Value(existing.useCount + 1),
       hidden: const Value(false),
@@ -69,8 +68,7 @@ class FoodUsageRepository {
           ..where((u) => u.identityKey.equals(key)))
         .getSingleOrNull();
     if (existing == null || e.at.isBefore(existing.at)) return;
-    await (_db.update(_db.foodUsages)
-          ..where((u) => u.identityKey.equals(key)))
+    await (_db.update(_db.foodUsages)..where((u) => u.identityKey.equals(key)))
         .write(FoodUsagesCompanion(
       qty: Value(e.qty),
       unitLabel: Value(e.unitLabel),
@@ -91,18 +89,50 @@ class FoodUsageRepository {
     return (await q.get()).map(_toDomain).toList();
   }
 
-  Stream<List<FoodUsage>> watchAll() => (_db.select(_db.foodUsages)
+  Stream<List<FoodUsage>> watchAll() =>
+      (_db.select(_db.foodUsages)..orderBy([(u) => OrderingTerm.desc(u.at)]))
+          .watch()
+          .map((rows) => rows.map(_toDomain).toList());
+
+  /// The rail's live read: visible regulars, newest first, with the cap
+  /// pushed into SQL — twelve chips should cost twelve rows per diary
+  /// write, not a lifetime of habits re-read and re-mapped every log.
+  Stream<List<FoodUsage>> watchVisible({int? limit}) {
+    final q = _db.select(_db.foodUsages)
+      ..where((u) => u.hidden.equals(false))
+      ..orderBy([(u) => OrderingTerm.desc(u.at)]);
+    if (limit != null) q.limit(limit);
+    return q.watch().map((rows) => rows.map(_toDomain).toList());
+  }
+
+  /// The Foods screen's Hidden section: unbounded — a household hides only
+  /// a handful of regulars on purpose, so the visible section's ~30 cap has
+  /// no business truncating this list too.
+  Stream<List<FoodUsage>> watchHidden() => (_db.select(_db.foodUsages)
+        ..where((u) => u.hidden.equals(true))
         ..orderBy([(u) => OrderingTerm.desc(u.at)]))
       .watch()
       .map((rows) => rows.map(_toDomain).toList());
 
+  /// The suggestion engine's pool: visible regulars, most-used first with
+  /// the engine's own label tie-break, capped in SQL at its ceiling.
+  Stream<List<FoodUsage>> watchTopUsed({required int limit}) {
+    final q = _db.select(_db.foodUsages)
+      ..where((u) => u.hidden.equals(false))
+      ..orderBy([
+        (u) => OrderingTerm.desc(u.useCount),
+        (u) => OrderingTerm.asc(u.label),
+      ])
+      ..limit(limit);
+    return q.watch().map((rows) => rows.map(_toDomain).toList());
+  }
+
   /// Every regular, hidden included — the export/backup gathering path.
-  Future<List<FoodUsage>> getAll() async =>
-      (await (_db.select(_db.foodUsages)
-                ..orderBy([(u) => OrderingTerm.desc(u.at)]))
-              .get())
-          .map(_toDomain)
-          .toList();
+  Future<List<FoodUsage>> getAll() async => (await (_db.select(_db.foodUsages)
+            ..orderBy([(u) => OrderingTerm.desc(u.at)]))
+          .get())
+      .map(_toDomain)
+      .toList();
 
   Future<void> setHidden(String identityKey, {required bool hidden}) =>
       (_db.update(_db.foodUsages)
@@ -111,27 +141,26 @@ class FoodUsageRepository {
 
   /// Restore path: re-seat an exported regular wholesale (counts + hidden
   /// flags are truth from the backup, not derivable from the replayed diary).
-  Future<void> put(FoodUsage u) =>
-      _db.into(_db.foodUsages).insert(
-            FoodUsagesCompanion.insert(
-              identityKey: u.identityKey,
-              foodKind: FoodKindDb.values[u.food.kind.index],
-              usdaFdcId: Value(u.food.usdaFdcId),
-              customFoodId: Value(u.food.customFoodId),
-              label: u.label,
-              qty: u.qty,
-              unitLabel: u.unitLabel,
-              grams: Value(u.grams),
-              kcal: Value(u.macros.kcal),
-              proteinG: Value(u.macros.proteinG),
-              carbG: Value(u.macros.carbG),
-              fatG: Value(u.macros.fatG),
-              useCount: u.useCount,
-              at: u.lastUsedAt,
-              hidden: Value(u.hidden),
-            ),
-            mode: InsertMode.insertOrReplace,
-          );
+  Future<void> put(FoodUsage u) => _db.into(_db.foodUsages).insert(
+        FoodUsagesCompanion.insert(
+          identityKey: u.identityKey,
+          foodKind: FoodKindDb.values[u.food.kind.index],
+          usdaFdcId: Value(u.food.usdaFdcId),
+          customFoodId: Value(u.food.customFoodId),
+          label: u.label,
+          qty: u.qty,
+          unitLabel: u.unitLabel,
+          grams: Value(u.grams),
+          kcal: Value(u.macros.kcal),
+          proteinG: Value(u.macros.proteinG),
+          carbG: Value(u.macros.carbG),
+          fatG: Value(u.macros.fatG),
+          useCount: u.useCount,
+          at: u.lastUsedAt,
+          hidden: Value(u.hidden),
+        ),
+        mode: InsertMode.insertOrReplace,
+      );
 
   static FoodUsage _toDomain(FoodUsageRow r) => FoodUsage(
         identityKey: r.identityKey,

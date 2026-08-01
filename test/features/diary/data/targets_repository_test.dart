@@ -21,8 +21,7 @@ void main() {
 
   tearDown(() => db.close());
 
-  test('an untouched database has no targets and the default roles',
-      () async {
+  test('an untouched database has no targets and the default roles', () async {
     final t = await repo.get();
     expect(t.isSet, isFalse);
     expect(t.values, const MacroSet());
@@ -103,8 +102,7 @@ void main() {
     );
     final byName = {for (final a in t.axes) a.axis: a};
 
-    expect(byName.keys,
-        containsAll(['kcal', 'protein', 'carbs', 'fat']));
+    expect(byName.keys, containsAll(['kcal', 'protein', 'carbs', 'fat']));
     expect(byName['kcal']!.target, 2000);
     expect(byName['kcal']!.role, TargetRole.under);
     expect(byName['protein']!.role, TargetRole.atLeast);

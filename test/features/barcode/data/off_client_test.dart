@@ -57,8 +57,8 @@ void main() {
     test('404 means honestly not-in-the-database', () async {
       final client = OffClient(
           client: MockClient((_) async => http.Response('not found', 404)));
-      expect(() => client.fetchProduct(code),
-          throwsA(isA<OffProductNotFound>()));
+      expect(
+          () => client.fetchProduct(code), throwsA(isA<OffProductNotFound>()));
     });
 
     test('a v3 failure envelope with 200 status is also not-found', () async {
@@ -66,8 +66,8 @@ void main() {
           client: MockClient((_) async => http.Response(
               jsonEncode({'code': '3017620422003', 'status': 'failure'}),
               200)));
-      expect(() => client.fetchProduct(code),
-          throwsA(isA<OffProductNotFound>()));
+      expect(
+          () => client.fetchProduct(code), throwsA(isA<OffProductNotFound>()));
     });
 
     test('non-JSON garbage becomes a lookup exception, not a crash', () async {
@@ -79,8 +79,8 @@ void main() {
 
     test('an oversized body is refused', () async {
       final client = OffClient(
-          client:
-              MockClient((_) async => http.Response('x' * (2 * 1024 * 1024 + 1), 200)));
+          client: MockClient(
+              (_) async => http.Response('x' * (2 * 1024 * 1024 + 1), 200)));
       expect(
           () => client.fetchProduct(code), throwsA(isA<OffLookupException>()));
     });

@@ -1,34 +1,37 @@
-import 'package:flutter/material.dart';
+import 'package:openhearth_design/openhearth_design.dart';
 
-/// Peckish's palette — jam and butter on an oat cloth; the family table.
+/// Peckish's semantic color names, aliased onto the shared OpenHearth
+/// ramps — no raw hex lives in this app. Peckish wears the flagship
+/// hearth terracotta (it IS the table-and-kitchen app); the names below
+/// say what each color MEANS here, and openhearth_design says what it is.
 class AppColors {
   AppColors._();
 
-  // Jam — damson plum (primary: app bar, primary buttons)
-  static const jam = Color(0xFF7A4160);
-  static const jam600 = Color(0xFF663450);
-  static const jam700 = Color(0xFF522941);
+  // The identity: hearth terracotta (app bar accents, primary buttons,
+  // the kcal number, today's bar).
+  static const paprika = OhColors.hearth500;
+  static const paprika600 = OhColors.hearth600;
+  static const paprika700 = OhColors.hearth700;
 
-  // Oat — warm flour/linen (background); oat2 for cards/raised surfaces
-  static const oat = Color(0xFFF7F1E5);
-  static const oat2 = Color(0xFFEFE6D3);
+  // Surfaces: warm linen (background; flour2 for cards/raised surfaces).
+  static const flour = OhColors.linen50;
+  static const flour2 = OhColors.linen100;
 
-  // Butter — the warm accent: today, the one-tap peck, highlights
-  static const butter = Color(0xFFE0AC3F);
+  // The warm accent: today, the one-tap peck, the carbs chip.
+  static const butter = OhColors.amber400;
 
-  // Sage — produce green: fresh, planned, checked off the list
-  static const sage = Color(0xFF6F8F52);
+  // Produce green: fresh, planned, the protein chip, checked off.
+  static const sage = OhColors.sage500;
 
-  // Clay — gentle attention. Never red: a heavy day is information, not alarm.
-  static const clay = Color(0xFFA66A4A);
+  // Gentle attention (fat chip, failure lines, the delete swipe). Deep
+  // brick, never alarm-red — a heavy day is information, not a siren.
+  static const clay = OhColors.hearth700;
 
-  // Ink — text (warm plum-black)
-  static const ink = Color(0xFF2C2530);
+  // Text.
+  static const ink = OhColors.linen900;
+  static const stone = OhColors.linen500;
 
-  // Stone — secondary text, disabled
-  static const stone = Color(0xFF97909B);
-
-  // Dark surfaces (plum-ink family, warm and quiet)
-  static const darkSurface = Color(0xFF211C25);
-  static const darkSurface2 = Color(0xFF2B2432);
+  // Dark surfaces (the shared hearth-dark family — embers, not aubergine).
+  static const darkSurface = OhColors.darkSurfaceBase;
+  static const darkSurface2 = OhColors.darkSurfaceCard;
 }

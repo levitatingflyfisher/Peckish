@@ -21,6 +21,14 @@ PeckishExport fullExport() => PeckishExport(
           createdAt: DateTime.utc(2026, 7, 1),
           archived: false,
         ),
+        CustomFood(
+          id: 'cf-2',
+          name: 'Spam',
+          servingLabel: '2 slices',
+          perServing: const MacroSet(kcal: 360),
+          createdAt: DateTime.utc(2026, 7, 2),
+          barcode: '27000612323',
+        ),
       ],
       diaryEntries: [
         DiaryEntry(
@@ -129,9 +137,13 @@ void main() {
   test('encode → decode round-trips every section', () {
     final decoded = PeckishExport.fromJson(fullExport().toPrettyJson());
 
-    expect(decoded.customFoods.single.name, 'Cafe Rio salad');
-    expect(decoded.customFoods.single.perServing.kcal, 640);
-    expect(decoded.customFoods.single.perServing.carbG, isNull);
+    expect(decoded.customFoods.first.name, 'Cafe Rio salad');
+    expect(decoded.customFoods.first.perServing.kcal, 640);
+    expect(decoded.customFoods.first.perServing.carbG, isNull);
+    // A restored food must still answer its own barcode, or the restore
+    // quietly costs you every one-tap scan you had built up.
+    expect(decoded.customFoods.last.barcode, '27000612323');
+    expect(decoded.customFoods.first.barcode, isNull);
 
     final e = decoded.diaryEntries.single;
     expect(e.food.kind, FoodKind.usda);
@@ -178,8 +190,7 @@ void main() {
 
   test('a pre-roles targets object decodes with null roles (defaults apply)',
       () {
-    final decoded = PeckishExport.fromJson(
-        '{"app":"peckish","schemaVersion":1,'
+    final decoded = PeckishExport.fromJson('{"app":"peckish","schemaVersion":1,'
         '"targets":{"kcal":2000,"proteinG":150}}');
     expect(decoded.targets.values.kcal, 2000);
     expect(decoded.targets.kcalRole, isNull);
@@ -188,8 +199,8 @@ void main() {
 
   test('an export with absent sections decodes to empties (old files restore)',
       () {
-    final decoded = PeckishExport.fromJson(
-        '{"app":"peckish","schemaVersion":1}');
+    final decoded =
+        PeckishExport.fromJson('{"app":"peckish","schemaVersion":1}');
     expect(decoded.customFoods, isEmpty);
     expect(decoded.diaryEntries, isEmpty);
     expect(decoded.savedMeals, isEmpty);
@@ -213,7 +224,8 @@ void main() {
         'peckish-export-2026-07-25.json');
   });
 
-  test('a scan-sourced entry round-trips, and unknown sources degrade to '
+  test(
+      'a scan-sourced entry round-trips, and unknown sources degrade to '
       'manual (older app reading a newer file)', () {
     final export = PeckishExport(
       createdAt: DateTime.utc(2026, 7, 26),

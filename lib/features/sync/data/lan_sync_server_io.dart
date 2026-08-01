@@ -13,6 +13,10 @@ import 'package:peckish/features/sync/data/sync_clock.dart';
 import 'package:peckish/features/sync/data/sync_codec.dart';
 import 'package:peckish/features/sync/data/sync_engine.dart';
 
+/// Native builds can bind a LAN socket. The seam owns the answer so
+/// screens gate on capability, never on `kIsWeb` (the house trio idiom).
+bool get lanSyncSupported => true;
+
 /// Peckish's LAN port — one above StillLife's 8420, so a phone running both
 /// apps can host both households.
 const kSyncPort = 8421;
@@ -77,8 +81,9 @@ class LanSyncServer {
       ..get('/sync/status', _handleStatus)
       ..get('/sync/export', _handleExport)
       ..post('/sync/import', _handleImport);
-    final handler =
-        const Pipeline().addMiddleware(_redactedLogger()).addHandler(router.call);
+    final handler = const Pipeline()
+        .addMiddleware(_redactedLogger())
+        .addHandler(router.call);
     _server = await shelf_io.serve(handler, InternetAddress.anyIPv4, _port);
   }
 
@@ -94,7 +99,7 @@ class LanSyncServer {
   /// identifies the household beyond "a Peckish lives here".
   Future<Response> _handleStatus(Request request) async {
     return Response.ok(
-      const JsonEncoder().convert({
+      jsonEncode({
         'nodeId': await _clock.nodeId(),
         'hlc': (await _clock.next()),
         'proto': SyncCodec.protocolVersion,
@@ -140,8 +145,8 @@ class LanSyncServer {
     final challenge = token == null ? null : _challenges.consume(token);
     if (challenge == null) {
       return Response(401,
-          body: const JsonEncoder()
-              .convert({'error': 'Missing or already-used sync challenge.'}),
+          body:
+              jsonEncode({'error': 'Missing or already-used sync challenge.'}),
           headers: {'content-type': 'application/json'});
     }
 
@@ -155,7 +160,7 @@ class LanSyncServer {
       );
     } on SanctuaryAuthException catch (e) {
       return Response(400,
-          body: const JsonEncoder().convert({'error': e.message}),
+          body: jsonEncode({'error': e.message}),
           headers: {'content-type': 'application/json'});
     }
 
@@ -166,7 +171,7 @@ class LanSyncServer {
       final result = await _engine.apply(changeset);
       return Response(
         result.isSuccess ? 200 : 422,
-        body: const JsonEncoder().convert({
+        body: jsonEncode({
           'recordsApplied': result.recordsApplied,
           if (result.error != null) 'error': result.error,
         }),
@@ -177,12 +182,12 @@ class LanSyncServer {
       // leftover-review lesson) — authenticated or not, the wire gets a
       // shape, not a stack.
       return Response.internalServerError(
-          body: const JsonEncoder().convert({'error': 'Merge failed.'}),
+          body: jsonEncode({'error': 'Merge failed.'}),
           headers: {'content-type': 'application/json'});
     }
   }
 
   Response _tooLarge() => Response(413,
-      body: const JsonEncoder().convert({'error': 'Payload too large'}),
+      body: jsonEncode({'error': 'Payload too large'}),
       headers: {'content-type': 'application/json'});
 }

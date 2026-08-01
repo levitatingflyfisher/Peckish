@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_zxing/flutter_zxing.dart' show Format;
+import 'package:flutter_zxing/flutter_zxing.dart' show Format, ResolutionPreset;
 import 'package:peckish/features/barcode/presentation/scanner_tuning.dart';
 
 // ReaderWidget needs a real camera, which this CI box does not have, so the
@@ -27,8 +27,7 @@ void main() {
     expect(ScannerTuning.scanDelaySuccess, const Duration(milliseconds: 2000));
   });
 
-  test('most of the frame is decoded, not just an invisible center square',
-      () {
+  test('most of the frame is decoded, not just an invisible center square', () {
     expect(ScannerTuning.cropPercent, 0.75,
         reason: 'users cannot aim at a crop box they cannot see');
   });
@@ -39,5 +38,14 @@ void main() {
     expect(ScannerTuning.showFlashlight, isTrue);
     expect(ScannerTuning.showToggleCamera, isFalse,
         reason: 'nobody scans groceries with the selfie camera');
+  });
+
+  test('the camera feed is asked for at its highest resolution', () {
+    // Root cause #6: crinkled-wrapper failures are consistent with a soft
+    // low-res feed. ReaderWidget already defaulted to ResolutionPreset.high
+    // (~720p) when ScannerView passed no resolution at all — never truly
+    // "unset" — but a crinkled, curved, glossy label deserves the sharpest
+    // frame the lens has, not a mid-tier default nobody chose on purpose.
+    expect(ScannerTuning.resolution, ResolutionPreset.max);
   });
 }

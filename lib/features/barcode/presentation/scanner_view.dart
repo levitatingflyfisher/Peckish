@@ -2,5 +2,4 @@
 /// the web build gets the stub (manual entry is the universal path).
 library;
 
-export 'scanner_view_stub.dart'
-    if (dart.library.ffi) 'scanner_view_zxing.dart';
+export 'scanner_view_stub.dart' if (dart.library.ffi) 'scanner_view_zxing.dart';

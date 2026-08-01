@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,6 +9,7 @@ import 'package:peckish/features/sync/data/sync_engine.dart';
 import 'package:peckish/features/sync/data/sync_secret_store.dart';
 import 'package:peckish/shared/theme/app_spacing.dart';
 import 'package:uuid/uuid.dart';
+import 'package:peckish/shared/widgets/input_modal.dart';
 
 /// The household secret store; overridable in tests.
 final syncSecretStoreProvider =
@@ -49,6 +49,11 @@ class _SyncScreenState extends ConsumerState<SyncScreen> {
   @override
   void initState() {
     super.initState();
+    // The server outlives this screen (kept-alive provider): re-entry must
+    // report what it is actually doing, not a fresh local default.
+    if (lanSyncSupported) {
+      _listening = ref.read(lanSyncServerProvider).isRunning;
+    }
     ref.read(syncSecretStoreProvider).read().then((s) {
       if (mounted) setState(() => _secret = s);
     });
@@ -63,7 +68,9 @@ class _SyncScreenState extends ConsumerState<SyncScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    if (kIsWeb) {
+    // The capability seam answers for the platform; this screen never asks
+    // kIsWeb itself.
+    if (!lanSyncSupported) {
       return Scaffold(
         appBar: AppBar(title: const Text('Household sync')),
         body: Center(
@@ -181,8 +188,8 @@ class _SyncScreenState extends ConsumerState<SyncScreen> {
 
   Future<void> _enterCode() async {
     final controller = TextEditingController();
-    final code = await showDialog<String>(
-      context: context,
+    final code = await showInputDialog<String>(
+      context,
       builder: (ctx) => AlertDialog(
         title: const Text('Enter the household code'),
         content: TextField(
@@ -196,8 +203,7 @@ class _SyncScreenState extends ConsumerState<SyncScreen> {
               onPressed: () => Navigator.of(ctx).pop(),
               child: const Text('Cancel')),
           FilledButton(
-              onPressed: () =>
-                  Navigator.of(ctx).pop(controller.text.trim()),
+              onPressed: () => Navigator.of(ctx).pop(controller.text.trim()),
               child: const Text('Join')),
         ],
       ),
@@ -206,7 +212,7 @@ class _SyncScreenState extends ConsumerState<SyncScreen> {
     if (code.length < kMinSyncSecretLength) {
       setState(() => _message =
           'That code is too short to be a household code — copy the whole '
-          'thing from the other device.');
+              'thing from the other device.');
       return;
     }
     await _adoptSecret(code);
@@ -240,9 +246,9 @@ class _SyncScreenState extends ConsumerState<SyncScreen> {
   Future<void> _syncNow() async {
     final host = _host.text.trim();
     if (host.isEmpty) {
-      setState(() =>
-          _message = "Enter the other device's address (Settings → "
-              'Household sync shows it there).');
+      setState(
+          () => _message = "Enter the other device's address (Settings, then "
+              'Household sync, shows it there).');
       return;
     }
     setState(() {

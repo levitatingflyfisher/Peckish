@@ -24,8 +24,8 @@ void main() {
           carbG: const Value(33.3),
           fatG: const Value(9.7),
         ));
-    await db.into(db.usdaPortions).insert(UsdaPortionsCompanion.insert(
-        fdcId: 1, label: '1 slice', grams: 107));
+    await db.into(db.usdaPortions).insert(
+        UsdaPortionsCompanion.insert(fdcId: 1, label: '1 slice', grams: 107));
     await db.into(db.usdaFoods).insert(UsdaFoodsCompanion.insert(
           fdcId: const Value(2),
           source: 'sr',

@@ -11,6 +11,8 @@ class ModelDownloadService {
 
   Future<bool> isDownloaded(PeckishModelSpec spec) async => false;
 
+  Future<bool> hasPartial(PeckishModelSpec spec) async => false;
+
   Stream<(int, int)> download(PeckishModelSpec spec) => Stream.error(
         UnsupportedError(
             'On-device models are not available in the web version.'),

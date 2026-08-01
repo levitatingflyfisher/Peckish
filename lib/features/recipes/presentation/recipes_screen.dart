@@ -7,8 +7,10 @@ import 'package:peckish/features/recipes/domain/recipe.dart';
 import 'package:peckish/features/recipes/import/recipe_fetcher.dart';
 import 'package:peckish/features/recipes/import/schema_org_recipe_parser.dart';
 import 'package:peckish/features/recipes/presentation/recipe_detail_screen.dart';
+import 'package:peckish/shared/extensions/qty_format.dart';
 import 'package:peckish/shared/theme/app_colors.dart';
 import 'package:peckish/shared/theme/app_spacing.dart';
+import 'package:peckish/shared/widgets/input_modal.dart';
 
 /// The recipe box: paste a URL and the page becomes a recipe, or write one
 /// by hand. Import is preview-then-confirm — nothing enters the box unseen.
@@ -53,8 +55,8 @@ class RecipesScreen extends ConsumerWidget {
                       trailing: r.perServing?.kcal == null
                           ? null
                           : Chip(
-                              label: Text(
-                                  '${r.perServing!.kcal!.round()} kcal'),
+                              label:
+                                  Text('${r.perServing!.kcal!.round()} kcal'),
                               visualDensity: VisualDensity.compact,
                             ),
                       onTap: () => Navigator.of(context).push(
@@ -72,8 +74,7 @@ class RecipesScreen extends ConsumerWidget {
 
   String _subtitle(Recipe r) {
     final bits = <String>[
-      if (r.servings != null)
-        '${r.servings! % 1 == 0 ? r.servings!.toInt() : r.servings} servings',
+      if (r.servings != null) '${formatQty(r.servings!)} servings',
       '${r.ingredients.length} ingredients',
     ];
     return bits.join(' · ');
@@ -89,8 +90,7 @@ class RecipesScreen extends ConsumerWidget {
               ListTile(
                 leading: const Icon(Icons.link),
                 title: const Text('Paste a recipe link'),
-                subtitle:
-                    const Text('Fetches that one page, nothing else'),
+                subtitle: const Text('Fetches that one page, nothing else'),
                 onTap: () {
                   Navigator.of(sheetContext).pop();
                   _importFromUrl(context, ref);
@@ -112,8 +112,8 @@ class RecipesScreen extends ConsumerWidget {
 
   Future<void> _importFromUrl(BuildContext context, WidgetRef ref) async {
     final controller = TextEditingController();
-    final url = await showDialog<String>(
-      context: context,
+    final url = await showInputDialog<String>(
+      context,
       builder: (d) => AlertDialog(
         title: const Text('Paste a recipe link'),
         content: TextField(
@@ -248,8 +248,8 @@ class _RecipeEditScreenState extends ConsumerState<RecipeEditScreen> {
           ),
           const SizedBox(height: AppSpacing.lg),
           FilledButton(
-            style: FilledButton.styleFrom(
-                minimumSize: const Size.fromHeight(52)),
+            style:
+                FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)),
             onPressed: _save,
             child: Text(widget.existing != null ? 'Save changes' : 'Save'),
           ),

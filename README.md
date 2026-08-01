@@ -21,17 +21,40 @@ ads, no tracking, no subscriptions.
   aisle-sorted list. Manual adds always survive regeneration; checked items
   are never re-added; unchecked generated lines follow the plan.
 - **Today** — a one-tap diary built around your regulars: recents rail,
-  saved meals, offline search over the bundled spine, quick add. Static
-  targets if you want them; plain numbers either way.
+  saved meals, offline search over the bundled spine, quick add. Optional
+  targets with roles (a floor, a budget, a land-near), and "round out your
+  day" suggestions drawn from your own regulars.
+- **The month behind you** — its own tab: a trend line for the macro you
+  pick with your target ruled across it, and a calendar whose every past
+  day opens that day's plate, complete with its own kcal and per-macro
+  breakdown. Nothing disappears, blank days stay honestly blank, and
+  every way of logging — your regulars, search, quick add, barcode, AI —
+  works on a day you already lived, one tap where it should be one tap.
+- **Scan it** — barcode scan (camera or typed digits), answered from your
+  own saved foods first, then downloadable offline databases on your
+  phone; a code nobody knows shows one button, "Ask openfoodfacts.org",
+  and only that tap sends the digits. Save a scanned food and the next
+  scan of that tin just logs it.
+- **Guess it** — describe the meal, or snap the plate (Android), and AI
+  drafts lines you prune and confirm. Pick where it thinks: a model
+  downloaded to the phone, your household's own desktop over an
+  encrypted LAN channel, or your own cloud key. Ships off; every
+  AI-drafted line carries its provenance.
+- **The household kitchen** — recipes, the plan, groceries, custom foods
+  and saved meals can sync over an encrypted pairing on your own Wi-Fi;
+  diaries and targets never leave their device.
 - **Your data is yours** — encrypted `.ohbk` backup/restore (sanctuary),
   plain-JSON export, and a real erase button.
 
 ## The network, exactly
 
-The app touches the network for two user-initiated actions only: fetching
-the one recipe URL you pasted, and (later) an Open Food Facts barcode
-lookup. Everything else is on-device, forever. The Android manifest declares
-INTERNET and nothing else.
+The app touches the network only when you act: fetching the one recipe URL
+you pasted, optional downloads (an on-device AI model, the offline barcode
+databases), and — when a scanned barcode isn't in your phone's databases —
+an Open Food Facts lookup that runs only when you tap "Ask
+openfoodfacts.org". With the offline database installed, a scan is answered
+on the phone and nothing leaves. Everything else is on-device, forever. The
+full map lives in-app: Settings → What leaves your device.
 
 ## Building
 

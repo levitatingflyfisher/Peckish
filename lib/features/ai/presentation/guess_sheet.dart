@@ -5,21 +5,33 @@ import 'package:peckish/core/providers/core_providers.dart';
 import 'package:peckish/features/ai/data/ai_config.dart';
 import 'package:peckish/features/ai/data/ai_config_repository.dart';
 import 'package:peckish/features/ai/data/guess_service.dart';
+import 'package:peckish/features/ai/data/stove_secret_store.dart';
 import 'package:peckish/features/ai/domain/meal_guess.dart';
 import 'package:peckish/features/ai/on_device/on_device_providers.dart';
 import 'package:peckish/features/ai/on_device/plate_lookup.dart';
 import 'package:peckish/features/ai/on_device/plate_scan.dart';
 import 'package:peckish/features/ai/on_device/plate_scanner.dart';
+import 'package:peckish/features/ai/stove/stove_brain.dart';
+import 'package:peckish/features/ai/stove/stove_brain_factory.dart';
+import 'package:peckish/features/diary/domain/day_stamp.dart';
 import 'package:peckish/features/diary/domain/diary_entry.dart';
+import 'package:peckish/features/diary/presentation/day_format.dart';
+import 'package:peckish/shared/theme/app_colors.dart';
 import 'package:peckish/shared/theme/app_spacing.dart';
+import 'package:peckish/shared/widgets/input_modal.dart';
 import 'package:uuid/uuid.dart';
 
 /// The platform key store; a single override point for tests.
 final aiKeyStoreProvider = Provider<KeyStore>((_) => const SecureKeyStore());
 
+/// The household-phrase store for the stove backend; same override point
+/// pattern as the key store.
+final stoveSecretStoreProvider =
+    Provider<StoveSecretStore>((_) => const SecureStoveSecretStore());
+
 final aiConfigRepositoryProvider = Provider<AiConfigRepository>((ref) =>
-    AiConfigRepository(
-        ref.watch(sharedPreferencesProvider), ref.watch(aiKeyStoreProvider)));
+    AiConfigRepository(ref.watch(sharedPreferencesProvider),
+        ref.watch(aiKeyStoreProvider), ref.watch(stoveSecretStoreProvider)));
 
 /// The current AI configuration. The add sheet gates its tile on
 /// `configured`; invalidate after saving settings.
@@ -29,18 +41,26 @@ final aiConfigProvider = FutureProvider<AiConfig>(
 /// Test seam: a non-null client here replaces the wire.
 final guessHttpClientProvider = Provider<http.Client?>((_) => null);
 
+/// The platform-selected stove factory (null-returning on web); a test
+/// seam — override to fake the encrypted wire.
+final stoveBrainFactoryProvider =
+    Provider<StoveBrain? Function(AiConfig)>((_) => createStoveBrain);
+
 /// The guesstimate box: describe what you ate, the model drafts lines, you
 /// prune and confirm. Nothing is logged until the confirm tap, and every
 /// logged line carries `ai` provenance.
-Future<void> showGuessSheet(BuildContext context) => showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (_) => const _GuessSheet(),
-    );
+///
+/// [day] is the past day being fed (null = today). Prose about a meal is
+/// no less reliable three days late than three minutes late — the model
+/// was always estimating from words, never from the clock.
+Future<void> showGuessSheet(BuildContext context, {String? day}) =>
+    showInputSheet<void>(context, builder: (_) => _GuessSheet(day: day));
 
 class _GuessSheet extends ConsumerStatefulWidget {
-  const _GuessSheet();
+  const _GuessSheet({this.day});
+
+  /// Null = today; otherwise the past day these lines will land on.
+  final String? day;
 
   @override
   ConsumerState<_GuessSheet> createState() => _GuessSheetState();
@@ -72,7 +92,15 @@ class _GuessSheetState extends ConsumerState<_GuessSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Guess it for me', style: theme.textTheme.titleLarge),
+          Row(
+            children: [
+              Expanded(
+                child:
+                    Text('Guess it for me', style: theme.textTheme.titleLarge),
+              ),
+              const SheetCloseButton(),
+            ],
+          ),
           const SizedBox(height: AppSpacing.xs),
           Text(
             _draft == null
@@ -81,6 +109,13 @@ class _GuessSheetState extends ConsumerState<_GuessSheet> {
                 : 'AI guesses — prune what it got wrong, then log.',
             style: theme.textTheme.bodySmall,
           ),
+          if (widget.day != null)
+            Padding(
+              padding: const EdgeInsets.only(top: AppSpacing.sm),
+              child: Text('Adding to ${prettyDay(widget.day!)}',
+                  style: theme.textTheme.titleMedium
+                      ?.copyWith(color: AppColors.paprika)),
+            ),
           const SizedBox(height: AppSpacing.md),
           if (_draft == null) ...[
             Row(
@@ -141,8 +176,7 @@ class _GuessSheetState extends ConsumerState<_GuessSheet> {
                       trailing: IconButton(
                         icon: const Icon(Icons.close),
                         tooltip: 'Remove this line',
-                        onPressed: () =>
-                            setState(() => _draft!.removeAt(i)),
+                        onPressed: () => setState(() => _draft!.removeAt(i)),
                       ),
                     ),
                 ],
@@ -150,7 +184,7 @@ class _GuessSheetState extends ConsumerState<_GuessSheet> {
             ),
             const SizedBox(height: AppSpacing.sm),
             FilledButton(
-              onPressed: _draft!.isEmpty ? null : () => _logAll(context),
+              onPressed: _draft!.isEmpty ? null : _logAll,
               child: Text(
                   'Log ${_draft!.length} ${_draft!.length == 1 ? "entry" : "entries"}'),
             ),
@@ -180,18 +214,14 @@ class _GuessSheetState extends ConsumerState<_GuessSheet> {
         config: config,
         httpClient: ref.read(guessHttpClientProvider),
         localBrain: ref.read(localBrainProvider),
+        stoveBrain: ref.read(stoveBrainFactoryProvider)(config),
       );
       final guess = await service.guess(description);
       if (!mounted) return;
-      setState(() {
-        _busy = false;
-        if (guess.foods.isEmpty) {
-          _message = "The AI couldn't make anything of that — try naming "
-              'the foods more plainly, or Quick add them yourself.';
-        } else {
-          _draft = List.of(guess.foods);
-        }
-      });
+      _finish(
+          guess,
+          "The AI couldn't make anything of that — try naming "
+          'the foods more plainly, or Quick add them yourself.');
     } on GuessException catch (e) {
       if (!mounted) return;
       setState(() {
@@ -221,14 +251,27 @@ class _GuessSheetState extends ConsumerState<_GuessSheet> {
       final guess =
           await PlateScan.fromLabels(labels, (q) => plateLookup(usda, q));
       if (!mounted) return;
+      _finish(
+          guess,
+          // Two different failures, two different sentences. The labeler
+          // reporting 'Food' at 0.94 and the labeler seeing a sink are not
+          // the same event, and the old copy called both of them "no food",
+          // which is why this read as the feature being broken.
+          PlateScan.sawFoodButNotWhat(labels)
+              ? 'That looks like a meal, but the photo labeller only gets '
+                  'as far as "food" — it knows about nineteen dishes, not '
+                  'yours. Say what it was and the numbers come from the '
+                  'same place.'
+              : "Couldn't spot any food in that photo — describe the "
+                  'meal below instead.');
+    } on PlateUnavailableException {
+      if (!mounted) return;
       setState(() {
         _busy = false;
-        if (guess.foods.isEmpty) {
-          _message = "Couldn't spot any food in that photo — describe the "
-              'meal below instead.';
-        } else {
-          _draft = List.of(guess.foods);
-        }
+        _message = "This phone can't label photos — that one piece rides "
+            'Google Play services. Everything else, including the '
+            'downloaded on-device model, works without it: describe the '
+            'meal below.';
       });
     } on Exception {
       if (!mounted) return;
@@ -240,14 +283,31 @@ class _GuessSheetState extends ConsumerState<_GuessSheet> {
     }
   }
 
-  Future<void> _logAll(BuildContext context) async {
+  /// The shared landing for both guess flows (text and plate photo): stop
+  /// the spinner, then either surface the draft lines or say — in the
+  /// flow's own words — that nothing came of it.
+  void _finish(MealGuess guess, String emptyMessage) {
+    setState(() {
+      _busy = false;
+      if (guess.foods.isEmpty) {
+        _message = emptyMessage;
+      } else {
+        _draft = List.of(guess.foods);
+      }
+    });
+  }
+
+  Future<void> _logAll() async {
     final now = DateTime.now();
+    // One stamp for the whole draft: a plate's lines belong to one moment,
+    // even if the loop below straddles a midnight.
+    final stamp = dayStamp(widget.day, now: now);
     final diary = ref.read(diaryRepositoryProvider);
     for (final food in _draft!) {
       await diary.log(DiaryEntry(
         id: const Uuid().v4(),
-        day: DiaryEntry.dayOf(now),
-        at: now,
+        day: stamp.day,
+        at: stamp.at,
         food: const FoodRef.quick(),
         label: food.name,
         qty: food.grams ?? 1,
@@ -258,7 +318,7 @@ class _GuessSheetState extends ConsumerState<_GuessSheet> {
         createdAt: now,
       ));
     }
-    if (context.mounted) Navigator.of(context).pop();
+    if (mounted) Navigator.of(context).pop();
   }
 
   /// '~650 g · 905 kcal · estimate' — the confidence label in plain words.

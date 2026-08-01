@@ -25,7 +25,9 @@ Future<void> unmount(WidgetTester tester) async {
 }
 
 DiaryEntry entry(
-        {required String id, required String day, String label = 'Egg burrito'}) =>
+        {required String id,
+        required String day,
+        String label = 'Egg burrito'}) =>
     DiaryEntry(
       id: id,
       day: day,
@@ -103,8 +105,11 @@ void main() {
     expect(find.text('249 kcal'), findsOneWidget);
 
     // The label appears as recents chip + list row; swipe the LIST row (the
-    // one showing kcal — it sits inside the Dismissible).
+    // one showing kcal — it sits inside the Dismissible). Swipe now asks
+    // first — see delete_undo_test.dart for the confirm/Undo coverage.
     await tester.drag(find.text('249 kcal'), const Offset(-500, 0));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Delete'));
     await tester.pumpAndSettle();
 
     expect(find.text('249 kcal'), findsNothing);

@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:peckish/features/ai/data/ai_config.dart';
 import 'package:peckish/features/ai/domain/meal_guess.dart';
 import 'package:peckish/features/ai/on_device/local_brain.dart';
+import 'package:peckish/features/ai/stove/stove_brain.dart';
 
 /// The guess couldn't be made — configuration, network, or the service
 /// itself. The message is written for the sheet, not a log file.
@@ -18,7 +19,11 @@ class GuessException implements Exception {
 /// Sends the user's words to exactly the backend they configured — nothing
 /// else ever leaves the device — and parses the answer into a draft.
 class GuessService {
-  GuessService({required this.config, http.Client? httpClient, this.localBrain})
+  GuessService(
+      {required this.config,
+      http.Client? httpClient,
+      this.localBrain,
+      this.stoveBrain})
       : _http = httpClient ?? http.Client();
 
   final AiConfig config;
@@ -26,6 +31,9 @@ class GuessService {
 
   /// The on-device model, when this platform has one (null on web).
   final LocalBrain? localBrain;
+
+  /// The household stove, when this platform can reach one (null on web).
+  final StoveBrain? stoveBrain;
 
   static const _timeout = Duration(seconds: 60);
 
@@ -38,9 +46,34 @@ class GuessService {
       AiBackend.anthropic => await _askAnthropic(description),
       AiBackend.openaiCompat => await _askOpenAiCompat(description),
       AiBackend.onDevice => await _askLocalBrain(description),
+      AiBackend.stove => await _askStove(description),
       AiBackend.none => throw StateError('unreachable'),
     };
     return MealGuess.parse(raw);
+  }
+
+  Future<String> _askStove(String description) async {
+    final brain = stoveBrain;
+    if (brain == null) {
+      throw const GuessException(
+          "The stove isn't available on this platform — pick another "
+          'option in Settings.');
+    }
+    try {
+      // Same canonical prompt as every backend; the adapter keeps domovoi's
+      // own calm messages (unreachable, refused) and they surface as-is.
+      return await brain.complete(MealGuess.promptFor(description));
+    } on GuessException {
+      rethrow;
+    } on Exception catch (_) {
+      throw const GuessException(
+          "The stove couldn't answer — check its address and the household "
+          'phrase in Settings, then try again.');
+    } on Error catch (_) {
+      throw const GuessException(
+          "The stove couldn't answer — check its address and the household "
+          'phrase in Settings, then try again.');
+    }
   }
 
   Future<String> _askLocalBrain(String description) async {
