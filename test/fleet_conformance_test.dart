@@ -5,7 +5,14 @@ void main() => runFleetConformance(const FleetAppConfig(
       // Bundles its own type, so nothing falls back to a web font — a
       // character the bundled families cannot draw is a box on a
       // real phone. C7 sweeps lib/ for any.
-      checks: FleetAppConfig.withBundledFonts,
+      // C8: Peckish themes from OhTheme.light()/hearthDark(), whose
+      // app-wide iconTheme overrides a filled icon button's own foreground
+      // — which is how the snap-your-plate camera glyph ended up painted
+      // in primary against its tonal fill. Guard stays on.
+      checks: {
+        ...FleetAppConfig.withBundledFonts,
+        FleetCheck.c8IconButtons,
+      },
       // Tier-T (zero visual change): only the Material TextTheme ladder comes
       // from openhearth_design; the jam/oat/butter identity stays app-local.
       // None of those hex values coincide with canonical tokens, so no

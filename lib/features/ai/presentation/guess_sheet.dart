@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
+import 'package:openhearth_design/openhearth_design.dart';
 import 'package:peckish/core/providers/core_providers.dart';
 import 'package:peckish/features/ai/data/ai_config.dart';
 import 'package:peckish/features/ai/data/ai_config_repository.dart';
@@ -139,7 +140,7 @@ class _GuessSheetState extends ConsumerState<_GuessSheet> {
                     ref.watch(plateScannerProvider) != null)
                   Padding(
                     padding: const EdgeInsets.only(left: AppSpacing.sm),
-                    child: IconButton.filledTonal(
+                    child: OhIconButton.filledTonal(
                       icon: const Icon(Icons.photo_camera_outlined),
                       tooltip: 'Snap your plate',
                       onPressed: _busy ? null : _snapPlate,
