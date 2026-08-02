@@ -385,8 +385,28 @@ class AppDatabase extends _$AppDatabase {
         },
         beforeOpen: (details) async {
           await customStatement('PRAGMA foreign_keys = ON');
+          // Idempotent, so existing installs get them without a schema
+          // bump: the diary is filtered by day on every Today/History
+          // build and portions by fdc_id on every USDA pick — both were
+          // full scans that grew with the install's age. Table-guarded in
+          // the _addColumnIfMissing spirit: migration fixtures open
+          // partial schemas.
+          await _indexIfTableExists('diary_entries',
+              'CREATE INDEX IF NOT EXISTS idx_diary_entries_day '
+              'ON diary_entries (day)');
+          await _indexIfTableExists('usda_portions',
+              'CREATE INDEX IF NOT EXISTS idx_usda_portions_fdc_id '
+              'ON usda_portions (fdc_id)');
         },
       );
+
+  Future<void> _indexIfTableExists(String table, String createIndex) async {
+    final exists = await customSelect(
+      "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?",
+      variables: [Variable(table)],
+    ).get();
+    if (exists.isNotEmpty) await customStatement(createIndex);
+  }
 
   Future<void> _addColumnIfMissing(
       Migrator m, TableInfo table, GeneratedColumn column) async {

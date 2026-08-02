@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -58,6 +59,27 @@ void main() {
 
     test('stamps the spine version so boot can skip a re-import', () async {
       expect(await repo.importedSpineVersion(), 1);
+    });
+
+    test('spineCurrent is the boot fast-path: false before, true after',
+        () async {
+      // Boot must be able to answer "is the spine in place?" WITHOUT
+      // loading and decoding the 2.5MB asset — that decode cost every
+      // launch was the single biggest potato waste in the app.
+      final fresh = UsdaFoodRepository(AppDatabase(NativeDatabase.memory()));
+      expect(await fresh.spineCurrent(), isFalse);
+
+      expect(await repo.spineCurrent(), isTrue);
+    });
+
+    test('the compile-time shipped version matches the real asset', () {
+      // The fast-path const and the asset must never drift: the tool that
+      // regenerates the asset bumps `v`, and this test forces the const
+      // to follow.
+      final raw = jsonDecode(
+              File('assets/food/usda_foods.json').readAsStringSync())
+          as Map<String, dynamic>;
+      expect(raw['v'], UsdaFoodRepository.shippedSpineVersion);
     });
   });
 

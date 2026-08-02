@@ -19,6 +19,16 @@ class UsdaFoodRepository {
 
   static const spineVersionKey = 'usda_spine_v';
 
+  /// The version inside assets/food/usda_foods.json, lifted to a const so
+  /// boot can skip loading and decoding the 2.5MB asset entirely when the
+  /// import already happened — which is every launch except the first.
+  /// Locked to the real asset by usda_food_repository_test.
+  static const shippedSpineVersion = 1;
+
+  /// True when the shipped spine is already imported — the boot fast path.
+  Future<bool> spineCurrent() async =>
+      await importedSpineVersion() == shippedSpineVersion;
+
   /// Parses the spine JSON and loads it, replacing any previous copy if the
   /// shipped version differs. Idempotent: re-importing the same version is a
   /// no-op, so boot can call this unconditionally.
