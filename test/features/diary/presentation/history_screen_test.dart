@@ -186,12 +186,12 @@ void main() {
       overrides: [appDatabaseProvider.overrideWithValue(db)],
       child: MaterialApp(
         theme: AppTheme.light,
-        home: MediaQuery(
-          data: const MediaQueryData(
+        home: const MediaQuery(
+          data: MediaQueryData(
             size: Size(320, 640),
             textScaler: TextScaler.linear(2.5),
           ),
-          child: const HistoryScreen(today: today),
+          child: HistoryScreen(today: today),
         ),
       ),
     ));
