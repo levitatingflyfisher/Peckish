@@ -12,20 +12,37 @@ docs/README.md (Diátaxis hub). Decisions live in docs/adr/.
 
 ## Map
 
-- `lib/core/` — providers (all repositories + `spineReady` boot import),
-  router (4-tab shell: Today/Plan/Recipes/Groceries), drift `AppDatabase`.
+- `lib/core/` — providers (all repositories + `spineReady`: a compile-time
+  spine-version const answers first, the 2.5MB asset loads only on a
+  genuine import), router (4-tab shell: Today/Plan/Recipes/Groceries),
+  drift `AppDatabase`.
 - `lib/features/food/` — `MacroSet` (null = unknown, never zero), the
   bundled-USDA repository (import/search/portions), custom foods.
 - `lib/features/diary/` — the ledger (snapshot macros at log time), saved
-  meals (one-tap `logMeal`), static targets, Today UI + add sheet.
+  meals (one-tap `logMeal`), targets with roles + the suggestion engine,
+  Today + add sheet + history (week chart, day pages, edit sheet).
+- `lib/features/barcode/` — GTIN validation + scanner tuning, the
+  downloadable slice DBs (spec / download service / local db) and the
+  resolver chain (usda → off_us → explicit ask), the OFF client. ADR-0010.
+- `lib/features/ai/` — the guesstimate (BYOK or on-device model), the
+  plate labeler, the model manager (ADR-0009). The parser only drafts;
+  logging is always the user's confirm.
+- `lib/features/sync/` — LAN pairing, HLC `sync_clock`, the LWW engine +
+  codec (ADR-0006); kitchen tables only, encryption fail-closed.
 - `lib/features/recipes/` — box CRUD, schema.org parser, fetcher, UI.
 - `lib/features/plan/` — week cells (recipe/meal/note; titles resolve live).
 - `lib/features/groceries/` — the list + its three regeneration laws +
   keyword aisle classifier.
 - `lib/features/sanctuary_backup/` + `lib/features/settings/` — .ohbk wiring
-  (PeckishExport is the single wire shape), export/erase.
+  (PeckishExport is the single wire shape), export/erase, the privacy map.
+- `lib/shared/` — ONE resumable-transfer engine (`data/resumable_transfer`)
+  and ONE download-card state machine (`widgets/download_card`) — model and
+  barcode downloads both ride them; `num_field` + `qty_format` are the only
+  number entry/formatting. Don't fork copies.
 - `assets/food/usda_foods.json` — the bundled spine (regenerate via
-  `tool/usda/`, see its README for the FNDDS nutrient-id gotcha).
+  `tool/usda/`, see its README for the FNDDS nutrient-id gotcha); the
+  barcode slices are NOT assets — built by `tool/barcode_db/`, published
+  as release assets, downloaded in-app.
 
 ## Non-negotiables
 
