@@ -9,6 +9,7 @@ import 'package:peckish/features/diary/presentation/add_sheet.dart';
 import 'package:peckish/features/diary/presentation/day_format.dart';
 import 'package:peckish/features/diary/presentation/entry_tile.dart';
 import 'package:peckish/features/diary/presentation/regulars_rail.dart';
+import 'package:peckish/features/diary/presentation/totals_card.dart';
 import 'package:peckish/features/food/domain/macro_set.dart';
 import 'package:peckish/shared/theme/app_colors.dart';
 import 'package:peckish/shared/theme/app_spacing.dart';
@@ -604,8 +605,13 @@ class _MonthStats extends StatelessWidget {
   }
 }
 
-/// One past day, opened from the calendar: the plate as it was. Lines can
-/// still be swiped away (the ledger is yours) — totals everywhere react.
+/// One past day, opened from the calendar: the plate as it was, with the
+/// same four numbers Today shows against the same targets. A dot on a trend
+/// line is a shape, not a number, and "what did I actually eat on the 19th"
+/// is a question asked about the past far more often than about now.
+///
+/// Lines can still be swiped away (the ledger is yours) — totals everywhere
+/// react.
 class HistoryDayScreen extends ConsumerWidget {
   const HistoryDayScreen({super.key, required this.day});
 
@@ -614,6 +620,12 @@ class HistoryDayScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final entries = ref.watch(_dayEntriesProvider(day)).valueOrNull ?? const [];
+    // Folded from the entries already watched above — one drift watch feeds
+    // the card and the list both. Seeded with the all-null set, never zero.
+    final totals =
+        entries.fold(const MacroSet(), (sum, e) => sum + e.macros);
+    final targets =
+        ref.watch(_targetsProvider).valueOrNull ?? const DailyTargets();
     return Scaffold(
       appBar: AppBar(title: Text(prettyDay(day))),
       floatingActionButton: FloatingActionButton(
@@ -624,6 +636,8 @@ class HistoryDayScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.lg),
         children: [
+          TotalsCard(totals: totals, targets: targets),
+          const SizedBox(height: AppSpacing.lg),
           // Every chip feeds THIS day. Filling a gap is nearly always a
           // food you eat all the time, so the one-tap route has to be here
           // and not only on Today.

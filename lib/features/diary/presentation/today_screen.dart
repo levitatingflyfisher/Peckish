@@ -9,6 +9,7 @@ import 'package:peckish/features/diary/domain/relog.dart';
 import 'package:peckish/features/diary/presentation/add_sheet.dart';
 import 'package:peckish/features/diary/presentation/entry_tile.dart';
 import 'package:peckish/features/diary/presentation/regulars_rail.dart';
+import 'package:peckish/features/diary/presentation/totals_card.dart';
 import 'package:peckish/features/diary/presentation/targets_dialog.dart';
 import 'package:peckish/features/diary/domain/suggestion_engine.dart';
 import 'package:peckish/features/food/domain/macro_set.dart';
@@ -49,7 +50,7 @@ class TodayScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.lg),
         children: [
-          _TotalsCard(
+          TotalsCard(
             totals: totals.value ?? const MacroSet(),
             targets: targets.value ?? const DailyTargets(),
           ),
@@ -140,114 +141,6 @@ final _suggestionsProvider =
   };
 });
 
-class _TotalsCard extends StatelessWidget {
-  const _TotalsCard({required this.totals, required this.targets});
-
-  final MacroSet totals;
-  final DailyTargets targets;
-
-  String _fmt(double? v) => v == null ? '0' : v.round().toString();
-
-  @override
-  Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
-    final kcalTarget = targets.values.kcal;
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Flexible(
-                  child: Text(
-                    _fmt(totals.kcal),
-                    style: text.displayMedium?.copyWith(
-                      color: AppColors.paprika,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.xs),
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Text(
-                    kcalTarget == null
-                        ? 'kcal'
-                        : 'of ${targets.resolvedKcalRole.mark}'
-                            '${_fmt(kcalTarget)} kcal',
-                    style:
-                        text.titleMedium?.copyWith(color: AppColors.stone),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Wrap(
-              spacing: AppSpacing.sm,
-              runSpacing: AppSpacing.xs,
-              children: [
-                _MacroChip(
-                    label: 'Protein',
-                    value: totals.proteinG,
-                    target: targets.values.proteinG,
-                    role: targets.resolvedProteinRole,
-                    color: AppColors.sage),
-                _MacroChip(
-                    label: 'Carbs',
-                    value: totals.carbG,
-                    target: targets.values.carbG,
-                    role: targets.resolvedCarbRole,
-                    color: AppColors.butter),
-                _MacroChip(
-                    label: 'Fat',
-                    value: totals.fatG,
-                    target: targets.values.fatG,
-                    role: targets.resolvedFatRole,
-                    color: AppColors.clay),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _MacroChip extends StatelessWidget {
-  const _MacroChip({
-    required this.label,
-    required this.value,
-    required this.target,
-    required this.role,
-    required this.color,
-  });
-
-  final String label;
-  final double? value;
-  final double? target;
-  final TargetRole role;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    final v = value == null ? '—' : '${value!.round()}g';
-    final suffix =
-        target == null ? '' : ' / ${role.mark}${target!.round()}g';
-    return Chip(
-      avatar: CircleAvatar(backgroundColor: color, radius: 6),
-      label: Text('$label $v$suffix'),
-      visualDensity: VisualDensity.comfortable,
-    );
-  }
-}
-
-/// "Round out your day" — the engine's advice, worn lightly. Ideas come
-/// with a one-tap Log; a finished day gets one warm line; dismissal lasts
-/// exactly one day. The card never scolds: when nothing helps, the engine
-/// goes quiet and this widget is never even built.
 class _RoundOutCard extends ConsumerWidget {
   const _RoundOutCard({
     required this.day,
