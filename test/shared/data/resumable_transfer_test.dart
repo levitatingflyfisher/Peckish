@@ -14,10 +14,10 @@ import 'package:peckish/shared/data/resumable_transfer.dart';
 /// chunk counter is the wiretap: a transfer that keeps running after the
 /// listener left shows up as reads that should not exist.
 class _SlowChunkAdapter implements HttpClientAdapter {
-  _SlowChunkAdapter(this.payload, {this.chunkSize = 1024});
+  _SlowChunkAdapter(this.payload);
 
   final List<int> payload;
-  final int chunkSize;
+  static const chunkSize = 1024;
 
   /// How many chunks the "network" has handed over.
   int chunksServed = 0;

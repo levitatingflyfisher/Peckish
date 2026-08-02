@@ -141,6 +141,11 @@ void main() {
     await f.writeAsBytes(bytes);
   }
 
+  test('native builds support local slices (the capability seam answers, '
+      'screens never ask kIsWeb)', () {
+    expect(localSlicesSupported, isTrue);
+  });
+
   test('isInstalled is false when nothing is on disk', () async {
     final h = build();
     expect(await h.svc.isInstalled(spec), isFalse);
@@ -243,6 +248,46 @@ void main() {
 
     expect(h.adapter.rangeHeaders, isEmpty,
         reason: 'a catalog entry without a hash must never hit the network');
+  });
+
+  test('hasPartial reports an orphaned verified-.gz awaiting install',
+      () async {
+    final h = build();
+    // A completed transfer killed before verify/gunzip leaves a full .gz —
+    // the UI must offer Resume, not pretend nothing happened.
+    await seed(gzOf(), gzBytes);
+    expect(await h.svc.hasPartial(spec), isTrue);
+  });
+
+  test('a complete orphaned .gz installs with zero network requests',
+      () async {
+    await seed(gzOf(), gzBytes);
+    // A stale .gz.part alongside must not survive to poison a later resume.
+    await seed(gzPartOf(), gzBytes.sublist(0, 64));
+    final h = build();
+
+    final events = await h.svc.download(spec).toList();
+
+    expect(h.adapter.rangeHeaders, isEmpty,
+        reason: 'the bytes are already here — the network owes us nothing');
+    expect(await dbOf().readAsBytes(), dbBytes);
+    expect(await h.svc.isInstalled(spec), isTrue);
+    expect(gzOf().existsSync(), isFalse);
+    expect(gzPartOf().existsSync(), isFalse);
+    expect(events, [(gzBytes.length, gzBytes.length)]);
+  });
+
+  test('a sha-failing orphaned .gz is deleted and the normal transfer '
+      'proceeds', () async {
+    await seed(gzOf(), List<int>.from(gzBytes)..[0] ^= 0xFF);
+    final h = build();
+
+    await h.svc.download(spec).toList();
+
+    expect(h.adapter.rangeHeaders, [null],
+        reason: 'the corrupt orphan is discarded and the wire does the job');
+    expect(await dbOf().readAsBytes(), dbBytes);
+    expect(await h.svc.isInstalled(spec), isTrue);
   });
 
   test('hasPartial is true only mid-transfer', () async {

@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
@@ -6,6 +5,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import 'package:peckish/features/ai/on_device/model_spec.dart';
+import 'package:peckish/shared/data/resumable_transfer.dart';
 
 /// Downloads and manages the on-device model files (native builds only —
 /// web uses the inert `model_download_service_web.dart` variant).
@@ -67,13 +67,8 @@ class ModelDownloadService {
   /// Downloads [spec], yielding `(receivedBytes, totalBytes)` tuples
   /// (total is `-1` when the server omits Content-Length).
   ///
-  /// Resumable: an interrupted attempt's `.part` is continued with an HTTP
-  /// Range request instead of restarting from zero (what kept happening
-  /// when a phone slept mid-download). The partial is deliberately KEPT on
-  /// error so the next attempt picks up where this one stopped. A 416
-  /// (partial larger than the resource) discards and restarts; a host that
-  /// ignores Range (200 instead of 206) also discards — appending onto
-  /// stale bytes would corrupt the file.
+  /// The `.part` resume / 416-restart / 200-ignores-Range discipline is
+  /// the shared [resumableDownload] engine's — see its doc for the story.
   Stream<(int, int)> download(PeckishModelSpec spec) async* {
     if (spec.requiresToken) {
       throw StateError(
@@ -81,76 +76,16 @@ class ModelDownloadService {
     }
     final file = await modelFile(spec);
     final part = await _partFile(spec);
-    final controller = StreamController<(int, int)>();
-
-    Future<void> run() async {
-      final resumeFrom = part.existsSync() ? await part.length() : 0;
-      final reqHeaders = <String, dynamic>{
-        if (resumeFrom > 0) 'Range': 'bytes=$resumeFrom-',
-      };
-
-      Response<dynamic> response;
-      var restarted = false;
-      try {
-        response = await _dio.download(
-          spec.downloadUrl,
-          part.path,
-          options: Options(headers: reqHeaders),
-          onReceiveProgress: (received, total) {
-            // dio reports progress relative to THIS request; offset it so
-            // the UI tracks the whole file when resuming.
-            controller.add((
-              resumeFrom + received,
-              total < 0 ? -1 : resumeFrom + total,
-            ));
-          },
-          // Keep the partial on error so a later attempt can resume.
-          deleteOnError: false,
-          fileAccessMode:
-              resumeFrom > 0 ? FileAccessMode.append : FileAccessMode.write,
-        );
-      } on DioException catch (err) {
-        if (resumeFrom > 0 &&
-            err.response?.statusCode ==
-                HttpStatus.requestedRangeNotSatisfiable) {
-          if (part.existsSync()) await part.delete();
-          response = await _dio.download(
-            spec.downloadUrl,
-            part.path,
-            onReceiveProgress: (received, total) =>
-                controller.add((received, total)),
-            deleteOnError: false,
-          );
-          restarted = true;
-        } else {
-          rethrow;
-        }
-      }
-
-      if (!restarted &&
-          resumeFrom > 0 &&
-          response.statusCode == HttpStatus.ok) {
-        if (part.existsSync()) await part.delete();
-        await _dio.download(
-          spec.downloadUrl,
-          part.path,
-          onReceiveProgress: (received, total) =>
-              controller.add((received, total)),
-          deleteOnError: false,
-        );
-      }
-
-      // Atomic promotion — only now may [isDownloaded] say true.
-      if (file.existsSync()) await file.delete();
-      await part.rename(file.path);
-    }
-
-    unawaited(run().then((_) => controller.close(), onError: (Object e) {
-      controller.addError(e);
-      controller.close();
-    }));
-
-    yield* controller.stream;
+    yield* resumableDownload(
+      dio: _dio,
+      url: spec.downloadUrl,
+      partFile: part,
+      promote: () async {
+        // Atomic promotion — only now may [isDownloaded] say true.
+        if (file.existsSync()) await file.delete();
+        await part.rename(file.path);
+      },
+    );
   }
 
   /// Deletes the local model file (and any leftover `.part`).

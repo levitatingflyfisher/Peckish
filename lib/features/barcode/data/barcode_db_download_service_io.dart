@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:io';
 
 import 'package:crypto/crypto.dart';
@@ -7,6 +6,11 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import 'package:peckish/features/barcode/data/barcode_db_spec.dart';
+import 'package:peckish/shared/data/resumable_transfer.dart';
+
+/// Native builds can hold slice files on disk. The seam owns the answer so
+/// screens gate on capability, never on `kIsWeb` (the house trio idiom).
+bool get localSlicesSupported => true;
 
 /// Downloads and manages the offline barcode slices (native builds only —
 /// web uses the inert `barcode_db_download_service_web.dart` variant).
@@ -76,11 +80,15 @@ class BarcodeDbDownloadService {
   }
 
   /// A half-finished transfer is waiting on disk (and the slice isn't
-  /// installed yet): the UI shows Resume instead of Download.
+  /// installed yet): the UI shows Resume instead of Download. An orphaned
+  /// `.gz` counts too — a completed transfer killed before verify/gunzip
+  /// left the whole artifact waiting, and Resume finishes the job without
+  /// touching the network.
   Future<bool> hasPartial(BarcodeDbSpec spec) async {
     if (await isInstalled(spec)) return false;
     final part = await _gzPart(spec);
-    return part.existsSync();
+    if (part.existsSync()) return true;
+    return (await _gz(spec)).existsSync();
   }
 
   /// The absolute path of an installed slice, or null — the lookup chain's
@@ -100,11 +108,9 @@ class BarcodeDbDownloadService {
   /// Content-Length). After the last tuple the stream stays open briefly
   /// for the sha check + gunzip, then closes on success.
   ///
-  /// Resumable exactly like the model downloader: an interrupted attempt's
-  /// `.gz.part` continues with an HTTP Range request; the partial is KEPT
-  /// on error; a 416 (partial larger than the resource) discards and
-  /// restarts; a host that ignores Range (200 instead of 206) also
-  /// discards — appending onto stale bytes would corrupt the file.
+  /// The `.gz.part` resume / 416-restart / 200-ignores-Range discipline
+  /// is the shared [resumableDownload] engine's — see its doc for the
+  /// story.
   ///
   /// Integrity: the finished .gz must hash to [BarcodeDbSpec.sha256Gz]
   /// before it is decompressed. A mismatch deletes the .gz and throws
@@ -118,93 +124,59 @@ class BarcodeDbDownloadService {
     }
     final gz = await _gz(spec);
     final gzPart = await _gzPart(spec);
-    final controller = StreamController<(int, int)>();
 
-    Future<void> run() async {
-      final resumeFrom = gzPart.existsSync() ? await gzPart.length() : 0;
-      final reqHeaders = <String, dynamic>{
-        if (resumeFrom > 0) 'Range': 'bytes=$resumeFrom-',
-      };
-
-      Response<dynamic> response;
-      var restarted = false;
+    // Crash-window orphan: a transfer that finished but died before
+    // verify/gunzip left a complete .gz. Finish the job with zero network
+    // requests — verify first; an orphan that fails its checksum is
+    // deleted and the normal transfer below takes over.
+    if (gz.existsSync()) {
+      final len = await gz.length();
       try {
-        response = await _dio.download(
-          spec.downloadUrl,
-          gzPart.path,
-          options: Options(headers: reqHeaders),
-          onReceiveProgress: (received, total) {
-            // dio reports progress relative to THIS request; offset it so
-            // the UI tracks the whole file when resuming.
-            controller.add((
-              resumeFrom + received,
-              total < 0 ? -1 : resumeFrom + total,
-            ));
-          },
-          // Keep the partial on error so a later attempt can resume.
-          deleteOnError: false,
-          fileAccessMode:
-              resumeFrom > 0 ? FileAccessMode.append : FileAccessMode.write,
-        );
-      } on DioException catch (err) {
-        if (resumeFrom > 0 &&
-            err.response?.statusCode ==
-                HttpStatus.requestedRangeNotSatisfiable) {
-          if (gzPart.existsSync()) await gzPart.delete();
-          response = await _dio.download(
-            spec.downloadUrl,
-            gzPart.path,
-            onReceiveProgress: (received, total) =>
-                controller.add((received, total)),
-            deleteOnError: false,
-          );
-          restarted = true;
-        } else {
-          rethrow;
-        }
-      }
-
-      if (!restarted &&
-          resumeFrom > 0 &&
-          response.statusCode == HttpStatus.ok) {
+        await _verifyAndInstall(spec, gz);
+        // A stale .gz.part alongside would poison a later resume; the
+        // install it was working toward just happened.
         if (gzPart.existsSync()) await gzPart.delete();
-        await _dio.download(
-          spec.downloadUrl,
-          gzPart.path,
-          onReceiveProgress: (received, total) =>
-              controller.add((received, total)),
-          deleteOnError: false,
-        );
+        yield (len, len);
+        return;
+      } on BarcodeDbIntegrityException {
+        // Fall through — _verifyAndInstall already removed the orphan.
       }
-
-      // Transfer done: promote to .gz and verify before touching it.
-      if (gz.existsSync()) await gz.delete();
-      await gzPart.rename(gz.path);
-
-      final digest = await sha256.bind(gz.openRead()).first;
-      if (digest.toString() != spec.sha256Gz.toLowerCase()) {
-        await gz.delete();
-        throw BarcodeDbIntegrityException(
-            'Downloaded "${spec.id}" did not match its published checksum. '
-            'The file was removed — trying again is safe.');
-      }
-
-      // Verified: gunzip streaming to .part, then the atomic promotion —
-      // only now may [isInstalled] say true.
-      final dbPart = await _dbPart(spec);
-      await gz.openRead().transform(gzip.decoder).pipe(dbPart.openWrite());
-      final installed = await _installed(spec);
-      if (installed.existsSync()) await installed.delete();
-      await dbPart.rename(installed.path);
-      await gz.delete();
     }
 
-    unawaited(run().then((_) => controller.close(), onError: (Object e) {
-      controller.addError(e);
-      controller.close();
-    }));
+    yield* resumableDownload(
+      dio: _dio,
+      url: spec.downloadUrl,
+      partFile: gzPart,
+      promote: () async {
+        // Transfer done: promote to .gz and verify before touching it.
+        if (gz.existsSync()) await gz.delete();
+        await gzPart.rename(gz.path);
+        await _verifyAndInstall(spec, gz);
+      },
+    );
+  }
 
-    yield* controller.stream;
+  /// The post-transfer half of the pipeline, shared by the normal path and
+  /// the orphaned-.gz fast path: sha-check the compressed artifact, gunzip
+  /// to `.part`, atomic rename, clean up. A checksum mismatch deletes the
+  /// .gz and throws [BarcodeDbIntegrityException].
+  Future<void> _verifyAndInstall(BarcodeDbSpec spec, File gz) async {
+    final digest = await sha256.bind(gz.openRead()).first;
+    if (digest.toString() != spec.sha256Gz.toLowerCase()) {
+      await gz.delete();
+      throw BarcodeDbIntegrityException(
+          'Downloaded "${spec.id}" did not match its published checksum. '
+          'The file was removed — trying again is safe.');
+    }
+
+    // Verified: gunzip streaming to .part, then the atomic promotion —
+    // only now may [isInstalled] say true.
+    final dbPart = await _dbPart(spec);
+    await gz.openRead().transform(gzip.decoder).pipe(dbPart.openWrite());
+    final installed = await _installed(spec);
+    if (installed.existsSync()) await installed.delete();
+    await dbPart.rename(installed.path);
+    await gz.delete();
   }
 
   /// Deletes the installed slice and every intermediate.

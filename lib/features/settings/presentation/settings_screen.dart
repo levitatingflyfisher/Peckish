@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,6 +5,7 @@ import 'package:sanctuary_backup_ui/sanctuary_backup_ui.dart';
 
 import 'package:peckish/core/providers/core_providers.dart';
 import 'package:peckish/features/ai/presentation/ai_settings_dialog.dart';
+import 'package:peckish/features/barcode/data/barcode_db_download_service.dart';
 import 'package:peckish/features/diary/presentation/targets_dialog.dart';
 import 'package:peckish/features/settings/data/export_serializer.dart';
 import 'package:peckish/features/settings/data/export_share.dart';
@@ -81,8 +81,9 @@ class SettingsScreen extends ConsumerWidget {
             },
           ),
           // Web has no local slices (ADR-0010): the tile would promise a
-          // phone-side answer the platform can't keep.
-          if (!kIsWeb)
+          // phone-side answer the platform can't keep. The capability seam
+          // answers for the platform; this screen never asks kIsWeb itself.
+          if (localSlicesSupported)
             ListTile(
               leading: const Icon(Icons.qr_code_2_outlined),
               title: const Text('Offline barcode lookup'),

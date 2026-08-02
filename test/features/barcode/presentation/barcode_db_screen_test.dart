@@ -18,12 +18,17 @@ class _FakeDbService extends BarcodeDbDownloadService {
   _FakeDbService({
     Map<String, String> installedPaths = const {},
     Set<String> partials = const {},
+    this.downloadError,
   })  : _installedPaths = Map.of(installedPaths),
         _partials = Set.of(partials);
 
   final Map<String, String> _installedPaths;
   final Set<String> _partials;
   final deleted = <String>[];
+
+  /// When set, every download() fails with this — the screen's failure
+  /// copy is what's under test.
+  final Object? downloadError;
 
   @override
   Future<bool> isInstalled(BarcodeDbSpec spec) async =>
@@ -37,7 +42,9 @@ class _FakeDbService extends BarcodeDbDownloadService {
   Future<String?> installedDbPath(String id) async => _installedPaths[id];
 
   @override
-  Stream<(int, int)> download(BarcodeDbSpec spec) => const Stream.empty();
+  Stream<(int, int)> download(BarcodeDbSpec spec) => downloadError != null
+      ? Stream.error(downloadError!)
+      : const Stream.empty();
 
   @override
   Future<void> delete(BarcodeDbSpec spec) async {
@@ -73,12 +80,15 @@ void main() {
     return path;
   }
 
-  Widget host(_FakeDbService service) => ProviderScope(
+  Widget host(_FakeDbService service, {bool? slicesSupported}) =>
+      ProviderScope(
         overrides: [
           barcodeDbDownloadServiceProvider.overrideWithValue(service),
         ],
-        child:
-            MaterialApp(theme: AppTheme.light, home: const BarcodeDbScreen()),
+        child: MaterialApp(
+            theme: AppTheme.light,
+            home:
+                BarcodeDbScreen(slicesSupportedOverride: slicesSupported)),
       );
 
   testWidgets('the catalog renders one card per slice, plus the license '
@@ -130,6 +140,48 @@ void main() {
     expect(find.textContaining('Paused'), findsOneWidget);
     expect(find.text('Resume'), findsOneWidget);
     expect(find.text('Download'), findsOneWidget);
+  });
+
+  testWidgets('a checksum failure names itself instead of blaming the Wi-Fi',
+      (tester) async {
+    await tester.pumpWidget(host(_FakeDbService(
+        downloadError: const BarcodeDbIntegrityException(
+            'Downloaded "usda" did not match its published checksum. '
+            'The file was removed — trying again is safe.'))));
+    await tester.pumpAndSettle();
+
+    // The wakelock the download holds is a real platform call — give it
+    // real async (the ai_settings_on_device_test pattern).
+    await tester.runAsync(() async {
+      await tester.tap(find.text('Download').first);
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('checksum'), findsOneWidget,
+        reason: 'the integrity story reaches the card');
+    expect(find.text("Couldn't finish — trying again is safe."), findsNothing,
+        reason: 'a checksum failure must not read as a network drop');
+  });
+
+  testWidgets('without local-slice support the screen says so calmly, '
+      'offering no dead buttons', (tester) async {
+    await tester.pumpWidget(host(_FakeDbService(), slicesSupported: false));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Offline barcode databases live on the '
+        'phone app'), findsOneWidget);
+    expect(find.text('Download'), findsNothing,
+        reason: 'a button whose tap can only ever fail is a broken promise');
+    expect(find.text('Resume'), findsNothing);
+  });
+
+  testWidgets('with local-slice support the download cards do render '
+      '(the native path stays whole)', (tester) async {
+    await tester.pumpWidget(host(_FakeDbService(), slicesSupported: true));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Download'), findsNWidgets(2));
   });
 
   testWidgets('delete confirms first, then frees the slice', (tester) async {

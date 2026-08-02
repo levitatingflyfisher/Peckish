@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -49,6 +48,11 @@ class _SyncScreenState extends ConsumerState<SyncScreen> {
   @override
   void initState() {
     super.initState();
+    // The server outlives this screen (kept-alive provider): re-entry must
+    // report what it is actually doing, not a fresh local default.
+    if (lanSyncSupported) {
+      _listening = ref.read(lanSyncServerProvider).isRunning;
+    }
     ref.read(syncSecretStoreProvider).read().then((s) {
       if (mounted) setState(() => _secret = s);
     });
@@ -63,7 +67,9 @@ class _SyncScreenState extends ConsumerState<SyncScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    if (kIsWeb) {
+    // The capability seam answers for the platform; this screen never asks
+    // kIsWeb itself.
+    if (!lanSyncSupported) {
       return Scaffold(
         appBar: AppBar(title: const Text('Household sync')),
         body: Center(

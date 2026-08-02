@@ -7,6 +7,9 @@ import 'package:peckish/core/storage/app_database.dart';
 import 'package:peckish/features/food/data/custom_food_repository.dart';
 import 'package:peckish/features/food/domain/custom_food.dart';
 import 'package:peckish/features/food/domain/macro_set.dart';
+import 'package:peckish/features/sync/data/lan_sync_server.dart';
+import 'package:peckish/features/sync/data/sync_clock.dart';
+import 'package:peckish/features/sync/data/sync_engine.dart';
 import 'package:peckish/features/sync/data/sync_secret_store.dart';
 import 'package:peckish/features/sync/presentation/sync_screen.dart';
 import 'package:peckish/shared/theme/app_theme.dart';
@@ -34,6 +37,11 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(seconds: 1));
   }
+
+  test('native builds support LAN sync (the capability seam answers, '
+      'screens never ask kIsWeb)', () {
+    expect(lanSyncSupported, isTrue);
+  });
 
   testWidgets('no code yet: sync actions are gated until one exists',
       (tester) async {
@@ -79,6 +87,55 @@ void main() {
         greaterThanOrEqualTo(kMinSyncSecretLength));
     expect(find.textContaining('1 existing item'), findsOneWidget,
         reason: 'the backfill is visible, honest work');
+    await unmount(tester);
+  });
+
+  testWidgets(
+      're-entering the screen tells the truth about a server that kept '
+      'serving', (tester) async {
+    await secrets.write('a-household-secret-longer-than-16');
+    // The provider keeps the server alive across screen visits; this test
+    // owns one directly so both mounts see the same instance.
+    final server = LanSyncServer(
+      engine: SyncEngine(db),
+      clock: SyncClock.of(db),
+      secret: () async => 'a-household-secret-longer-than-16',
+      port: 0, // ephemeral — nothing in this test dials it
+    );
+
+    Widget hostWithServer() => ProviderScope(
+          overrides: [
+            appDatabaseProvider.overrideWithValue(db),
+            syncSecretStoreProvider.overrideWithValue(secrets),
+            lanSyncServerProvider.overrideWithValue(server),
+          ],
+          child:
+              MaterialApp(theme: AppTheme.light, home: const SyncScreen()),
+        );
+
+    await tester.pumpWidget(hostWithServer());
+    await tester.pumpAndSettle();
+
+    // Turn listening on — a real socket bind, so real async.
+    await tester.runAsync(() async {
+      await tester.tap(find.byType(SwitchListTile));
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    await tester.pumpAndSettle();
+    expect(tester.widget<SwitchListTile>(find.byType(SwitchListTile)).value,
+        isTrue);
+
+    // Leave and come back; the kept-alive server never stopped.
+    await unmount(tester);
+    await tester.pumpWidget(hostWithServer());
+    await tester.pumpAndSettle();
+
+    expect(tester.widget<SwitchListTile>(find.byType(SwitchListTile)).value,
+        isTrue,
+        reason: 'the switch must mirror the server, not a stale local '
+            'default — the server has been serving the whole time');
+
+    await tester.runAsync(server.stop);
     await unmount(tester);
   });
 }

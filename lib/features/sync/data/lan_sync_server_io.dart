@@ -13,6 +13,10 @@ import 'package:peckish/features/sync/data/sync_clock.dart';
 import 'package:peckish/features/sync/data/sync_codec.dart';
 import 'package:peckish/features/sync/data/sync_engine.dart';
 
+/// Native builds can bind a LAN socket. The seam owns the answer so
+/// screens gate on capability, never on `kIsWeb` (the house trio idiom).
+bool get lanSyncSupported => true;
+
 /// Peckish's LAN port — one above StillLife's 8420, so a phone running both
 /// apps can host both households.
 const kSyncPort = 8421;
