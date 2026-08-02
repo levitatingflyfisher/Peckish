@@ -24,8 +24,9 @@ docs/README.md (Diátaxis hub). Decisions live in docs/adr/.
 - `lib/features/barcode/` — GTIN validation + scanner tuning, the
   downloadable slice DBs (spec / download service / local db) and the
   resolver chain (usda → off_us → explicit ask), the OFF client. ADR-0010.
-- `lib/features/ai/` — the guesstimate (BYOK or on-device model), the
-  plate labeler, the model manager (ADR-0009). The parser only drafts;
+- `lib/features/ai/` — the guesstimate (BYOK, on-device model, or the
+  household stove — domovoi's encrypted home-server tier, `stove/` trio),
+  the plate labeler, the model manager (ADR-0009). The parser only drafts;
   logging is always the user's confirm.
 - `lib/features/sync/` — LAN pairing, HLC `sync_clock`, the LWW engine +
   codec (ADR-0006); kitchen tables only, encryption fail-closed.
@@ -35,10 +36,11 @@ docs/README.md (Diátaxis hub). Decisions live in docs/adr/.
   keyword aisle classifier.
 - `lib/features/sanctuary_backup/` + `lib/features/settings/` — .ohbk wiring
   (PeckishExport is the single wire shape), export/erase, the privacy map.
-- `lib/shared/` — ONE resumable-transfer engine (`data/resumable_transfer`)
-  and ONE download-card state machine (`widgets/download_card`) — model and
-  barcode downloads both ride them; `num_field` + `qty_format` are the only
-  number entry/formatting. Don't fork copies.
+- `lib/shared/` — ONE transfer path: domovoi's `resumableDownload` engine
+  behind the `data/download_stream` façade, and ONE download-card state
+  machine (`widgets/download_card`) — model and barcode downloads both ride
+  them; `num_field` + `qty_format` are the only number entry/formatting.
+  Don't fork copies.
 - `assets/food/usda_foods.json` — the bundled spine (regenerate via
   `tool/usda/`, see its README for the FNDDS nutrient-id gotcha); the
   barcode slices are NOT assets — built by `tool/barcode_db/`, published

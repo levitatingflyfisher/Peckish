@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:peckish/features/ai/data/ai_config.dart';
 import 'package:peckish/features/ai/data/ai_config_repository.dart';
+import 'package:peckish/features/ai/data/stove_secret_store.dart';
 import 'package:peckish/features/ai/on_device/model_download_service_io.dart';
 import 'package:peckish/features/ai/on_device/on_device_providers.dart';
 import 'package:peckish/features/ai/presentation/ai_settings_dialog.dart';
@@ -52,8 +53,8 @@ void main() {
       documentsDirectory: () async => tempDir,
     );
     SharedPreferences.setMockInitialValues({});
-    repo = AiConfigRepository(
-        await SharedPreferences.getInstance(), _MemoryKeys());
+    repo = AiConfigRepository(await SharedPreferences.getInstance(),
+        _MemoryKeys(), InMemoryStoveSecretStore());
   });
 
   tearDown(() async {

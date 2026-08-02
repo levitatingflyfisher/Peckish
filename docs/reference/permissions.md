@@ -4,7 +4,7 @@ The Android manifest declares exactly two permissions:
 
 | Permission | Why |
 |---|---|
-| `android.permission.INTERNET` | Only when you act (the full map is in-app: Settings → What leaves your device): fetching the one recipe URL you pasted, the optional model and offline-barcode-database downloads, household sync on your own Wi-Fi, and — when a scan misses the offline databases — an Open Food Facts lookup that runs only when you tap "Ask openfoodfacts.org" and sends only the barcode string. |
+| `android.permission.INTERNET` | Only when you act (the full map is in-app: Settings → What leaves your device): fetching the one recipe URL you pasted, the optional model and offline-barcode-database downloads, household sync on your own Wi-Fi, an AI guess via your home stove — encrypted to your own machine, only when you ask — and, when a scan misses the offline databases, an Open Food Facts lookup that runs only when you tap "Ask openfoodfacts.org" and sends only the barcode string. |
 | `android.permission.CAMERA` | One flow only: the barcode scan screen (v0.2). Runtime permission, requested when you open it. Frames are decoded on the device and discarded — with the offline database a scan usually leaves nothing at all, and the digits only go to Open Food Facts when you ask (v0.7, ADR-0010). |
 
 Everything else — food search, logging, planning, the grocery list, backup

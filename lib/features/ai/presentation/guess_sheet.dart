@@ -5,11 +5,14 @@ import 'package:peckish/core/providers/core_providers.dart';
 import 'package:peckish/features/ai/data/ai_config.dart';
 import 'package:peckish/features/ai/data/ai_config_repository.dart';
 import 'package:peckish/features/ai/data/guess_service.dart';
+import 'package:peckish/features/ai/data/stove_secret_store.dart';
 import 'package:peckish/features/ai/domain/meal_guess.dart';
 import 'package:peckish/features/ai/on_device/on_device_providers.dart';
 import 'package:peckish/features/ai/on_device/plate_lookup.dart';
 import 'package:peckish/features/ai/on_device/plate_scan.dart';
 import 'package:peckish/features/ai/on_device/plate_scanner.dart';
+import 'package:peckish/features/ai/stove/stove_brain.dart';
+import 'package:peckish/features/ai/stove/stove_brain_factory.dart';
 import 'package:peckish/features/diary/domain/diary_entry.dart';
 import 'package:peckish/shared/theme/app_spacing.dart';
 import 'package:uuid/uuid.dart';
@@ -17,9 +20,16 @@ import 'package:uuid/uuid.dart';
 /// The platform key store; a single override point for tests.
 final aiKeyStoreProvider = Provider<KeyStore>((_) => const SecureKeyStore());
 
+/// The household-phrase store for the stove backend; same override point
+/// pattern as the key store.
+final stoveSecretStoreProvider =
+    Provider<StoveSecretStore>((_) => const SecureStoveSecretStore());
+
 final aiConfigRepositoryProvider = Provider<AiConfigRepository>((ref) =>
     AiConfigRepository(
-        ref.watch(sharedPreferencesProvider), ref.watch(aiKeyStoreProvider)));
+        ref.watch(sharedPreferencesProvider),
+        ref.watch(aiKeyStoreProvider),
+        ref.watch(stoveSecretStoreProvider)));
 
 /// The current AI configuration. The add sheet gates its tile on
 /// `configured`; invalidate after saving settings.
@@ -28,6 +38,11 @@ final aiConfigProvider = FutureProvider<AiConfig>(
 
 /// Test seam: a non-null client here replaces the wire.
 final guessHttpClientProvider = Provider<http.Client?>((_) => null);
+
+/// The platform-selected stove factory (null-returning on web); a test
+/// seam — override to fake the encrypted wire.
+final stoveBrainFactoryProvider =
+    Provider<StoveBrain? Function(AiConfig)>((_) => createStoveBrain);
 
 /// The guesstimate box: describe what you ate, the model drafts lines, you
 /// prune and confirm. Nothing is logged until the confirm tap, and every
@@ -180,6 +195,7 @@ class _GuessSheetState extends ConsumerState<_GuessSheet> {
         config: config,
         httpClient: ref.read(guessHttpClientProvider),
         localBrain: ref.read(localBrainProvider),
+        stoveBrain: ref.read(stoveBrainFactoryProvider)(config),
       );
       final guess = await service.guess(description);
       if (!mounted) return;

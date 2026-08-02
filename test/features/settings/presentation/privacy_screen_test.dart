@@ -42,6 +42,11 @@ void main() {
     // The on-device story, including the Play-services honesty.
     expect(find.textContaining('Google Play services'), findsOneWidget);
     expect(find.textContaining('nothing leaves'), findsWidgets);
+    // The stove tier: a home server, named with its encryption and its
+    // trigger like every other row.
+    expect(find.textContaining('home stove'), findsOneWidget);
+    expect(find.textContaining('encrypted to your own machine'),
+        findsOneWidget);
 
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(seconds: 1));

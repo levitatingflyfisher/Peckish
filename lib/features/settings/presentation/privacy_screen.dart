@@ -88,6 +88,11 @@ class PrivacyScreen extends StatelessWidget {
               'If you configured one, the words you type in the guess box '
               'go to that service and nowhere else. Off by default.',
               color: AppColors.butter),
+          row(Icons.fireplace_outlined, 'AI guess via your home stove',
+              'The guess-box words travel sealed under your household '
+              'phrase — encrypted to your own machine, only when you ask, '
+              'and nowhere else.',
+              color: AppColors.butter),
           row(Icons.sync_outlined, 'Household sync',
               'Encrypted bundles move between your own devices on your own '
               'Wi-Fi. Diaries and targets never sync at all.',
