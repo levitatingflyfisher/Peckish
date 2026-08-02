@@ -96,6 +96,30 @@ class FoodUsageRepository {
       .watch()
       .map((rows) => rows.map(_toDomain).toList());
 
+  /// The rail's live read: visible regulars, newest first, with the cap
+  /// pushed into SQL — twelve chips should cost twelve rows per diary
+  /// write, not a lifetime of habits re-read and re-mapped every log.
+  Stream<List<FoodUsage>> watchVisible({int? limit}) {
+    final q = _db.select(_db.foodUsages)
+      ..where((u) => u.hidden.equals(false))
+      ..orderBy([(u) => OrderingTerm.desc(u.at)]);
+    if (limit != null) q.limit(limit);
+    return q.watch().map((rows) => rows.map(_toDomain).toList());
+  }
+
+  /// The suggestion engine's pool: visible regulars, most-used first with
+  /// the engine's own label tie-break, capped in SQL at its ceiling.
+  Stream<List<FoodUsage>> watchTopUsed({required int limit}) {
+    final q = _db.select(_db.foodUsages)
+      ..where((u) => u.hidden.equals(false))
+      ..orderBy([
+        (u) => OrderingTerm.desc(u.useCount),
+        (u) => OrderingTerm.asc(u.label),
+      ])
+      ..limit(limit);
+    return q.watch().map((rows) => rows.map(_toDomain).toList());
+  }
+
   /// Every regular, hidden included — the export/backup gathering path.
   Future<List<FoodUsage>> getAll() async =>
       (await (_db.select(_db.foodUsages)

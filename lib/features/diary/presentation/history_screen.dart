@@ -113,30 +113,18 @@ class _Chart extends StatefulWidget {
 }
 
 class _ChartState extends State<_Chart> {
+  /// Selected axis, by [DailyTargets.axes]' own name — the chart hand-
+  /// matches no field lists of its own.
   String _axis = 'kcal';
 
-  static const _axes = ['kcal', 'Protein', 'Carbs', 'Fat'];
+  TargetAxis get _selected =>
+      widget.targets.axes.firstWhere((a) => a.axis == _axis);
 
-  double? _of(MacroSet? m) => switch (_axis) {
-        'Protein' => m?.proteinG,
-        'Carbs' => m?.carbG,
-        'Fat' => m?.fatG,
-        _ => m?.kcal,
-      };
+  /// The picker speaks Title Case for the macros; 'kcal' is its own name.
+  static String _label(String axis) =>
+      axis == 'kcal' ? axis : axis[0].toUpperCase() + axis.substring(1);
 
-  double? get _target => switch (_axis) {
-        'Protein' => widget.targets.values.proteinG,
-        'Carbs' => widget.targets.values.carbG,
-        'Fat' => widget.targets.values.fatG,
-        _ => widget.targets.values.kcal,
-      };
-
-  TargetRole get _role => switch (_axis) {
-        'Protein' => widget.targets.resolvedProteinRole,
-        'Carbs' => widget.targets.resolvedCarbRole,
-        'Fat' => widget.targets.resolvedFatRole,
-        _ => widget.targets.resolvedKcalRole,
-      };
+  double? _of(MacroSet? m) => m == null ? null : _selected.of(m);
 
   /// '1.8k' for four-digit kcal, plain rounds otherwise — a label, not a
   /// spreadsheet cell.
@@ -144,11 +132,17 @@ class _ChartState extends State<_Chart> {
       ? '${(v / 1000).toStringAsFixed(1)}k'
       : v.round().toString();
 
+  /// Vertical room reserved above a full-height bar for its value label.
+  /// Labels live OUTSIDE the bars' frame so they never steal bar height —
+  /// that theft is what once drew an at-target day below its own line.
+  static const _labelBand = 18.0;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final ordered = widget.week.reversed.toList();
-    final target = _target;
+    final axis = _selected;
+    final target = axis.target;
     var scale = target ?? 0;
     for (final d in ordered) {
       final v = _of(widget.totals[d]) ?? 0;
@@ -156,48 +150,60 @@ class _ChartState extends State<_Chart> {
     }
     if (scale <= 0) scale = 1;
     final ceiling = scale * 1.15;
-    final targetFraction = target == null ? null : target / ceiling;
-    final mark = switch (_role) {
-      TargetRole.about => '',
-      TargetRole.atLeast => '≥',
-      TargetRole.under => '≤',
-    };
-    final unit = _axis == 'kcal' ? ' kcal' : 'g ${_axis.toLowerCase()}';
+    final unit = _axis == 'kcal' ? ' kcal' : 'g $_axis';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SegmentedButton<String>(
-          segments: [
-            for (final a in _axes)
-              ButtonSegment(value: a, label: Text(a)),
-          ],
-          selected: {_axis},
-          showSelectedIcon: false,
-          style: const ButtonStyle(
-              visualDensity: VisualDensity.compact,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-          onSelectionChanged: (s) => setState(() => _axis = s.first),
+        // Scale-down beats wrapping here: at large text scales on narrow
+        // phones the four segments would fold their labels mid-word into
+        // tall broken columns (the fleet's recurring overflow shape).
+        // FittedBox keeps one readable, tappable row.
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: SegmentedButton<String>(
+            segments: [
+              for (final a in widget.targets.axes)
+                ButtonSegment(value: a.axis, label: Text(_label(a.axis))),
+            ],
+            selected: {_axis},
+            showSelectedIcon: false,
+            style: const ButtonStyle(
+                visualDensity: VisualDensity.compact,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+            onSelectionChanged: (s) => setState(() => _axis = s.first),
+          ),
         ),
         const SizedBox(height: AppSpacing.md),
         SizedBox(
           height: 160,
-          child: Stack(
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  for (final d in ordered) _bar(context, theme, d, ceiling),
-                ],
-              ),
-              if (targetFraction != null)
-                Align(
-                  alignment:
-                      Alignment(0, 1 - 2 * targetFraction.clamp(0.0, 1.0)),
-                  child: Container(height: 1.5, color: AppColors.stone),
+          child: LayoutBuilder(builder: (context, constraints) {
+            // ONE coordinate frame for bars and line: both are measured
+            // against [usable] — the frame minus the label band — so a day
+            // logged exactly at target sits exactly on the target line.
+            final usable = constraints.maxHeight - _labelBand;
+            return Stack(
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    for (final d in ordered)
+                      _bar(context, theme, d, ceiling, usable),
+                  ],
                 ),
-            ],
-          ),
+                if (target != null)
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: (target / ceiling).clamp(0.0, 1.0) * usable,
+                    child: Container(
+                        key: const ValueKey('target-line'),
+                        height: 1.5,
+                        color: AppColors.stone),
+                  ),
+              ],
+            );
+          }),
         ),
         const SizedBox(height: AppSpacing.xs),
         Row(
@@ -217,7 +223,7 @@ class _ChartState extends State<_Chart> {
           Padding(
             padding: const EdgeInsets.only(top: AppSpacing.xs),
             child: Text(
-              '$mark${target.round()}$unit target',
+              '${axis.role.mark}${target.round()}$unit target',
               textAlign: TextAlign.end,
               style: theme.textTheme.labelSmall
                   ?.copyWith(color: AppColors.stone),
@@ -227,41 +233,46 @@ class _ChartState extends State<_Chart> {
     );
   }
 
-  Widget _bar(
-      BuildContext context, ThemeData theme, String day, double ceiling) {
+  Widget _bar(BuildContext context, ThemeData theme, String day,
+      double ceiling, double usable) {
     final value = _of(widget.totals[day]);
     final fraction = ((value ?? 0) / ceiling).clamp(0.0, 1.0);
-    final barFlex = (fraction * 1000).round();
+    // Bar height in the shared frame — the same pixels-per-unit the target
+    // line uses, so at-target days genuinely touch it.
+    final barHeight = fraction * usable;
     final isToday = day == widget.week.first;
     return Expanded(
       child: InkWell(
         key: ValueKey('bar-$day'),
         onTap: () => context.push('/history/$day'),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 3),
-          child: Column(
-            children: [
-              Spacer(flex: (1000 - barFlex).clamp(1, 1000)),
-              if (value != null)
-                Text(_fmt(value),
-                    style: theme.textTheme.labelSmall
-                        ?.copyWith(color: AppColors.stone)),
-              const SizedBox(height: 2),
-              Expanded(
-                flex: barFlex.clamp(1, 1000),
-                child: Container(
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: isToday
-                        ? AppColors.paprika
-                        : AppColors.paprika.withValues(alpha: 0.45),
-                    borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(4)),
-                  ),
+        child: Stack(
+          children: [
+            Positioned(
+              left: 3,
+              right: 3,
+              bottom: 0,
+              height: barHeight,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: isToday
+                      ? AppColors.paprika
+                      : AppColors.paprika.withValues(alpha: 0.45),
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(4)),
                 ),
               ),
-            ],
-          ),
+            ),
+            if (value != null)
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: barHeight + 2,
+                child: Text(_fmt(value),
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.labelSmall
+                        ?.copyWith(color: AppColors.stone)),
+              ),
+          ],
         ),
       ),
     );

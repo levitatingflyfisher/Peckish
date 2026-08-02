@@ -22,6 +22,14 @@ enum TargetRole {
         'under' => under,
         _ => null,
       };
+
+  /// The role worn on its sleeve wherever a target is printed: floors read
+  /// as ≥, caps as ≤, plain "about" targets stay bare numbers.
+  String get mark => switch (this) {
+        about => '',
+        atLeast => '≥',
+        under => '≤',
+      };
 }
 
 /// One macro axis of the day's targets, resolved and self-describing:

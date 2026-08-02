@@ -190,15 +190,17 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull,
         reason: 'no layout exception at 320dp / 2.5x text');
+    // getRect (not getSize): the fix may scale the picker down, so assert
+    // the on-screen pixels after any transform, not the local box size.
     expect(
-        tester.getSize(find.byType(SegmentedButton<String>)).width,
+        tester.getRect(find.byType(SegmentedButton<String>)).width,
         lessThanOrEqualTo(320),
         reason: 'the picker fits the narrow screen');
     // Big text must scale the picker down, not fold labels mid-word into
     // tall broken columns: every label stays on a single line (one line at
     // 2.5x is at most ~50px tall).
     for (final label in const ['kcal', 'Protein', 'Carbs', 'Fat']) {
-      expect(tester.getSize(find.text(label)).height, lessThanOrEqualTo(60),
+      expect(tester.getRect(find.text(label)).height, lessThanOrEqualTo(60),
           reason: '"$label" must stay a one-line label');
     }
 

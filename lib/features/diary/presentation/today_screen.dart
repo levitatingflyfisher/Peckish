@@ -65,9 +65,7 @@ class TodayScreen extends ConsumerWidget {
                 onPressed: () => showTargetsDialog(context, ref),
               ),
             ),
-          if (ref.watch(_suggestionsProvider(today)) case final advice?
-              when advice.status == SuggestionStatus.ideas ||
-                  advice.status == SuggestionStatus.complete) ...[
+          if (ref.watch(_suggestionsProvider(today)) case final advice?) ...[
             const SizedBox(height: AppSpacing.lg),
             _RoundOutCard(
               day: today,
@@ -118,23 +116,39 @@ class TodayScreen extends ConsumerWidget {
 final _entriesProvider = StreamProvider.autoDispose
     .family((ref, String day) =>
         ref.watch(diaryRepositoryProvider).watchEntriesForDay(day));
-final _totalsProvider = StreamProvider.autoDispose.family(
-    (ref, String day) =>
-        ref.watch(diaryRepositoryProvider).watchTotalsForDay(day));
-/// Live view of the persistent regulars — reacts to hides/unhides made
-/// anywhere (the Foods screen), not just to diary writes.
-final _usagesProvider = StreamProvider.autoDispose((ref) => ref
-    .watch(foodUsageRepositoryProvider)
-    .watchAll()
-    .map((all) => [for (final u in all.where((u) => !u.hidden)) u]));
+
+/// Totals fold out of the already-watched entries — one drift watch serves
+/// the totals card, the day list, and the suggestion engine. Seeded with
+/// the all-null set (never zero): a kcal-only day keeps protein unknown.
+final _totalsProvider = Provider.autoDispose
+    .family<AsyncValue<MacroSet>, String>((ref, day) => ref
+        .watch(_entriesProvider(day))
+        .whenData((entries) =>
+            entries.fold(const MacroSet(), (sum, e) => sum + e.macros)));
+
+/// The rail's regulars, live — reacts to hides/unhides made anywhere (the
+/// Foods screen), not just to diary writes. The twelve-chip cap lives in
+/// the query, so the rail costs twelve rows per change, not every habit
+/// ever recorded.
+final _railProvider = StreamProvider.autoDispose(
+    (ref) => ref.watch(foodUsageRepositoryProvider).watchVisible(limit: 12));
 final _recentsProvider = Provider.autoDispose((ref) => ref
-    .watch(_usagesProvider)
-    .whenData((us) => [for (final u in us.take(12)) u.asTemplateEntry()]));
+    .watch(_railProvider)
+    .whenData((us) => [for (final u in us) u.asTemplateEntry()]));
+
+/// The engine's pool: the most-used visible regulars, capped in SQL at the
+/// engine's own ceiling.
+final _enginePoolProvider = StreamProvider.autoDispose((ref) => ref
+    .watch(foodUsageRepositoryProvider)
+    .watchTopUsed(limit: SuggestionEngine.maxRegulars));
 final _targetsProvider = StreamProvider.autoDispose(
     (ref) => ref.watch(targetsRepositoryProvider).watch());
 
-/// The round-out-your-day advice, or null when the card has nothing to
-/// show: feature off, dismissed for this day, or inputs still loading.
+/// The round-out-your-day advice, or null whenever the card should not
+/// exist: feature off, dismissed for this day, inputs still loading, or
+/// the engine with nothing worth saying (no targets, or quiet). This
+/// provider is the single decider — the widget renders whatever non-null
+/// advice arrives, no second guard.
 final _suggestionsProvider =
     Provider.autoDispose.family<DaySuggestions?, String>((ref, day) {
   final prefs = ref.watch(userPrefsProvider).valueOrNull;
@@ -142,19 +156,15 @@ final _suggestionsProvider =
   if (prefs.suggestionsDismissedDay == day) return null;
   final targets = ref.watch(_targetsProvider).valueOrNull;
   final totals = ref.watch(_totalsProvider(day)).valueOrNull;
-  final usages = ref.watch(_usagesProvider).valueOrNull;
-  if (targets == null || totals == null || usages == null) return null;
-  return const SuggestionEngine()
-      .suggest(targets: targets, eaten: totals, regulars: usages);
+  final pool = ref.watch(_enginePoolProvider).valueOrNull;
+  if (targets == null || totals == null || pool == null) return null;
+  final advice = const SuggestionEngine()
+      .suggest(targets: targets, eaten: totals, regulars: pool);
+  return switch (advice.status) {
+    SuggestionStatus.ideas || SuggestionStatus.complete => advice,
+    _ => null,
+  };
 });
-
-/// A target's role, worn on its sleeve: floors read as ≥, caps as ≤,
-/// plain "about" targets stay bare numbers.
-String _roleMark(TargetRole role) => switch (role) {
-      TargetRole.about => '',
-      TargetRole.atLeast => '≥',
-      TargetRole.under => '≤',
-    };
 
 class _TotalsCard extends StatelessWidget {
   const _TotalsCard({required this.totals, required this.targets});
@@ -192,7 +202,7 @@ class _TotalsCard extends StatelessWidget {
                   child: Text(
                     kcalTarget == null
                         ? 'kcal'
-                        : 'of ${_roleMark(targets.resolvedKcalRole)}'
+                        : 'of ${targets.resolvedKcalRole.mark}'
                             '${_fmt(kcalTarget)} kcal',
                     style:
                         text.titleMedium?.copyWith(color: AppColors.stone),
@@ -251,7 +261,7 @@ class _MacroChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final v = value == null ? '—' : '${value!.round()}g';
     final suffix =
-        target == null ? '' : ' / ${_roleMark(role)}${target!.round()}g';
+        target == null ? '' : ' / ${role.mark}${target!.round()}g';
     return Chip(
       avatar: CircleAvatar(backgroundColor: color, radius: 6),
       label: Text('$label $v$suffix'),
