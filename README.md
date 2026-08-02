@@ -21,8 +21,21 @@ ads, no tracking, no subscriptions.
   aisle-sorted list. Manual adds always survive regeneration; checked items
   are never re-added; unchecked generated lines follow the plan.
 - **Today** — a one-tap diary built around your regulars: recents rail,
-  saved meals, offline search over the bundled spine, quick add. Static
-  targets if you want them; plain numbers either way.
+  saved meals, offline search over the bundled spine, quick add. Optional
+  targets with roles (a floor, a budget, a land-near), "round out your
+  day" suggestions drawn from your own regulars, and a history chart
+  where blank days stay honestly blank.
+- **Scan it** — barcode scan (camera or typed digits), answered from
+  downloadable offline databases on your phone; a code they don't know
+  shows one button, "Ask openfoodfacts.org", and only that tap sends the
+  digits.
+- **Guess it** — describe the meal, or snap the plate (Android), and
+  on-device AI drafts lines you prune and confirm — a downloaded local
+  model or your own key; ships off, and every AI-drafted line carries its
+  provenance.
+- **The household kitchen** — recipes, the plan, groceries, custom foods
+  and saved meals can sync over an encrypted pairing on your own Wi-Fi;
+  diaries and targets never leave their device.
 - **Your data is yours** — encrypted `.ohbk` backup/restore (sanctuary),
   plain-JSON export, and a real erase button.
 
