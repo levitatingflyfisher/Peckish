@@ -92,8 +92,8 @@ void main() {
     await tester.pumpWidget(host());
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('of ≤2000 kcal'), findsOneWidget);
-    expect(find.textContaining('Protein 30g / ≥150g'), findsOneWidget);
+    expect(find.textContaining('of max 2000 kcal'), findsOneWidget);
+    expect(find.textContaining('Protein 30g / min 150g'), findsOneWidget);
     await unmount(tester);
   });
 

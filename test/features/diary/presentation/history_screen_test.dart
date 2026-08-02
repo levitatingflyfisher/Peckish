@@ -112,7 +112,7 @@ void main() {
     });
     await tester.pumpWidget(host());
     await tester.pumpAndSettle();
-    expect(find.text('≤2000 kcal target'), findsOneWidget);
+    expect(find.text('max 2000 kcal target'), findsOneWidget);
     await unmount(tester);
   });
 
@@ -136,7 +136,7 @@ void main() {
     expect(find.text('82'), findsOneWidget,
         reason: 'the protein view speaks grams');
     expect(find.text('1.8k'), findsNothing, reason: 'one axis at a time');
-    expect(find.text('≥150g protein target'), findsOneWidget,
+    expect(find.text('min 150g protein target'), findsOneWidget,
         reason: 'the target line wears its role mark, per axis');
     await unmount(tester);
   });

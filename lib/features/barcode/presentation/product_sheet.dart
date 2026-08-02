@@ -117,7 +117,7 @@ class _ProductSheetState extends ConsumerState<_ProductSheet> {
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
-            '≈ ${_slot(scaled.kcal, 'kcal', round: true)} · '
+            'About ${_slot(scaled.kcal, 'kcal', round: true)} · '
             'protein ${_slot(scaled.proteinG, 'g')} · '
             'carbs ${_slot(scaled.carbG, 'g')} · '
             'fat ${_slot(scaled.fatG, 'g')}',

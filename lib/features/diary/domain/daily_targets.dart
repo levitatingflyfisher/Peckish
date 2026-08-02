@@ -24,11 +24,19 @@ enum TargetRole {
       };
 
   /// The role worn on its sleeve wherever a target is printed: floors read
-  /// as ≥, caps as ≤, plain "about" targets stay bare numbers.
+  /// 'min 150g', caps 'max 2200 kcal', plain "about" targets stay bare
+  /// numbers. Includes its own trailing space, so callers stay a plain
+  /// '${role.mark}${number}'.
+  ///
+  /// These were ≥ and ≤ until v0.9, which was prettier and unreadable:
+  /// neither bundled font has either glyph, so every target anyone ever set
+  /// printed a tofu box. Words the app's own type can actually draw beat a
+  /// symbol that depends on an OS fallback chain we don't ship — see
+  /// test/shared/theme/font_coverage_test.dart.
   String get mark => switch (this) {
         about => '',
-        atLeast => '≥',
-        under => '≤',
+        atLeast => 'min ',
+        under => 'max ',
       };
 }
 

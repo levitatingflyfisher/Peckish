@@ -93,7 +93,7 @@ void main() {
     await save(tester);
 
     expect(find.text('of 2000 kcal'), findsOneWidget);
-    expect(find.textContaining('≥150g'), findsOneWidget,
+    expect(find.textContaining('min 150g'), findsOneWidget,
         reason: 'the protein floor reads as a floor');
     expect(find.text('Set daily targets'), findsNothing,
         reason: 'the invitation retires once targets exist');
@@ -115,7 +115,7 @@ void main() {
     await tester.pumpAndSettle();
     await save(tester);
 
-    expect(find.text('of ≤1800 kcal'), findsOneWidget);
+    expect(find.text('of max 1800 kcal'), findsOneWidget);
     await unmount(tester);
   });
 

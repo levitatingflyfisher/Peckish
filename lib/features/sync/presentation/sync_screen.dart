@@ -247,8 +247,8 @@ class _SyncScreenState extends ConsumerState<SyncScreen> {
     final host = _host.text.trim();
     if (host.isEmpty) {
       setState(() =>
-          _message = "Enter the other device's address (Settings → "
-              'Household sync shows it there).');
+          _message = "Enter the other device's address (Settings, then "
+              'Household sync, shows it there).');
       return;
     }
     setState(() {
