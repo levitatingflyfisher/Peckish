@@ -19,6 +19,9 @@
 5. Build a saved meal for your standing order (the whole Panda run, one
    tap). If numbers help, set targets in Settings → **Your day** — each
    gets a role: a floor, a budget, or a land-near.
+6. Missed a day? Open **History** from Today's app bar and tap that day on
+   the calendar. Its **+** adds to *that* day — including a barcode scan,
+   which is often the easiest way to reconstruct one.
 
 That's the entire system. The app never pings you, never scores you, and
 works in airplane mode.

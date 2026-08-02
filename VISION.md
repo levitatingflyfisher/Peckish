@@ -35,7 +35,8 @@ one local-first, no-accounts app.
 | Offline food search over 13,652 USDA foods | **Shipped** — bundled CC0 spine, version-stamped import |
 | Recipe box with paste-a-URL import | **Shipped** — generic schema.org extractor; per-site long tail NOT covered (recipe-scrapers has 649 subclasses for a reason); manual entry is the honest fallback |
 | Weekly plan + self-writing grocery list | **Shipped** — three regeneration laws, keyword aisle sort (deliberately dumb, user-correctable) |
-| One-tap diary + staples + targets + history | **Shipped** — target roles (floor / budget / about) with "round out your day" suggestions drawn from your own regulars (v0.4, ADR-0008); week chart + fortnight of day pages, blank days stay visibly blank |
+| One-tap diary + staples + targets + history | **Shipped** — target roles (floor / budget / about) with "round out your day" suggestions drawn from your own regulars (v0.4, ADR-0008); a month-shaped history (v0.8) — trend line per macro against its target, tappable calendar, blank days stay visibly blank |
+| Fixing a day you already lived | **Shipped v0.8** — search, quick add, saved meals, barcode, AI guess and plate photo all feed a past day from its own **+**, each naming the day before it writes |
 | Encrypted backup / restore (.ohbk) | **Shipped** — sanctuary spine, consequence copy test-bound to the erase set |
 | Ingredient→food matching for computed recipe nutrition | **Schema shipped, UI minimal** — declared (site) nutrition works today; hand-matching lines is future polish |
 | Family shared plan/groceries across devices | **Shipped v0.2 (LAN)** — encrypted Wi-Fi pairing, HLC last-write-wins with tombstones (ADR-0006); diaries and targets never leave a device. Internet sync (CRDT over a blind relay) remains not built |

@@ -1,7 +1,20 @@
 # Changelog
 
-## Unreleased
+## 0.8.0 — the missed-day release
 
+Every way of logging now works on a day you already lived, and history
+finally looks like something you can reach into.
+
+- **A scan can fix yesterday.** Barcode, the AI guess, and the plate
+  photo all work from a past day's **+** — the sheet names the day it's
+  feeding before you confirm. v0.6 hid these on past days as "now-flows";
+  that was wrong, since the tin still in your recycling is the best record
+  you have of the day you forgot to log.
+- **History is a month you can read.** A trend line for the macro you
+  pick, with your target ruled across it — a gap in the line is a day you
+  didn't log, never a zero. Under it, a real calendar: every past day is a
+  tappable cell showing that day's number, and the heading says out loud
+  that tapping is how you fix a day. Arrows walk back through the months.
 - **Ask the household stove.** Settings → AI gains a third place for the
   guess to think: a model running on your own desktop, reached over an
   encrypted channel keyed by the same household phrase you use for

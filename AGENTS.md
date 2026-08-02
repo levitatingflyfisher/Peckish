@@ -20,7 +20,9 @@ docs/README.md (Diátaxis hub). Decisions live in docs/adr/.
   bundled-USDA repository (import/search/portions), custom foods.
 - `lib/features/diary/` — the ledger (snapshot macros at log time), saved
   meals (one-tap `logMeal`), targets with roles + the suggestion engine,
-  Today + add sheet + history (week chart, day pages, edit sheet).
+  Today + add sheet + history (month trend line, tappable calendar, day
+  pages, edit sheet). `domain/day_stamp.dart` holds the ONE rule for which
+  day a log lands on — every add path calls it; don't re-derive it.
 - `lib/features/barcode/` — GTIN validation + scanner tuning, the
   downloadable slice DBs (spec / download service / local db) and the
   resolver chain (usda → off_us → explicit ask), the OFF client. ADR-0010.
