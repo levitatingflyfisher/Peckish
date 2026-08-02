@@ -66,7 +66,10 @@ void main() {
     });
     await tester.pumpAndSettle();
 
-    expect(find.text('Forgotten stew'), findsOneWidget,
+    expect(
+        find.descendant(
+            of: find.byType(EntryTile), matching: find.text('Forgotten stew')),
+        findsOneWidget,
         reason: 'the line lands on the open history day');
     expect(find.text('450 kcal'), findsOneWidget);
     await unmount(tester);

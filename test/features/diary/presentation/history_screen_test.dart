@@ -9,6 +9,7 @@ import 'package:peckish/features/diary/data/diary_repository.dart';
 import 'package:peckish/features/diary/data/targets_repository.dart';
 import 'package:peckish/features/diary/domain/daily_targets.dart';
 import 'package:peckish/features/diary/domain/diary_entry.dart';
+import 'package:peckish/features/diary/presentation/entry_tile.dart';
 import 'package:peckish/features/diary/presentation/history_screen.dart';
 import 'package:peckish/features/food/domain/macro_set.dart';
 import 'package:peckish/shared/theme/app_theme.dart';
@@ -295,7 +296,12 @@ void main() {
     }
     await tester.tap(find.byKey(ValueKey('day-$day')));
     await tester.pumpAndSettle();
-    expect(find.text('Calendar stew'), findsOneWidget);
+    // Scoped to the ledger: the day also carries a regulars rail, where
+    // this food now rightly appears as a one-tap chip.
+    expect(
+        find.descendant(
+            of: find.byType(EntryTile), matching: find.text('Calendar stew')),
+        findsOneWidget);
     await unmount(tester);
   });
 }

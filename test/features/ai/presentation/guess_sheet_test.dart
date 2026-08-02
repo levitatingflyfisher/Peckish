@@ -138,7 +138,10 @@ void main() {
           theme: AppTheme.light, home: HistoryDayScreen(day: day)),
     ));
     await tester.pumpAndSettle();
-    expect(find.text('Chipotle bowl'), findsOneWidget);
+    expect(
+        find.descendant(
+            of: find.byType(EntryTile), matching: find.text('Chipotle bowl')),
+        findsOneWidget);
     await unmount(tester);
   });
 

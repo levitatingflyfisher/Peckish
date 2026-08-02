@@ -12,6 +12,7 @@ import 'package:peckish/features/ai/presentation/guess_sheet.dart';
 import 'package:peckish/features/diary/domain/day_stamp.dart';
 import 'package:peckish/features/diary/domain/diary_entry.dart';
 import 'package:peckish/features/diary/presentation/day_format.dart';
+import 'package:peckish/features/diary/presentation/regulars_rail.dart';
 import 'package:peckish/features/food/domain/custom_food.dart';
 import 'package:peckish/features/food/domain/macro_set.dart';
 import 'package:peckish/features/food/domain/usda_food.dart';
@@ -139,6 +140,9 @@ class _IdleSheet extends ConsumerWidget {
                     .titleMedium
                     ?.copyWith(color: AppColors.paprika)),
           ),
+        // First, above every other route in: the food you have logged
+        // before is the one you are most likely adding now.
+        RegularsList(day: day, onLogged: () => Navigator.of(context).pop()),
         ListTile(
           leading: const Icon(Icons.bolt_outlined, color: AppColors.butter),
           title: const Text('Quick add'),

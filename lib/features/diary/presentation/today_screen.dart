@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:uuid/uuid.dart';
 
 import 'package:peckish/core/providers/core_providers.dart';
 import 'package:peckish/features/diary/domain/daily_targets.dart';
 import 'package:peckish/features/diary/domain/diary_entry.dart';
+import 'package:peckish/features/diary/domain/relog.dart';
 import 'package:peckish/features/diary/presentation/add_sheet.dart';
 import 'package:peckish/features/diary/presentation/entry_tile.dart';
+import 'package:peckish/features/diary/presentation/regulars_rail.dart';
 import 'package:peckish/features/diary/presentation/targets_dialog.dart';
 import 'package:peckish/features/diary/domain/suggestion_engine.dart';
 import 'package:peckish/features/food/domain/macro_set.dart';
@@ -25,7 +26,6 @@ class TodayScreen extends ConsumerWidget {
     final today = DiaryEntry.dayOf(DateTime.now());
     final entries = ref.watch(_entriesProvider(today));
     final totals = ref.watch(_totalsProvider(today));
-    final recents = ref.watch(_recentsProvider);
     final targets = ref.watch(_targetsProvider);
 
     return Scaffold(
@@ -74,23 +74,10 @@ class TodayScreen extends ConsumerWidget {
             ),
           ],
           const SizedBox(height: AppSpacing.lg),
-          if ((recents.value ?? const []).isNotEmpty) ...[
-            Row(
-              children: [
-                Expanded(
-                  child: Text('Your regulars',
-                      style: Theme.of(context).textTheme.titleMedium),
-                ),
-                TextButton(
-                  onPressed: () => context.push('/foods'),
-                  child: const Text('See all'),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            _RecentsRail(recents: recents.value!),
-            const SizedBox(height: AppSpacing.lg),
-          ],
+          // Aimed at no day in particular, which means today — the same
+          // rail a past day gets, pointed at now.
+          const RegularsRail(),
+          const SizedBox(height: AppSpacing.lg),
           Text('Logged today', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: AppSpacing.sm),
           if ((entries.value ?? const []).isEmpty)
@@ -125,16 +112,6 @@ final _totalsProvider = Provider.autoDispose
         .watch(_entriesProvider(day))
         .whenData((entries) =>
             entries.fold(const MacroSet(), (sum, e) => sum + e.macros)));
-
-/// The rail's regulars, live — reacts to hides/unhides made anywhere (the
-/// Foods screen), not just to diary writes. The twelve-chip cap lives in
-/// the query, so the rail costs twelve rows per change, not every habit
-/// ever recorded.
-final _railProvider = StreamProvider.autoDispose(
-    (ref) => ref.watch(foodUsageRepositoryProvider).watchVisible(limit: 12));
-final _recentsProvider = Provider.autoDispose((ref) => ref
-    .watch(_railProvider)
-    .whenData((us) => [for (final u in us) u.asTemplateEntry()]));
 
 /// The engine's pool: the most-used visible regulars, capped in SQL at the
 /// engine's own ceiling.
@@ -270,55 +247,6 @@ class _MacroChip extends StatelessWidget {
   }
 }
 
-class _RecentsRail extends ConsumerWidget {
-  const _RecentsRail({required this.recents});
-
-  final List<DiaryEntry> recents;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return SizedBox(
-      height: 56,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: recents.length,
-        separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.sm),
-        itemBuilder: (context, i) {
-          final template = recents[i];
-          return ActionChip(
-            avatar: const Icon(Icons.replay, size: 18),
-            label: Text(template.label, overflow: TextOverflow.ellipsis),
-            labelPadding:
-                const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-            onPressed: () async {
-              final now = DateTime.now();
-              await ref.read(diaryRepositoryProvider).log(DiaryEntry(
-                    id: const Uuid().v4(),
-                    day: DiaryEntry.dayOf(now),
-                    at: now,
-                    food: template.food,
-                    label: template.label,
-                    qty: template.qty,
-                    unitLabel: template.unitLabel,
-                    grams: template.grams,
-                    macros: template.macros,
-                    source: EntrySource.tap,
-                    createdAt: now,
-                  ));
-              if (context.mounted) {
-                ScaffoldMessenger.of(context)
-                  ..clearSnackBars()
-                  ..showSnackBar(
-                      SnackBar(content: Text('Logged ${template.label}')));
-              }
-            },
-          );
-        },
-      ),
-    );
-  }
-}
-
 /// "Round out your day" — the engine's advice, worn lightly. Ideas come
 /// with a one-tap Log; a finished day gets one warm line; dismissal lasts
 /// exactly one day. The card never scolds: when nothing helps, the engine
@@ -355,22 +283,12 @@ class _RoundOutCard extends ConsumerWidget {
 
   Future<void> _log(WidgetRef ref, Suggestion s) async {
     final diary = ref.read(diaryRepositoryProvider);
+    // One stamp for the whole idea: a combo is one decision, even if the
+    // loop below straddles a midnight.
+    final now = DateTime.now();
     for (final item in s.items) {
-      final now = DateTime.now();
-      final u = item.usage;
-      await diary.log(DiaryEntry(
-        id: const Uuid().v4(),
-        day: DiaryEntry.dayOf(now),
-        at: now,
-        food: u.food,
-        label: u.label,
-        qty: u.qty * item.count,
-        unitLabel: u.unitLabel,
-        grams: u.grams == null ? null : u.grams! * item.count,
-        macros: u.macros * item.count.toDouble(),
-        source: EntrySource.tap,
-        createdAt: now,
-      ));
+      await diary.log(relogEntry(item.usage.asTemplateEntry(),
+          day: day, count: item.count, now: now));
     }
   }
 

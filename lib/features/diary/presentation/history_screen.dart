@@ -8,6 +8,7 @@ import 'package:peckish/features/diary/domain/diary_entry.dart';
 import 'package:peckish/features/diary/presentation/add_sheet.dart';
 import 'package:peckish/features/diary/presentation/day_format.dart';
 import 'package:peckish/features/diary/presentation/entry_tile.dart';
+import 'package:peckish/features/diary/presentation/regulars_rail.dart';
 import 'package:peckish/features/food/domain/macro_set.dart';
 import 'package:peckish/shared/theme/app_colors.dart';
 import 'package:peckish/shared/theme/app_spacing.dart';
@@ -623,6 +624,11 @@ class HistoryDayScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.lg),
         children: [
+          // Every chip feeds THIS day. Filling a gap is nearly always a
+          // food you eat all the time, so the one-tap route has to be here
+          // and not only on Today.
+          RegularsRail(day: day),
+          const SizedBox(height: AppSpacing.lg),
           if (entries.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
@@ -636,6 +642,7 @@ class HistoryDayScreen extends ConsumerWidget {
             )
           else
             for (final entry in entries) EntryTile(entry: entry),
+          const SizedBox(height: 96), // room above the FAB
         ],
       ),
     );

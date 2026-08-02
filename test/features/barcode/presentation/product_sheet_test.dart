@@ -117,7 +117,11 @@ void main() {
           theme: AppTheme.light, home: HistoryDayScreen(day: day)),
     ));
     await tester.pumpAndSettle();
-    expect(find.text('Nutella (Ferrero)'), findsOneWidget,
+    expect(
+        find.descendant(
+            of: find.byType(EntryTile),
+            matching: find.text('Nutella (Ferrero)')),
+        findsOneWidget,
         reason: 'the line lands on the day the sheet was opened for');
     await unmount(tester);
   });
