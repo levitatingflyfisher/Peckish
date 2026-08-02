@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.6.0 — the hearth release
+
+Phone-test feedback, all five points.
+
+- **It looks like OpenHearth now.** The damson-plum-on-parchment theme
+  is gone. Peckish wears the shared openhearth_design system whole —
+  hearth terracotta on warm linen, the ember-family dark theme, the
+  fleet's own type and buttons — and a test now forbids raw hex in the
+  theme layer. Launcher and web icons re-hued to match.
+- **A missed day is fixable.** Every history day has its own + that adds
+  to THAT day (quick add, search, portions, saved meals). The sheet says
+  which day it's feeding; barcode and AI stay in the present tense.
+- **The chart grew up.** Pick an axis — kcal, protein, carbs, fat — and
+  the bars, value labels, and the target line (wearing its role mark)
+  follow. Every bar opens its day.
+- **Honest without Google.** On a phone without Play services the plate
+  labeler bows out by name and points at everything that still works —
+  which is everything else, including the downloaded on-device model.
+  New in Settings: "What leaves your device", the whole network map on
+  one screen (most rows say "nothing" — that's why data-off just works).
+- **Downloads tell the truth.** An interrupted model download now shows
+  "Paused — Resume", and Resume picks up from the same byte (it always
+  did; now it says so). Leaving the app pauses a transfer; the progress
+  survives on disk.
+
 ## 0.5.0 — the on-device release
 
 Two new rungs that run entirely on the phone, ported from the fleet's

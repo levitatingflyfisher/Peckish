@@ -7,6 +7,6 @@ class AppInfo {
   AppInfo._();
 
   static const String appName = 'Peckish';
-  static const String appVersion = '0.5.0';
+  static const String appVersion = '0.6.0';
   static const String tagline = 'Feed the week.';
 }
