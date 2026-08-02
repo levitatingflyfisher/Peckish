@@ -6,13 +6,13 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
-import 'package:peckish/shared/data/resumable_transfer.dart';
+import 'package:peckish/shared/data/download_stream.dart';
 
-/// In-memory dio transport (the model-service harness), but SLOW: the
-/// payload trickles out one chunk at a time so the test can cancel the
-/// subscription mid-transfer — exactly what a screen unmount does. The
-/// chunk counter is the wiretap: a transfer that keeps running after the
-/// listener left shows up as reads that should not exist.
+/// In-memory dio transport, but SLOW: the payload trickles out one chunk at
+/// a time so the test can cancel the subscription mid-transfer — exactly
+/// what a screen unmount does. The chunk counter is the wiretap: a transfer
+/// that keeps running after the listener left shows up as reads that should
+/// not exist.
 class _SlowChunkAdapter implements HttpClientAdapter {
   _SlowChunkAdapter(this.payload);
 
@@ -64,8 +64,7 @@ class _InstantAdapter implements HttpClientAdapter {
     Stream<Uint8List>? requestStream,
     Future<void>? cancelFuture,
   ) async {
-    return ResponseBody.fromBytes(
-        Uint8List.fromList(payload), HttpStatus.ok,
+    return ResponseBody.fromBytes(Uint8List.fromList(payload), HttpStatus.ok,
         headers: {
           HttpHeaders.contentLengthHeader: ['${payload.length}'],
         });
@@ -75,11 +74,17 @@ class _InstantAdapter implements HttpClientAdapter {
   void close({bool force = false}) {}
 }
 
+// The engine itself (Range resume, 416 restart, promote-once, cancel-aware)
+// is domovoi's and proven by domovoi's own suite. What lives HERE is the
+// stream façade Peckish's services and download cards ride: the listener
+// leaving must reach the wire as a cancel — the double-writer scar
+// (a detached transfer appending while the next visit's Resume opened a
+// second writer on the same partial) must never reopen.
 void main() {
   late Directory tempDir;
 
   setUp(() async {
-    tempDir = await Directory.systemTemp.createTemp('peckish_transfer_test');
+    tempDir = await Directory.systemTemp.createTemp('peckish_stream_test');
   });
 
   tearDown(() async {
@@ -97,7 +102,7 @@ void main() {
     var promoted = false;
 
     final firstEvent = Completer<void>();
-    final sub = resumableDownload(
+    final sub = downloadStream(
       dio: dio,
       url: 'https://example.test/artifact.bin',
       partFile: partOf(),
@@ -110,8 +115,7 @@ void main() {
     await sub.cancel();
     final servedAtCancel = adapter.chunksServed;
 
-    // Ample time for a runaway detached transfer to betray itself (the
-    // double-writer bug: run() kept going after the listener left).
+    // Ample time for a runaway detached transfer to betray itself.
     await Future<void>.delayed(const Duration(milliseconds: 300));
 
     expect(adapter.chunksServed, lessThanOrEqualTo(servedAtCancel + 1),
@@ -134,7 +138,7 @@ void main() {
     final promoteGate = Completer<void>();
     var promoteFinished = false;
 
-    final sub = resumableDownload(
+    final sub = downloadStream(
       dio: dio,
       url: 'https://example.test/artifact.bin',
       partFile: partOf(),
@@ -155,4 +159,41 @@ void main() {
     expect(promoteFinished, isTrue,
         reason: 'a completed transfer may finish installing quietly');
   });
+
+  test('an unknown total reaches the listener as -1, not null', () async {
+    // domovoi reports `null` for an absent Content-Length; every Peckish
+    // consumer (download cards) speaks the (received, -1) dialect.
+    final payload = List<int>.generate(2 * 1024, (i) => i % 251);
+    final dio = Dio()
+      ..httpClientAdapter = _NoLengthAdapter(payload);
+
+    final events = await downloadStream(
+      dio: dio,
+      url: 'https://example.test/artifact.bin',
+      partFile: partOf(),
+      promote: () async {},
+    ).toList();
+
+    expect(events, isNotEmpty);
+    expect(events.map((e) => e.$2), everyElement(-1));
+  });
+}
+
+class _NoLengthAdapter implements HttpClientAdapter {
+  _NoLengthAdapter(this.payload);
+
+  final List<int> payload;
+
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
+    return ResponseBody(
+        Stream.value(Uint8List.fromList(payload)), HttpStatus.ok);
+  }
+
+  @override
+  void close({bool force = false}) {}
 }

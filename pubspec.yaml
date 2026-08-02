@@ -61,6 +61,12 @@ dependencies:
     path: ../ohStyle/openhearth_design
   sanctuary_auth_core:
     path: ../packages/sanctuary_auth_core
+  # The OpenHearth control plane for household AI: the shared resumable
+  # download engine (model + barcode slices ride it) and the encrypted
+  # stove protocol to a home server. Pure Dart; io-only files import it
+  # behind the house trio idiom so web builds never compile dart:io.
+  domovoi:
+    path: ../DomovoiDiscernment
   sanctuary_backup_ui:
     path: ../packages/sanctuary_backup_ui
   file_picker: '>=8.0.0 <10.0.0'

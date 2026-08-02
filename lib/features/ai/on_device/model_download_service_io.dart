@@ -5,7 +5,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import 'package:peckish/features/ai/on_device/model_spec.dart';
-import 'package:peckish/shared/data/resumable_transfer.dart';
+import 'package:peckish/shared/data/download_stream.dart';
 
 /// Downloads and manages the on-device model files (native builds only —
 /// web uses the inert `model_download_service_web.dart` variant).
@@ -68,7 +68,8 @@ class ModelDownloadService {
   /// (total is `-1` when the server omits Content-Length).
   ///
   /// The `.part` resume / 416-restart / 200-ignores-Range discipline is
-  /// the shared [resumableDownload] engine's — see its doc for the story.
+  /// domovoi's `resumableDownload` engine's, spoken through the
+  /// [downloadStream] façade — see their docs for the story.
   Stream<(int, int)> download(PeckishModelSpec spec) async* {
     if (spec.requiresToken) {
       throw StateError(
@@ -76,7 +77,7 @@ class ModelDownloadService {
     }
     final file = await modelFile(spec);
     final part = await _partFile(spec);
-    yield* resumableDownload(
+    yield* downloadStream(
       dio: _dio,
       url: spec.downloadUrl,
       partFile: part,
