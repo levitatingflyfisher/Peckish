@@ -181,7 +181,7 @@ class _TotalsCard extends StatelessWidget {
                   child: Text(
                     _fmt(totals.kcal),
                     style: text.displayMedium?.copyWith(
-                      color: AppColors.jam,
+                      color: AppColors.paprika,
                       fontWeight: FontWeight.w700,
                     ),
                   ),

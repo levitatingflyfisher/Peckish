@@ -45,7 +45,7 @@ class EntryTile extends ConsumerWidget {
           style: Theme.of(context)
               .textTheme
               .titleMedium
-              ?.copyWith(color: AppColors.jam),
+              ?.copyWith(color: AppColors.paprika),
         ),
       ),
     );

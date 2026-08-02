@@ -12,29 +12,29 @@ class AppTheme {
   // The Material text ladder is the shared openhearth_design copy — byte-equal
   // to the const block this file used to hand-roll, so adopting it is zero
   // visual change by construction (locked by the whole-TextStyle equivalence
-  // test — Peckish has no goldens yet). Peckish's jam/oat
+  // test — Peckish has no goldens yet). Peckish's paprika/flour
   // surfaces below stay app-local: they are identity, not shared tokens.
   static const TextTheme _textTheme = OhTypography.materialTextTheme;
 
   static final light = ThemeData(
     useMaterial3: true,
     colorScheme: ColorScheme.fromSeed(
-      seedColor: AppColors.jam,
+      seedColor: AppColors.paprika,
       brightness: Brightness.light,
-      surface: AppColors.oat,
+      surface: AppColors.flour,
       onSurface: AppColors.ink,
     ),
-    scaffoldBackgroundColor: AppColors.oat,
+    scaffoldBackgroundColor: AppColors.flour,
     shadowColor: AppColors.ink.withValues(alpha: 0.15),
     textTheme: _textTheme,
     appBarTheme: const AppBarTheme(
-      backgroundColor: AppColors.jam,
-      foregroundColor: AppColors.oat,
+      backgroundColor: AppColors.paprika,
+      foregroundColor: AppColors.flour,
     ),
     cardTheme: CardThemeData(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       elevation: 0,
-      color: AppColors.oat2,
+      color: AppColors.flour2,
       shadowColor: AppColors.ink.withValues(alpha: 0.1),
     ),
     bottomSheetTheme: const BottomSheetThemeData(
@@ -51,7 +51,7 @@ class AppTheme {
   static final dark = ThemeData(
     useMaterial3: true,
     colorScheme: ColorScheme.fromSeed(
-      seedColor: AppColors.jam,
+      seedColor: AppColors.paprika,
       brightness: Brightness.dark,
       surface: AppColors.darkSurface,
     ),
@@ -60,7 +60,7 @@ class AppTheme {
     textTheme: _textTheme,
     appBarTheme: const AppBarTheme(
       backgroundColor: AppColors.darkSurface2,
-      foregroundColor: AppColors.oat,
+      foregroundColor: AppColors.flour,
     ),
     cardTheme: CardThemeData(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

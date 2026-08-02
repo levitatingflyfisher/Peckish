@@ -323,7 +323,7 @@ class _Plate extends StatelessWidget {
         shape: BoxShape.circle,
         color: planned ? AppColors.butter : Colors.transparent,
         border: Border.all(
-          color: highlight ? AppColors.jam : AppColors.stone,
+          color: highlight ? AppColors.paprika : AppColors.stone,
           width: highlight ? 2.5 : 1.5,
         ),
       ),

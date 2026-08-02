@@ -22,7 +22,7 @@ class AboutScreen extends StatelessWidget {
           const SizedBox(height: AppSpacing.xs),
           Text(
             AppInfo.tagline,
-            style: text.titleMedium?.copyWith(color: AppColors.jam),
+            style: text.titleMedium?.copyWith(color: AppColors.paprika),
           ),
           const SizedBox(height: AppSpacing.lg),
 

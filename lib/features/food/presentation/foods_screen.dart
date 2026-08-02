@@ -190,7 +190,7 @@ class _CustomTile extends ConsumerWidget {
     final kcal = food.perServing.kcal;
     return ListTile(
       contentPadding: EdgeInsets.zero,
-      leading: const Icon(Icons.home_outlined, color: AppColors.jam),
+      leading: const Icon(Icons.home_outlined, color: AppColors.paprika),
       title: Text(food.name),
       subtitle: Text(
           '${food.servingLabel}${kcal == null ? '' : ' · ${kcal.round()} kcal'}'),

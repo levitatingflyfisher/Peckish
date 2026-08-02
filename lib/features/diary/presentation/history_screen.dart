@@ -155,8 +155,8 @@ class _WeekBars extends StatelessWidget {
                           child: Container(
                             decoration: BoxDecoration(
                               color: d == week.first
-                                  ? AppColors.jam
-                                  : AppColors.jam.withValues(alpha: 0.45),
+                                  ? AppColors.paprika
+                                  : AppColors.paprika.withValues(alpha: 0.45),
                               borderRadius: const BorderRadius.vertical(
                                   top: Radius.circular(4)),
                             ),
@@ -261,7 +261,7 @@ class _DayRow extends StatelessWidget {
       trailing: Text(
         kcal == null ? '—' : '${kcal.round()} kcal',
         style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            color: kcal == null ? AppColors.stone : AppColors.jam),
+            color: kcal == null ? AppColors.stone : AppColors.paprika),
       ),
       onTap: () => context.push('/history/$day'),
     );

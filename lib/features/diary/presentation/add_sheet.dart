@@ -103,7 +103,7 @@ class _IdleSheet extends ConsumerWidget {
         ),
         if (aiReady)
           ListTile(
-            leading: const Icon(Icons.auto_awesome, color: AppColors.jam),
+            leading: const Icon(Icons.auto_awesome, color: AppColors.paprika),
             title: const Text('Guess it for me'),
             subtitle: const Text('Describe the meal — AI drafts, you confirm'),
             onTap: () {
@@ -176,7 +176,7 @@ class _Results extends ConsumerWidget {
       children: [
         for (final c in customs)
           ListTile(
-            leading: const Icon(Icons.home_outlined, color: AppColors.jam),
+            leading: const Icon(Icons.home_outlined, color: AppColors.paprika),
             title: Text(c.name),
             subtitle: Text(
                 '${c.servingLabel}${c.perServing.kcal == null ? '' : ' · ${c.perServing.kcal!.round()} kcal'}'),
