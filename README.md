@@ -28,10 +28,13 @@ ads, no tracking, no subscriptions.
 
 ## The network, exactly
 
-The app touches the network for two user-initiated actions only: fetching
-the one recipe URL you pasted, and (later) an Open Food Facts barcode
-lookup. Everything else is on-device, forever. The Android manifest declares
-INTERNET and nothing else.
+The app touches the network only when you act: fetching the one recipe URL
+you pasted, optional downloads (an on-device AI model, the offline barcode
+databases), and — when a scanned barcode isn't in your phone's databases —
+an Open Food Facts lookup that runs only when you tap "Ask
+openfoodfacts.org". With the offline database installed, a scan is answered
+on the phone and nothing leaves. Everything else is on-device, forever. The
+full map lives in-app: Settings → What leaves your device.
 
 ## Building
 

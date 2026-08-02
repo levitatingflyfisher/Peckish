@@ -67,8 +67,14 @@ class PrivacyScreen extends StatelessWidget {
               'itself, below.'),
           section('Only when you act'),
           row(Icons.qr_code_scanner, 'Barcode scan',
-              'The 13 digits — nothing else — go to world.openfoodfacts.org '
-              'when you scan or type a code.',
+              'With the offline database, scans are answered on the phone. '
+              'A miss only goes online when you tap Ask openfoodfacts.org — '
+              'the 13 digits, nothing else.',
+              color: AppColors.butter),
+          row(Icons.qr_code_2_outlined, 'Offline barcode database',
+              'Tapping Download fetches a database file from github.com, '
+              'once. After that, scans stay on the phone. Delete it any '
+              'time.',
               color: AppColors.butter),
           row(Icons.download_outlined, 'Model download',
               'Tapping Download fetches the model file from huggingface.co '

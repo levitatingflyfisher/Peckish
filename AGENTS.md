@@ -40,9 +40,12 @@ docs/README.md (Diátaxis hub). Decisions live in docs/adr/.
 - **Two-tap law + thumb targets.** Regulars log in one tap; every top-level
   screen must pass the 320dp / 2× textScale sweep
   (test/shared/accessibility_sweep_test.dart).
-- **Network = two user-initiated flows only** (recipe-URL fetch, OFF barcode
-  lookup). INTERNET is the only manifest permission; the conformance test
-  records the surface.
+- **Network only when the user acts** — the privacy screen (Settings →
+  What leaves your device) is the contract, mirrored in
+  docs/reference/permissions.md. Barcode scans resolve against the local
+  database slices first; the OFF lookup runs only from the explicit "Ask
+  openfoodfacts.org" tap (ADR-0010). The conformance test records the
+  permission surface.
 - **Storage enums** (`FoodKindDb` etc.) are separate from domain enums so a
   reorder can't rewrite stored integers. Append only.
 - Wire schemaVersion (PeckishExport, hardcoded 1) ≠ drift schemaVersion.

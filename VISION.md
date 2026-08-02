@@ -39,6 +39,6 @@ one local-first, no-accounts app.
 | Encrypted backup / restore (.ohbk) | **Shipped** — sanctuary spine, consequence copy test-bound to the erase set |
 | Ingredient→food matching for computed recipe nutrition | **Schema shipped, UI minimal** — declared (site) nutrition works today; hand-matching lines is future polish |
 | Family shared plan/groceries across devices | **Not built** — v0.1 is single-device; the researched path is CRDT (tudo-pattern sqlite_crdt) over a blind relay, LAN-first |
-| Barcode scanning (Open Food Facts) | **Not built** — designed for (INTERNET permission + terms reviewed), deliberately after v0.1 |
+| Barcode scanning (offline-first) | **Shipped v0.7** — camera scan + typed digits, answered from downloadable USDA/OFF database slices on the phone (ADR-0010); the network is a question — one Open Food Facts lookup per explicit "Ask openfoodfacts.org" tap |
 | AI meal guesstimate (local model / BYOK) | **Not built** — Reckon's spine is the template when it earns its place |
 | iOS | Not planned (fleet convention: Android + PWA) |

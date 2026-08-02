@@ -13,6 +13,11 @@ import 'package:peckish/shared/theme/app_theme.dart';
 // leave the device is named, and everything else is named as staying.
 void main() {
   testWidgets('the map names every flow, honestly', (tester) async {
+    // The map grew past the default 600px viewport; a taller surface keeps
+    // every ListView row built so the whole contract is assertable.
+    tester.view.physicalSize = const Size(800, 1800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     final db = AppDatabase(NativeDatabase.memory());
     await tester.pumpWidget(ProviderScope(
       overrides: [appDatabaseProvider.overrideWithValue(db)],
@@ -24,8 +29,14 @@ void main() {
     expect(find.text('What leaves your device'), findsOneWidget);
     // The offline spine — the reason data-off just works.
     expect(find.textContaining('bundled'), findsWidgets);
-    // Every network touch, named with its trigger.
-    expect(find.textContaining('openfoodfacts.org'), findsOneWidget);
+    // The barcode row tells the ADR-0010 truth: scans are answered on the
+    // phone; the network waits for an explicit ask.
+    expect(find.textContaining('answered on the phone'), findsOneWidget);
+    expect(find.textContaining('Ask openfoodfacts.org'), findsOneWidget);
+    // Every network touch, named with its trigger — including the
+    // database download itself.
+    expect(find.textContaining('openfoodfacts.org'), findsWidgets);
+    expect(find.textContaining('github.com'), findsOneWidget);
     expect(find.textContaining('huggingface.co'), findsOneWidget);
     expect(find.textContaining('recipe'), findsWidgets);
     // The on-device story, including the Play-services honesty.
