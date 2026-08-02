@@ -11,7 +11,6 @@ import 'package:peckish/features/barcode/domain/barcode_code.dart';
 import 'package:peckish/features/barcode/domain/off_product.dart';
 import 'package:peckish/features/barcode/presentation/barcode_sketch.dart';
 import 'package:peckish/features/barcode/presentation/product_sheet.dart';
-import 'package:peckish/features/barcode/presentation/scan_mode_store.dart';
 import 'package:peckish/features/barcode/presentation/scanner_view.dart';
 import 'package:peckish/features/diary/presentation/regulars_rail.dart';
 import 'package:peckish/shared/theme/app_spacing.dart';
@@ -20,11 +19,20 @@ import 'package:peckish/shared/theme/app_spacing.dart';
 final offClientProvider = Provider<OffClient>((ref) => OffClient());
 
 /// Scan a barcode (camera, where there is one) or type the digits under the
-/// bars (everywhere). Camera platforms get a Scan/Type toggle — Type it
-/// unmounts the camera entirely — and the choice is remembered.
+/// bars — one screen, not two modes. The digits field is live in every
+/// state, so there is nothing to choose between and nothing to remember:
+/// the camera is simply UP when there is nothing to deal with, and DOWN the
+/// moment there is (a lookup in flight, a question awaiting your answer,
+/// the confirm sheet open). One button parks it for this visit.
 ///
-/// ADR-0010's law: the phone answers first. A code resolves against the
-/// downloaded slices; a local hit opens the confirm sheet with zero
+/// v0.6 shipped a remembered Scan/Type toggle. Two v0.8 phone findings
+/// retired it: remembering could only ever cost a click (camera-up already
+/// serves the typist), and a preview left running under a decoded code —
+/// most visibly after picking a photo from the gallery — is a camera doing
+/// nothing but drawing power.
+///
+/// ADR-0010's law: the phone answers first. A code resolves against your
+/// own saved foods and then the downloaded slices; a local hit needs zero
 /// network. A miss is a STATE offering an explicit "Ask openfoodfacts.org"
 /// button — no code path in this screen reaches the network without that
 /// tap. Failures are states with next steps, not errors.
@@ -58,52 +66,42 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
   /// truthfully points the miss at the offline download instead.
   bool _missAnyLocalDb = false;
 
-  /// Null while the remembered choice loads (camera platforms): the camera
-  /// must not warm up in that gap for a user who chose typing.
-  ScanMode? _mode;
+  /// The code most recently read, shown in place of the preview while it is
+  /// being dealt with — a picked gallery photo especially, where there is
+  /// otherwise nothing on screen saying what was decoded.
+  BarcodeCode? _read;
 
-  /// A tap in the load gap wins over the arriving remembered value.
-  bool _userChose = false;
+  /// Parked by hand for this visit, or by a camera that couldn't start.
+  /// Deliberately not persisted: see the class comment.
+  bool _cameraOff = false;
 
   bool get _hasCamera => widget.debugCameraOverride ?? ScannerView.available;
 
-  @override
-  void initState() {
-    super.initState();
-    if (_hasCamera) {
-      unawaited(_restoreMode());
-    } else {
-      _mode = ScanMode.type;
-    }
-  }
+  /// Something is in hand — a lookup running, a question waiting, a sheet
+  /// open. Nothing is being scanned, so nothing should be scanning.
+  bool get _busyWithACode => _busy || _sheetOpen || _missCode != null;
 
-  Future<void> _restoreMode() async {
-    final saved = await ref.read(scanModeStoreProvider).load();
-    if (!mounted || _userChose) return;
-    setState(() => _mode = saved ?? ScanMode.camera);
-  }
+  bool get _cameraUp => _hasCamera && !_cameraOff && !_busyWithACode;
 
-  void _setMode(ScanMode mode) {
-    _userChose = true;
-    if (mode == _mode) return;
-    setState(() {
-      _mode = mode;
-      _message = null;
-      _missCode = null;
-    });
-    unawaited(ref.read(scanModeStoreProvider).save(mode));
-  }
-
-  /// Camera couldn't start (permission, hardware): land on typing with one
-  /// calm line. Deliberately not persisted — a transient failure shouldn't
-  /// overwrite the user's choice.
+  /// Camera couldn't start (permission, hardware): park it with one calm
+  /// line. The digits field was already there, so there is nothing to fall
+  /// back TO — it just stops promising a preview it cannot give.
   void _onCameraError(Exception _) {
     if (!mounted) return;
     setState(() {
-      _mode = ScanMode.type;
+      _cameraOff = true;
       _message = "The camera couldn't start here — type the numbers instead.";
     });
   }
+
+  /// Drop a dealt-with code and go back to hunting. The stale question dies
+  /// with it: a live Ask button aimed at the PREVIOUS scan would log the
+  /// wrong food two taps later.
+  void _scanAgain() => setState(() {
+        _missCode = null;
+        _read = null;
+        _message = null;
+      });
 
   @override
   void dispose() {
@@ -115,36 +113,29 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Scan a barcode')),
+      appBar: AppBar(
+        title: const Text('Scan a barcode'),
+        actions: [
+          if (_hasCamera)
+            IconButton(
+              icon: Icon(_cameraOff
+                  ? Icons.videocam_off_outlined
+                  : Icons.videocam_outlined),
+              tooltip: _cameraOff
+                  ? 'Turn the camera on'
+                  : 'Turn the camera off',
+              onPressed: () => setState(() => _cameraOff = !_cameraOff),
+            ),
+        ],
+      ),
       body: Column(
         children: [
-          if (_hasCamera)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.lg, AppSpacing.md, AppSpacing.lg, 0),
-              child: SegmentedButton<ScanMode>(
-                segments: const [
-                  ButtonSegment(
-                      value: ScanMode.camera,
-                      label: Text('Scan'),
-                      icon: Icon(Icons.photo_camera_outlined)),
-                  ButtonSegment(
-                      value: ScanMode.type,
-                      label: Text('Type it'),
-                      icon: Icon(Icons.keyboard_outlined)),
-                ],
-                selected: {if (_mode != null) _mode!},
-                emptySelectionAllowed: true,
-                onSelectionChanged: (s) => _setMode(s.first),
-              ),
-            ),
           Expanded(
-            child: switch (_mode) {
-              ScanMode.camera => _cameraPane(theme),
-              ScanMode.type => _typePane(),
-              // The one frame before the remembered choice arrives.
-              null => const SizedBox.shrink(),
-            },
+            child: _cameraUp
+                ? _cameraPane(theme)
+                : _busyWithACode && _read != null
+                    ? _readPane(theme, _read!)
+                    : _typePane(),
           ),
           SafeArea(
             top: false,
@@ -173,6 +164,11 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
                         onPressed: () => context.push('/barcode-db'),
                         child: const Text('Get the offline database'),
                       ),
+                    // The way out of the question, and back to hunting.
+                    TextButton(
+                      onPressed: _busy ? null : _scanAgain,
+                      child: const Text('Scan again'),
+                    ),
                     const SizedBox(height: AppSpacing.sm),
                   ],
                   TextField(
@@ -237,6 +233,26 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
         ),
       );
 
+  /// What replaces the preview once a code is in hand: the digits that were
+  /// actually read. A photo picked from the gallery decodes with nothing on
+  /// screen to show for it, and a live preview there is worse than nothing
+  /// — it says "still scanning" while the app has already stopped.
+  Widget _readPane(ThemeData theme, BarcodeCode code) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.xl),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.qr_code_2, size: 44),
+              const SizedBox(height: AppSpacing.sm),
+              Text('Read ${code.value}',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.titleMedium),
+            ],
+          ),
+        ),
+      );
+
   Future<void> _handleRaw(String raw) async {
     // The camera can fire the same code many times — during a lookup AND
     // under an open sheet.
@@ -257,6 +273,7 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
       _busy = true;
       _message = null;
       _missCode = null;
+      _read = code;
     });
     // The phone answers first — and only the phone. The one network path
     // in this screen is _askOnline, behind its explicit tap.

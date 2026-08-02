@@ -15,7 +15,6 @@ import 'package:peckish/features/barcode/data/barcode_resolver_provider.dart';
 import 'package:peckish/features/barcode/domain/barcode_code.dart';
 import 'package:peckish/features/barcode/data/off_client.dart';
 import 'package:peckish/features/barcode/presentation/barcode_sketch.dart';
-import 'package:peckish/features/barcode/presentation/scan_mode_store.dart';
 import 'package:peckish/features/barcode/presentation/scan_screen.dart';
 import 'package:peckish/features/barcode/presentation/scanner_view.dart';
 import 'package:peckish/shared/theme/app_theme.dart';
@@ -303,43 +302,29 @@ void main() {
     await unmount(tester);
   });
 
-  testWidgets('camera platforms: toggle + camera pane that reads by itself',
+  testWidgets('camera platforms: a camera pane that reads by itself',
       (tester) async {
     await tester.pumpWidget(host(client(), camera: true));
     await tester.pumpAndSettle();
 
-    expect(find.byType(SegmentedButton<ScanMode>), findsOneWidget);
     expect(find.byType(ScannerView), findsOneWidget);
     expect(find.textContaining('reads on its own'), findsOneWidget);
     expect(find.byType(BarcodeSketch), findsNothing);
+    // Typing needs no mode: the field is live under the preview.
+    expect(find.byType(TextField), findsOneWidget);
     await unmount(tester);
   });
 
-  testWidgets('"Type it" removes the camera from the tree and shows the '
-      'sketch', (tester) async {
-    await tester.pumpWidget(host(client(), camera: true));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('Type it'));
-    await tester.pumpAndSettle();
-
-    expect(find.byType(ScannerView), findsNothing,
-        reason: 'Type mode must dispose the camera, not hide it');
-    expect(find.byType(BarcodeSketch), findsOneWidget);
-    await unmount(tester);
-  });
-
-  testWidgets('the chosen mode survives leaving and reopening the screen',
+  testWidgets('parking the camera removes it from the tree, not just hides it',
       (tester) async {
     await tester.pumpWidget(host(client(), camera: true));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Type it'));
-    await tester.pumpAndSettle();
-    await unmount(tester); // the 1s pump also flushes the pref write
 
-    await tester.pumpWidget(host(client(), camera: true));
+    await tester.tap(find.byTooltip('Turn the camera off'));
     await tester.pumpAndSettle();
-    expect(find.byType(ScannerView), findsNothing);
+
+    expect(find.byType(ScannerView), findsNothing,
+        reason: 'off must dispose the camera, not hide it');
     expect(find.byType(BarcodeSketch), findsOneWidget);
     await unmount(tester);
   });
@@ -361,26 +346,13 @@ void main() {
     await unmount(tester);
   });
 
-  testWidgets('no camera: no toggle, the sketch teaches the small digits',
+  testWidgets('no camera: no camera button, the sketch teaches the digits',
       (tester) async {
     await tester.pumpWidget(host(client()));
     await tester.pumpAndSettle();
 
-    expect(find.byType(SegmentedButton<ScanMode>), findsNothing);
-    expect(find.byType(BarcodeSketch), findsOneWidget);
-    await unmount(tester);
-  });
-
-  testWidgets('a remembered Type choice never mounts the camera, even briefly',
-      (tester) async {
-    await tester.runAsync(() => ScanModeStore(db).save(ScanMode.type));
-    await tester.pumpWidget(host(client(), camera: true));
-    // The very first frame — the remembered choice hasn't arrived yet, and
-    // the camera must not warm up in the gap.
-    expect(find.byType(ScannerView), findsNothing,
-        reason: 'no camera warm-up for a user who chose typing');
-    await tester.pumpAndSettle();
-    expect(find.byType(ScannerView), findsNothing);
+    expect(find.byTooltip('Turn the camera off'), findsNothing,
+        reason: 'never offer to park a camera that does not exist');
     expect(find.byType(BarcodeSketch), findsOneWidget);
     await unmount(tester);
   });
