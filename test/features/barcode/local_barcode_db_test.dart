@@ -160,6 +160,26 @@ void main() {
         'attribution': 'Open Food Facts contributors',
       });
     });
+
+    test('a slice replaced at the same path serves the new data', () {
+      // The twice-a-year refresh installs a NEW file under the SAME name
+      // (delete → download → rename). A held sqlite fd would keep reading
+      // the unlinked old inode on POSIX — the handle must notice the file
+      // changed underneath it and reopen.
+      final path = buildSlice('usda.db', products: [
+        ['27000612323', 'Old Vintage Granola', null, 480.0, null, null, null, null, null],
+      ]);
+      db = LocalBarcodeDb(path);
+      expect(db.lookup(upcA)!.name, 'Old Vintage Granola');
+
+      File(path).deleteSync();
+      buildSlice('usda.db', products: [
+        ['27000612323', 'New Granola', null, 500.0, null, null, null, null, null],
+      ]);
+
+      expect(db.lookup(upcA)!.name, 'New Granola');
+      expect(db.lookup(upcA)!.per100g.kcal, 500.0);
+    });
   });
 
   group('LocalBarcodeDb (web)', () {

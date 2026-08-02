@@ -19,7 +19,25 @@ class LocalBarcodeDb {
   final String path;
   Database? _db;
 
-  Database _open() => _db ??= sqlite3.open(path, mode: OpenMode.readOnly);
+  /// The file's identity when the handle opened. The twice-a-year refresh
+  /// installs a NEW file under the SAME path; on POSIX an old fd would keep
+  /// serving the unlinked inode forever, so a changed mtime/size reopens.
+  FileStat? _openedStat;
+
+  Database _open() {
+    final stat = File(path).statSync();
+    final opened = _openedStat;
+    if (_db != null &&
+        opened != null &&
+        (stat.modified != opened.modified || stat.size != opened.size)) {
+      close();
+    }
+    if (_db == null) {
+      _openedStat = stat;
+      _db = sqlite3.open(path, mode: OpenMode.readOnly);
+    }
+    return _db!;
+  }
 
   /// The product for [code], or null when this slice doesn't know it.
   ///

@@ -142,4 +142,39 @@ void main() {
     expect(resolution.anyLocalDb, isFalse);
     resolver.close();
   });
+
+  test('a throwing installedDbPath seam is a calm miss, not a crash',
+      () async {
+    // The seam does real file I/O (isInstalled: openRead, junk delete) and
+    // can throw mid-scan — e.g. the management screen deleting the file in
+    // the existsSync→openRead window. resolveLocal owns that risk; the
+    // scan screen must never see it.
+    final resolver = BarcodeResolver(
+      installedDbPath: (_) async =>
+          throw const FileSystemException('vanished mid-probe'),
+    );
+
+    final resolution = await resolver.resolveLocal(code);
+    resolution as BarcodeMiss;
+    expect(resolution.anyLocalDb, isFalse);
+    resolver.close();
+  });
+
+  test('a slice replaced at the same path serves fresh data with no miss '
+      'observed in between', () async {
+    // Delete + re-download with no scan in the gap: the resolver never sees
+    // a null path, so the staleness guard lives in LocalBarcodeDb (stat
+    // check) — this pins the end-to-end behavior at the resolver seam.
+    final path = buildSlice('usda.db', 'Vintage rows here');
+    final resolver = resolverWith({'usda': path});
+    final first = await resolver.resolveLocal(code);
+    expect((first as BarcodeHit).product.name, 'Vintage rows here');
+
+    File(path).deleteSync();
+    buildSlice('usda.db', 'Fresh rows');
+
+    final second = await resolver.resolveLocal(code);
+    expect((second as BarcodeHit).product.name, 'Fresh rows');
+    resolver.close();
+  });
 }

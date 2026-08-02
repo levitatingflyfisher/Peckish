@@ -12,6 +12,7 @@ import 'package:peckish/core/providers/core_providers.dart';
 import 'package:peckish/core/storage/app_database.dart';
 import 'package:peckish/features/barcode/data/barcode_resolver.dart';
 import 'package:peckish/features/barcode/data/barcode_resolver_provider.dart';
+import 'package:peckish/features/barcode/domain/barcode_code.dart';
 import 'package:peckish/features/barcode/data/off_client.dart';
 import 'package:peckish/features/barcode/presentation/barcode_sketch.dart';
 import 'package:peckish/features/barcode/presentation/scan_mode_store.dart';
@@ -428,4 +429,65 @@ void main() {
     expect(find.text('open scanner'), findsOneWidget);
     await unmount(tester);
   });
+
+  testWidgets('a resolver failure resets the scanner calmly — never a '
+      'stuck spinner', (tester) async {
+    await tester.pumpWidget(
+        host(client(), resolver: _ExplodingResolver()));
+    await tester.pumpAndSettle();
+
+    await submit(tester, '3017620422003');
+
+    // The screen's contract: failures are states with next steps. The
+    // field must come back so the user can just try again.
+    expect(tester.widget<TextField>(find.byType(TextField)).enabled, isTrue);
+    expect(find.textContaining('try again'), findsOneWidget);
+    await unmount(tester);
+  });
+
+  testWidgets('an invalid re-entry clears the pending Ask — the button can '
+      'never target a stale code', (tester) async {
+    final usda = buildSlice('usda.db'); // installed but empty → miss
+    await tester.pumpWidget(
+        host(client(), resolver: resolverWith(usdaPath: usda)));
+    await tester.pumpAndSettle();
+
+    await submit(tester, '3017620422003');
+    expect(askButton, findsOneWidget);
+
+    // Mistyped follow-up: the old Ask must not survive aimed at the
+    // previous code — two more taps would log the wrong food.
+    await submit(tester, '3017620422004');
+    expect(find.textContaining('check the numbers'), findsOneWidget);
+    expect(askButton, findsNothing);
+    await unmount(tester);
+  });
+
+  testWidgets('an Error escaping the online ask resets busy instead of '
+      'bricking the screen', (tester) async {
+    final usda = buildSlice('usda.db');
+    final exploding = OffClient(
+        client: MockClient((_) async => throw StateError('transport bug')));
+    await tester.pumpWidget(
+        host(exploding, resolver: resolverWith(usdaPath: usda)));
+    await tester.pumpAndSettle();
+
+    await submit(tester, '3017620422003');
+    await tester.tap(askButton);
+    await tester.pumpAndSettle();
+
+    expect(tester.widget<TextField>(find.byType(TextField)).enabled, isTrue);
+    expect(find.textContaining('try again'), findsOneWidget);
+    await unmount(tester);
+  });
+}
+
+/// resolveLocal is documented never to throw — this stands in for the bug
+/// that breaks that promise, proving the screen survives it anyway.
+class _ExplodingResolver extends BarcodeResolver {
+  _ExplodingResolver() : super(installedDbPath: (_) async => null);
+
+  @override
+  Future<BarcodeResolution> resolveLocal(BarcodeCode code) async =>
+      throw StateError('resolver bug');
 }

@@ -238,9 +238,14 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
     if (_busy || _sheetOpen) return;
     final code = BarcodeCode.tryParse(raw);
     if (code == null) {
-      setState(() => _message =
-          "That doesn't look like a barcode — check the numbers and try "
-          'again.');
+      setState(() {
+        // The pending Ask dies with the old code: a live button aimed at
+        // the PREVIOUS scan would log the wrong food two taps later.
+        _missCode = null;
+        _message =
+            "That doesn't look like a barcode — check the numbers and try "
+            'again.';
+      });
       return;
     }
     setState(() {
@@ -250,8 +255,20 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
     });
     // The phone answers first — and only the phone. The one network path
     // in this screen is _askOnline, behind its explicit tap.
-    final resolution =
-        await ref.read(barcodeResolverProvider).resolveLocal(code);
+    final BarcodeResolution resolution;
+    try {
+      resolution = await ref.read(barcodeResolverProvider).resolveLocal(code);
+    } on Object {
+      // resolveLocal is documented never to throw — but if that promise
+      // ever breaks, the screen's own contract (failures are states, never
+      // a stuck spinner) must survive it.
+      if (!mounted) return;
+      setState(() {
+        _busy = false;
+        _message = "Couldn't check your phone's database — try again.";
+      });
+      return;
+    }
     if (!mounted) return;
     switch (resolution) {
       case BarcodeHit(:final product, :final sourceId):
@@ -263,8 +280,12 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
           _missAnyLocalDb = anyLocalDb;
           _message = anyLocalDb
               ? "Not in your phone's food database."
-              : "Peckish hasn't looked this up — barcode answers can live "
-                  'on your phone.';
+              : kIsWeb
+                  // Web has no local slices (ADR-0010): don't promise one.
+                  ? 'Not looked up yet — on the web, lookups only happen '
+                      'when you ask.'
+                  : "Peckish hasn't looked this up — barcode answers can "
+                      'live on your phone.';
         });
     }
   }
@@ -295,6 +316,14 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
       setState(() {
         _busy = false;
         _message = e.message;
+      });
+    } on Object {
+      // An Error (not Exception) escaping the client — a transport bug, a
+      // malformed answer — must not latch _busy and brick the screen.
+      if (!mounted) return;
+      setState(() {
+        _busy = false;
+        _message = "That didn't work — try again in a moment.";
       });
     }
   }
