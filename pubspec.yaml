@@ -17,7 +17,6 @@ dependencies:
   go_router: ^14.2.7
   # Recipe URL import: fetch exactly the one page the user pasted.
   http: ^1.2.1
-  fpdart: ^1.1.0
   uuid: ^4.4.2
   # Bumped from ^0.19.0: sanctuary_backup_ui (backup filename date formatting)
   # requires ^0.20.2.
@@ -52,7 +51,6 @@ dependencies:
   # SHA-256 check of downloaded barcode databases before install.
   crypto: ^3.0.3
   share_plus: ^10.0.3
-  lucide_flutter: ^1.7.0
   # Encrypted backup (SANCTUARY-BRIEF §4.W2) — sibling path deps, the eloEngine
   # precedent. file_picker is new (restore's "pick a .ohbk file" on every
   # platform); share_plus is already a dep (used by the plaintext export).
