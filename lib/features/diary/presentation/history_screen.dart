@@ -264,7 +264,12 @@ class _TrendChart extends StatelessWidget {
                 ceiling: ceiling,
                 compact: _compact,
                 lineColor: AppColors.paprika,
-                labelColor: AppColors.stone,
+                // The canvas labels borrow the app's own type — a bare
+                // TextStyle would fall back to the platform default and
+                // read as a different font from every Text beside it.
+                labelStyle: (Theme.of(context).textTheme.labelSmall ??
+                        const TextStyle())
+                    .copyWith(color: AppColors.stone, fontSize: 9),
               ),
             ),
             if (target != null)
@@ -325,14 +330,14 @@ class _TrendPainter extends CustomPainter {
     required this.ceiling,
     required this.compact,
     required this.lineColor,
-    required this.labelColor,
+    required this.labelStyle,
   });
 
   final List<_Pt> offsets;
   final double ceiling;
   final String Function(double) compact;
   final Color lineColor;
-  final Color labelColor;
+  final TextStyle labelStyle;
 
   static const _leftPad = _TrendChart._leftPad;
 
@@ -345,10 +350,12 @@ class _TrendPainter extends CustomPainter {
         Offset(_leftPad, y),
         Offset(size.width, y),
         Paint()
-          ..color = labelColor.withValues(alpha: 0.25)
+          ..color = (labelStyle.color ?? lineColor).withValues(alpha: 0.25)
           ..strokeWidth = 0.5,
       );
-      _label(canvas, compact(ceiling * frac), 0, y - 6);
+      // The topmost label hangs BELOW its rule; above it would be clipped
+      // off the top of the chart box.
+      _label(canvas, compact(ceiling * frac), 0, frac == 1.0 ? y + 1 : y - 6);
     }
 
     // Consecutive calendar days join up; a gap in logging breaks the line
@@ -407,10 +414,7 @@ class _TrendPainter extends CustomPainter {
 
   void _label(Canvas canvas, String text, double x, double y) {
     final tp = TextPainter(
-      text: TextSpan(
-          text: text,
-          style: TextStyle(
-              fontSize: 9, color: labelColor, fontWeight: FontWeight.w500)),
+      text: TextSpan(text: text, style: labelStyle),
       textDirection: TextDirection.ltr,
     )..layout();
     tp.paint(canvas, Offset(x, y));
@@ -418,7 +422,9 @@ class _TrendPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_TrendPainter old) =>
-      old.offsets != offsets || old.ceiling != ceiling;
+      old.offsets != offsets ||
+      old.ceiling != ceiling ||
+      old.labelStyle != labelStyle;
 }
 
 /// The month grid, Monday-first. Every past cell opens that day's plate;
