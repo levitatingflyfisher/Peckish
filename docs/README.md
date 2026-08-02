@@ -10,6 +10,8 @@
 ## How-to
 - [Back up and restore](how-to/backup-and-restore.md)
 - [Import a recipe from a link](how-to/import-a-recipe.md)
+- [Answer barcode scans on the phone](how-to/offline-barcode-databases.md)
+- [Sync the household](how-to/household-sync.md)
 - [Regenerate the bundled USDA spine](../tool/usda/README.md)
 
 ## Reference
