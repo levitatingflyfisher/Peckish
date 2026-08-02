@@ -4,8 +4,6 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:peckish/core/auth/auth_repository.dart';
-import 'package:peckish/core/auth/ghost_auth_repository.dart';
 import 'package:peckish/core/storage/app_database.dart' hide UserPrefs;
 import 'package:peckish/features/diary/data/diary_repository.dart';
 import 'package:peckish/features/diary/data/saved_meal_repository.dart';
@@ -38,9 +36,6 @@ SettingsRepository settingsRepository(Ref ref) {
   final db = ref.watch(appDatabaseProvider);
   return LocalSettingsRepository(db);
 }
-
-@riverpod
-AuthRepository authRepository(Ref ref) => GhostAuthRepository();
 
 @riverpod
 UsdaFoodRepository usdaFoodRepository(Ref ref) =>
@@ -85,8 +80,13 @@ GroceryRepository groceryRepository(Ref ref) =>
 /// state during the very first import.
 @Riverpod(keepAlive: true)
 Future<void> spineReady(Ref ref) async {
+  final repo = ref.watch(usdaFoodRepositoryProvider);
+  // The stamp answers first: on every boot after the first, the 2.5MB
+  // asset is never loaded, never decoded (the potato pass's biggest win —
+  // this used to jsonDecode the whole spine on the UI isolate per launch).
+  if (await repo.spineCurrent()) return;
   final json = await rootBundle.loadString('assets/food/usda_foods.json');
-  await ref.watch(usdaFoodRepositoryProvider).importSpine(json);
+  await repo.importSpine(json);
 }
 
 @riverpod
