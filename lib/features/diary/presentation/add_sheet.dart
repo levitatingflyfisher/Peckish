@@ -9,6 +9,7 @@ import 'package:peckish/core/providers/core_providers.dart';
 import 'package:peckish/features/ai/on_device/on_device_providers.dart';
 import 'package:peckish/features/ai/on_device/plate_scanner.dart';
 import 'package:peckish/features/ai/presentation/guess_sheet.dart';
+import 'package:peckish/features/diary/domain/day_stamp.dart';
 import 'package:peckish/features/diary/domain/diary_entry.dart';
 import 'package:peckish/features/diary/presentation/day_format.dart';
 import 'package:peckish/features/food/domain/custom_food.dart';
@@ -29,17 +30,6 @@ Future<void> showAddSheet(BuildContext context, {String? day}) =>
       useSafeArea: true,
       builder: (_) => _AddSheet(day: day),
     );
-
-/// Where a log for [targetDay] lands. Null = today, resolved AT LOG TIME
-/// (a sheet left open across midnight logs to the real now); a past day
-/// logs at that day's noon so it sorts naturally among real entries.
-({String day, DateTime at}) _stamp(String? targetDay) {
-  final now = DateTime.now();
-  if (targetDay == null || targetDay == DiaryEntry.dayOf(now)) {
-    return (day: DiaryEntry.dayOf(now), at: now);
-  }
-  return (day: targetDay, at: DateTime.parse('${targetDay}T12:00:00'));
-}
 
 class _AddSheet extends ConsumerStatefulWidget {
   const _AddSheet({this.day});
@@ -188,7 +178,7 @@ class _IdleSheet extends ConsumerWidget {
                   ? '${meal.items.length} items'
                   : '${meal.items.length} items · ${meal.totals.kcal!.round()} kcal'),
               onTap: () async {
-                final stamp = _stamp(day);
+                final stamp = dayStamp(day);
                 await ref.read(savedMealRepositoryProvider).logMeal(meal.id,
                     at: stamp.at, day: stamp.day);
                 if (context.mounted) Navigator.of(context).pop();
@@ -258,7 +248,7 @@ class _Results extends ConsumerWidget {
 
   Future<void> _logCustom(
       BuildContext context, WidgetRef ref, CustomFood c) async {
-    final stamp = _stamp(day);
+    final stamp = dayStamp(day);
     await ref.read(diaryRepositoryProvider).log(DiaryEntry(
           id: const Uuid().v4(),
           day: stamp.day,
@@ -323,7 +313,7 @@ class _PortionSheet extends ConsumerWidget {
 
   Future<void> _log(BuildContext context, WidgetRef ref, String unitLabel,
       double grams) async {
-    final stamp = _stamp(day);
+    final stamp = dayStamp(day);
     await ref.read(diaryRepositoryProvider).log(DiaryEntry(
           id: const Uuid().v4(),
           day: stamp.day,
@@ -446,7 +436,7 @@ class _QuickAddDialogState extends ConsumerState<_QuickAddDialog> {
       food = FoodRef.custom(id);
     }
 
-    final stamp = _stamp(widget.day);
+    final stamp = dayStamp(widget.day);
     await ref.read(diaryRepositoryProvider).log(DiaryEntry(
           id: const Uuid().v4(),
           day: stamp.day,
