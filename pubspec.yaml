@@ -45,6 +45,12 @@ dependencies:
   # GB-scale downloads must survive the screen sleeping.
   wakelock_plus: ^1.5.2
   path: ^1.9.0
+  # Offline barcode slices (ADR-0010): read-only sqlite lookups against the
+  # downloaded USDA/OFF databases. Native only (io-conditional import); the
+  # native lib is already linked via sqlite3_flutter_libs.
+  sqlite3: ^2.9.4
+  # SHA-256 check of downloaded barcode databases before install.
+  crypto: ^3.0.3
   share_plus: ^10.0.3
   lucide_flutter: ^1.7.0
   # Encrypted backup (SANCTUARY-BRIEF §4.W2) — sibling path deps, the eloEngine
@@ -97,7 +103,6 @@ dev_dependencies:
   # consumed by test/fleet_conformance_test.dart.
   oh_fleet_conformance:
     path: ../packages/oh_fleet_conformance
-  sqlite3: ^2.9.4
 
 flutter:
   uses-material-design: true

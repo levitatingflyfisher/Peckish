@@ -93,3 +93,6 @@ test/visual/failures/
 
 # Generated sources — CI + local run build_runner
 *.g.dart
+
+# ADR-0010 barcode-slice build area (GB-scale source data, never committed)
+tool/barcode_db/work/
