@@ -1,39 +1,37 @@
-import 'package:flutter/material.dart';
+import 'package:openhearth_design/openhearth_design.dart';
 
-/// Peckish's palette — paprika and butter on a flour cloth; a warm kitchen,
-/// not a study. Every hue is a food: nothing here is purple, and nothing
-/// here is alarm-red — paprika is appetite, clay is attention.
+/// Peckish's semantic color names, aliased onto the shared OpenHearth
+/// ramps — no raw hex lives in this app. Peckish wears the flagship
+/// hearth terracotta (it IS the table-and-kitchen app); the names below
+/// say what each color MEANS here, and openhearth_design says what it is.
 class AppColors {
   AppColors._();
 
-  // Paprika — the identity: a warm, appetizing brick-orange
-  // (app bar, primary buttons, the kcal number).
-  static const paprika = Color(0xFFB0442A);
-  static const paprika600 = Color(0xFF963A24);
-  static const paprika700 = Color(0xFF7C2F1D);
+  // The identity: hearth terracotta (app bar accents, primary buttons,
+  // the kcal number, today's bar).
+  static const paprika = OhColors.hearth500;
+  static const paprika600 = OhColors.hearth600;
+  static const paprika700 = OhColors.hearth700;
 
-  // Flour — warm kitchen linen (background); flour2 for cards/raised
-  // surfaces. Warm but bright: a worktop, not parchment.
-  static const flour = Color(0xFFFAF5EA);
-  static const flour2 = Color(0xFFF1E9D8);
+  // Surfaces: warm linen (background; flour2 for cards/raised surfaces).
+  static const flour = OhColors.linen50;
+  static const flour2 = OhColors.linen100;
 
-  // Butter — the warm accent: today, the one-tap peck, highlights.
-  static const butter = Color(0xFFE0AC3F);
+  // The warm accent: today, the one-tap peck, the carbs chip.
+  static const butter = OhColors.amber400;
 
-  // Sage — produce green: fresh, planned, checked off the list.
-  static const sage = Color(0xFF6F8F52);
+  // Produce green: fresh, planned, the protein chip, checked off.
+  static const sage = OhColors.sage500;
 
-  // Clay — gentle attention. Never red: a heavy day is information, not
-  // alarm. (Cocoa-brown, kept clearly apart from paprika.)
-  static const clay = Color(0xFF8A5B3E);
+  // Gentle attention (fat chip, failure lines, the delete swipe). Deep
+  // brick, never alarm-red — a heavy day is information, not a siren.
+  static const clay = OhColors.hearth700;
 
-  // Ink — text (warm umber-black, no plum in it)
-  static const ink = Color(0xFF2B241E);
+  // Text.
+  static const ink = OhColors.linen900;
+  static const stone = OhColors.linen500;
 
-  // Stone — secondary text, disabled (warm grey)
-  static const stone = Color(0xFF958D82);
-
-  // Dark surfaces (warm charcoal family — embers, not aubergine)
-  static const darkSurface = Color(0xFF221D18);
-  static const darkSurface2 = Color(0xFF2D2620);
+  // Dark surfaces (the shared hearth-dark family — embers, not aubergine).
+  static const darkSurface = OhColors.darkSurfaceBase;
+  static const darkSurface2 = OhColors.darkSurfaceCard;
 }

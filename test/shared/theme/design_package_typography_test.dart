@@ -5,79 +5,38 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openhearth_design/openhearth_design.dart';
 
-/// Tier-T adoption of `openhearth_design`: Peckish's Material TextTheme ladder
-/// must come from [OhTypography.materialTextTheme] (the package copy is
-/// byte-identical to the block the habit-lineage apps hand-rolled). Peckish
-/// has no goldens yet, so these WHOLE-STYLE equality assertions are the lock:
-/// per the ohStyle strict-equality pattern, `TextStyle.==` compares every
-/// field (letterSpacing, height, wordSpacing, decoration, inherit, …), so ANY
-/// local override of ANY property — not just family/size/weight — fails here.
+/// Full adoption of `openhearth_design` (upgraded from the v0.2-era
+/// typography-only tier): Peckish's themes ARE the shared OhTheme
+/// builders, whole — colors, ladder, buttons, inputs. These locks keep
+/// any hand-rolled ThemeData or raw hex from creeping back in.
 void main() {
-  const roles = <String, TextStyle? Function(TextTheme)>{
-    'displayLarge': _displayLarge,
-    'displayMedium': _displayMedium,
-    'displaySmall': _displaySmall,
-    'headlineLarge': _headlineLarge,
-    'headlineMedium': _headlineMedium,
-    'headlineSmall': _headlineSmall,
-    'titleLarge': _titleLarge,
-    'titleMedium': _titleMedium,
-    'titleSmall': _titleSmall,
-    'bodyLarge': _bodyLarge,
-    'bodyMedium': _bodyMedium,
-    'bodySmall': _bodySmall,
-    'labelLarge': _labelLarge,
-    'labelMedium': _labelMedium,
-    'labelSmall': _labelSmall,
-  };
+  test('the app themes are the shared OhTheme builders, field for field',
+      () {
+    // ThemeData has no value equality; the text ladder and color scheme
+    // together are the fingerprint that catches a hand-rolled divergence.
+    expect(AppTheme.light.textTheme, OhTheme.light().textTheme);
+    expect(AppTheme.light.colorScheme, OhTheme.light().colorScheme);
+    expect(AppTheme.light.scaffoldBackgroundColor,
+        OhTheme.light().scaffoldBackgroundColor);
+    expect(AppTheme.dark.textTheme, OhTheme.hearthDark().textTheme);
+    expect(AppTheme.dark.colorScheme, OhTheme.hearthDark().colorScheme);
+  });
 
-  for (final theme in {'light': AppTheme.light, 'dark': AppTheme.dark}.entries) {
-    test(
-        '${theme.key} theme text ladder matches OhTypography.materialTextTheme '
-        '(WHOLE TextStyle — letterSpacing/height included — all 15 roles)', () {
-      // ThemeData merges the provided TextTheme over its typography defaults
-      // (and those defaults carry colors/letterSpacing/height), so the app
-      // style can't equal the bare package style. Rebuild the same baseline
-      // WITHOUT a textTheme, merge the package role over it, and require the
-      // app role to whole-equal that: any app-local override of ANY TextStyle
-      // field — letterSpacing, height, decoration, … — breaks the equality.
-      final baseline = ThemeData(
-        useMaterial3: true,
-        colorScheme: theme.value.colorScheme,
-      );
-      for (final role in roles.entries) {
-        final app = role.value(theme.value.textTheme)!;
-        final base = role.value(baseline.textTheme)!;
-        final pkg = role.value(OhTypography.materialTextTheme)!;
-        expect(app, base.merge(pkg), reason: role.key);
-      }
-    });
-  }
-
-  test('app_theme.dart sources its TextTheme from the design package '
-      '(no hand-rolled ladder left behind)', () {
-    final source =
-        File('lib/shared/theme/app_theme.dart').readAsStringSync();
-    expect(source, contains('OhTypography.materialTextTheme'),
+  test('no hand-rolled theme and no raw hex anywhere in the theme layer',
+      () {
+    final theme = File('lib/shared/theme/app_theme.dart').readAsStringSync();
+    expect(theme, contains('OhTheme.light()'));
+    expect(theme, contains('OhTheme.hearthDark()'));
+    expect(theme.contains('ColorScheme.fromSeed'), isFalse,
+        reason: 'the shared builders own the scheme');
+    expect(theme.contains('TextTheme('), isFalse,
         reason: 'the ladder must come from openhearth_design');
-    expect(source.contains('TextTheme('), isFalse,
-        reason: 'the hand-rolled const TextTheme block must be gone — '
-            'a drifting local copy is exactly what the package prevents');
+
+    final colors =
+        File('lib/shared/theme/app_colors.dart').readAsStringSync();
+    expect(RegExp(r'Color\(0x').hasMatch(colors), isFalse,
+        reason: 'app colors are semantic ALIASES onto OhColors — raw hex '
+            'is how the boilerplate purple got in last time');
+    expect(colors, contains('OhColors.'));
   });
 }
-
-TextStyle? _displayLarge(TextTheme t) => t.displayLarge;
-TextStyle? _displayMedium(TextTheme t) => t.displayMedium;
-TextStyle? _displaySmall(TextTheme t) => t.displaySmall;
-TextStyle? _headlineLarge(TextTheme t) => t.headlineLarge;
-TextStyle? _headlineMedium(TextTheme t) => t.headlineMedium;
-TextStyle? _headlineSmall(TextTheme t) => t.headlineSmall;
-TextStyle? _titleLarge(TextTheme t) => t.titleLarge;
-TextStyle? _titleMedium(TextTheme t) => t.titleMedium;
-TextStyle? _titleSmall(TextTheme t) => t.titleSmall;
-TextStyle? _bodyLarge(TextTheme t) => t.bodyLarge;
-TextStyle? _bodyMedium(TextTheme t) => t.bodyMedium;
-TextStyle? _bodySmall(TextTheme t) => t.bodySmall;
-TextStyle? _labelLarge(TextTheme t) => t.labelLarge;
-TextStyle? _labelMedium(TextTheme t) => t.labelMedium;
-TextStyle? _labelSmall(TextTheme t) => t.labelSmall;
