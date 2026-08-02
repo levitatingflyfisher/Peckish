@@ -150,7 +150,7 @@ class _GuessSheetState extends ConsumerState<_GuessSheet> {
             ),
             const SizedBox(height: AppSpacing.sm),
             FilledButton(
-              onPressed: _draft!.isEmpty ? null : () => _logAll(context),
+              onPressed: _draft!.isEmpty ? null : _logAll,
               child: Text(
                   'Log ${_draft!.length} ${_draft!.length == 1 ? "entry" : "entries"}'),
             ),
@@ -183,15 +183,10 @@ class _GuessSheetState extends ConsumerState<_GuessSheet> {
       );
       final guess = await service.guess(description);
       if (!mounted) return;
-      setState(() {
-        _busy = false;
-        if (guess.foods.isEmpty) {
-          _message = "The AI couldn't make anything of that — try naming "
-              'the foods more plainly, or Quick add them yourself.';
-        } else {
-          _draft = List.of(guess.foods);
-        }
-      });
+      _finish(
+          guess,
+          "The AI couldn't make anything of that — try naming "
+          'the foods more plainly, or Quick add them yourself.');
     } on GuessException catch (e) {
       if (!mounted) return;
       setState(() {
@@ -221,15 +216,10 @@ class _GuessSheetState extends ConsumerState<_GuessSheet> {
       final guess =
           await PlateScan.fromLabels(labels, (q) => plateLookup(usda, q));
       if (!mounted) return;
-      setState(() {
-        _busy = false;
-        if (guess.foods.isEmpty) {
-          _message = "Couldn't spot any food in that photo — describe the "
-              'meal below instead.';
-        } else {
-          _draft = List.of(guess.foods);
-        }
-      });
+      _finish(
+          guess,
+          "Couldn't spot any food in that photo — describe the "
+          'meal below instead.');
     } on PlateUnavailableException {
       if (!mounted) return;
       setState(() {
@@ -249,7 +239,21 @@ class _GuessSheetState extends ConsumerState<_GuessSheet> {
     }
   }
 
-  Future<void> _logAll(BuildContext context) async {
+  /// The shared landing for both guess flows (text and plate photo): stop
+  /// the spinner, then either surface the draft lines or say — in the
+  /// flow's own words — that nothing came of it.
+  void _finish(MealGuess guess, String emptyMessage) {
+    setState(() {
+      _busy = false;
+      if (guess.foods.isEmpty) {
+        _message = emptyMessage;
+      } else {
+        _draft = List.of(guess.foods);
+      }
+    });
+  }
+
+  Future<void> _logAll() async {
     final now = DateTime.now();
     final diary = ref.read(diaryRepositoryProvider);
     for (final food in _draft!) {
@@ -267,7 +271,7 @@ class _GuessSheetState extends ConsumerState<_GuessSheet> {
         createdAt: now,
       ));
     }
-    if (context.mounted) Navigator.of(context).pop();
+    if (mounted) Navigator.of(context).pop();
   }
 
   /// '~650 g · 905 kcal · estimate' — the confidence label in plain words.

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -14,6 +16,7 @@ import 'package:peckish/features/food/domain/macro_set.dart';
 import 'package:peckish/features/food/domain/usda_food.dart';
 import 'package:peckish/shared/theme/app_colors.dart';
 import 'package:peckish/shared/theme/app_spacing.dart';
+import 'package:peckish/shared/widgets/num_field.dart';
 
 /// The + sheet: offline search over the bundled spine + custom foods, the
 /// staples list, and a quick-add line. Two taps end to end. Pass [day] to
@@ -48,11 +51,41 @@ class _AddSheet extends ConsumerStatefulWidget {
   ConsumerState<_AddSheet> createState() => _AddSheetState();
 }
 
+/// How long the search field stays quiet after the last keystroke before
+/// the query actually runs — long enough that fast typing costs one query
+/// instead of one per key, short enough to still feel instant.
+const _searchDebounce = Duration(milliseconds: 250);
+
 class _AddSheetState extends ConsumerState<_AddSheet> {
-  String _query = '';
+  Timer? _debounce;
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    super.dispose();
+  }
+
+  /// Keystrokes land in [_queryProvider] debounced. Clearing the field takes
+  /// effect immediately (straight back to the staples, no lag); everything
+  /// else waits out the quiet period.
+  void _onChanged(String q) {
+    _debounce?.cancel();
+    if (q.trim().isEmpty) {
+      ref.read(_queryProvider.notifier).state = '';
+      return;
+    }
+    _debounce = Timer(_searchDebounce, () {
+      if (mounted) ref.read(_queryProvider.notifier).state = q;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    final query = ref.watch(_queryProvider);
+    // Watched from the sheet itself — not from _Results — so the customs
+    // cache lives exactly as long as one sheet open: read the table once,
+    // then filter in memory on every keystroke.
+    ref.watch(_customsProvider);
     return DraggableScrollableSheet(
       expand: false,
       initialChildSize: 0.85,
@@ -67,14 +100,13 @@ class _AddSheetState extends ConsumerState<_AddSheet> {
                 hintText: 'Search foods — works offline',
                 border: OutlineInputBorder(),
               ),
-              onChanged: (q) => setState(() => _query = q),
+              onChanged: _onChanged,
             ),
           ),
           Expanded(
-            child: _query.trim().isEmpty
+            child: query.trim().isEmpty
                 ? _IdleSheet(scroll: scroll, day: widget.day)
-                : _Results(
-                    query: _query, scroll: scroll, day: widget.day),
+                : _Results(scroll: scroll, day: widget.day),
           ),
         ],
       ),
@@ -172,16 +204,15 @@ final _mealsProvider = FutureProvider.autoDispose(
     (ref) => ref.watch(savedMealRepositoryProvider).getAll());
 
 class _Results extends ConsumerWidget {
-  const _Results({required this.query, required this.scroll, this.day});
+  const _Results({required this.scroll, this.day});
 
-  final String query;
   final ScrollController scroll;
   final String? day;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final spine = ref.watch(spineReadyProvider);
-    final results = ref.watch(_searchProvider(query));
+    final results = ref.watch(_searchProvider);
     if (spine.isLoading) {
       return const Center(child: Text('Setting the table — one moment…'));
     }
@@ -256,14 +287,31 @@ class _Results extends ConsumerWidget {
   }
 }
 
-final _searchProvider = FutureProvider.autoDispose
-    .family((ref, String query) async => (
-          (await ref.watch(customFoodRepositoryProvider).getAll())
-              .where((c) =>
-                  c.name.toLowerCase().contains(query.trim().toLowerCase()))
-              .toList(),
-          await ref.watch(usdaFoodRepositoryProvider).search(query),
-        ));
+/// The settled (debounced) search text. Module-private and autoDispose: the
+/// sheet is its only writer and watcher, so it resets to '' when the sheet
+/// closes.
+final _queryProvider = StateProvider.autoDispose((_) => '');
+
+/// The custom-foods table, read ONCE per sheet open (the sheet state keeps
+/// this alive for its whole lifetime). Per-keystroke filtering happens in
+/// memory in [_searchProvider] — the table is never re-read while typing.
+final _customsProvider = FutureProvider.autoDispose(
+    (ref) => ref.watch(customFoodRepositoryProvider).getAll());
+
+/// One evaluation per settled query. A single provider watching the query —
+/// not a per-query family — so a query change reloads IN PLACE: AsyncValue
+/// carries the previous results through the reload and the list never
+/// flickers empty between keystrokes.
+final _searchProvider = FutureProvider.autoDispose((ref) async {
+  final query = ref.watch(_queryProvider);
+  final needle = query.trim().toLowerCase();
+  return (
+    (await ref.watch(_customsProvider.future))
+        .where((c) => c.name.toLowerCase().contains(needle))
+        .toList(),
+    await ref.watch(usdaFoodRepositoryProvider).search(query),
+  );
+});
 
 class _PortionSheet extends ConsumerWidget {
   const _PortionSheet(
@@ -368,13 +416,10 @@ class _QuickAddDialogState extends ConsumerState<_QuickAddDialog> {
   }
 
   static double? _num(TextEditingController c) =>
-      double.tryParse(c.text.replaceAll(',', '.'));
+      parseFlexibleDouble(c.text);
 
-  TextField _numField(TextEditingController c, String label) => TextField(
-        controller: c,
-        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        decoration: InputDecoration(labelText: label),
-      );
+  Widget _numField(TextEditingController c, String label) =>
+      NumField(controller: c, label: label);
 
   Future<void> _log() async {
     final name = _label.text.trim();

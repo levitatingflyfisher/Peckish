@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:peckish/core/providers/core_providers.dart';
 import 'package:peckish/features/recipes/presentation/recipes_screen.dart';
+import 'package:peckish/shared/extensions/qty_format.dart';
 import 'package:peckish/shared/theme/app_colors.dart';
 import 'package:peckish/shared/theme/app_spacing.dart';
 import 'package:peckish/shared/widgets/confirm_dialog.dart';
@@ -60,9 +61,7 @@ class RecipeDetailScreen extends ConsumerWidget {
             runSpacing: AppSpacing.xs,
             children: [
               if (r.servings != null)
-                Chip(
-                    label: Text(
-                        '${r.servings! % 1 == 0 ? r.servings!.toInt() : r.servings} servings')),
+                Chip(label: Text('${formatQty(r.servings!)} servings')),
               if (per?.kcal != null)
                 Chip(
                   avatar: const CircleAvatar(

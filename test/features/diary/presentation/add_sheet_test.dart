@@ -5,10 +5,48 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:peckish/core/providers/core_providers.dart';
 import 'package:peckish/core/storage/app_database.dart';
 import 'package:peckish/features/diary/presentation/today_screen.dart';
+import 'package:peckish/features/food/data/custom_food_repository.dart';
+import 'package:peckish/features/food/data/usda_food_repository.dart';
+import 'package:peckish/features/food/domain/custom_food.dart';
+import 'package:peckish/features/food/domain/macro_set.dart';
+import 'package:peckish/features/food/domain/usda_food.dart';
 import 'package:peckish/shared/theme/app_theme.dart';
 
 // See groceries_screen_test.dart for the three drift widget-test rules
 // (runAsync-seed before pump, UI-state assertions only, unmount not close).
+
+/// The + sheet debounces its search (~250ms of quiet before the query
+/// runs); tests that type into the search field pump past it before
+/// expecting results.
+const searchDebounce = Duration(milliseconds: 300);
+
+/// Counts real search-query round trips, so the debounce test can prove
+/// that fast typing costs ONE query, not one per keystroke.
+class _CountingUsdaRepository extends UsdaFoodRepository {
+  _CountingUsdaRepository(super.db);
+
+  int searchCalls = 0;
+
+  @override
+  Future<List<UsdaFood>> search(String query, {int limit = 40}) {
+    searchCalls += 1;
+    return super.search(query, limit: limit);
+  }
+}
+
+/// Counts custom-foods table reads, so the cache test can prove the table
+/// is read once per sheet open — not once per keystroke.
+class _CountingCustomRepository extends CustomFoodRepository {
+  _CountingCustomRepository(super.db);
+
+  int getAllCalls = 0;
+
+  @override
+  Future<List<CustomFood>> getAll({bool includeArchived = false}) {
+    getAllCalls += 1;
+    return super.getAll(includeArchived: includeArchived);
+  }
+}
 
 Widget host(AppDatabase db) => ProviderScope(
       overrides: [
@@ -153,10 +191,64 @@ void main() {
     await tester.tap(find.byType(FloatingActionButton));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField).first, 'grandma');
+    await tester.pump(searchDebounce);
     await tester.pumpAndSettle();
     expect(find.byIcon(Icons.home_outlined), findsOneWidget);
     // Rail chip + today's row (behind the sheet) + the search result.
     expect(find.text('Grandma rolls'), findsNWidgets(3));
+    await unmount(tester);
+  });
+
+  testWidgets(
+      'fast typing runs ONE debounced query, and customs are read once '
+      'per sheet open', (tester) async {
+    final usda = _CountingUsdaRepository(db);
+    final customs = _CountingCustomRepository(db);
+    await tester.runAsync(() => customs.create(CustomFood(
+          id: 'cf-1',
+          name: 'Grandma rolls',
+          servingLabel: 'serving',
+          perServing: const MacroSet(kcal: 180),
+          createdAt: DateTime(2026, 7, 1),
+        )));
+
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        appDatabaseProvider.overrideWithValue(db),
+        spineReadyProvider.overrideWith((ref) async {}),
+        usdaFoodRepositoryProvider.overrideWith((ref) => usda),
+        customFoodRepositoryProvider.overrideWith((ref) => customs),
+      ],
+      child: MaterialApp(theme: AppTheme.light, home: const TodayScreen()),
+    ));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(FloatingActionButton));
+    await tester.pumpAndSettle();
+    final customsReadsAtOpen = customs.getAllCalls;
+
+    // Three keystrokes, all inside the debounce window.
+    await tester.enterText(find.byType(TextField).first, 'g');
+    await tester.pump(const Duration(milliseconds: 50));
+    await tester.enterText(find.byType(TextField).first, 'gr');
+    await tester.pump(const Duration(milliseconds: 50));
+    await tester.enterText(find.byType(TextField).first, 'gra');
+    await tester.pump(searchDebounce);
+    await tester.pumpAndSettle();
+
+    // The settled query found the custom, via ONE query round trip.
+    expect(find.byIcon(Icons.home_outlined), findsOneWidget);
+    expect(usda.searchCalls, 1,
+        reason: 'three quick keystrokes must settle into one query');
+
+    // A later keystroke queries again — but never re-reads the customs
+    // table: that was cached at sheet open and is filtered in memory.
+    await tester.enterText(find.byType(TextField).first, 'gran');
+    await tester.pump(searchDebounce);
+    await tester.pumpAndSettle();
+    expect(usda.searchCalls, 2);
+    expect(customs.getAllCalls, customsReadsAtOpen,
+        reason: 'keystrokes must filter the in-memory customs cache, '
+            'not re-read the table');
     await unmount(tester);
   });
 }

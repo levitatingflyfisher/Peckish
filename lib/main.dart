@@ -73,7 +73,9 @@ class _PeckishAppState extends ConsumerState<PeckishApp> {
       // reading width rather than stretching edge-to-edge (phones pass through).
       builder: (context, child) {
         final inner = child ?? const SizedBox.shrink();
-        if (MediaQuery.of(context).size.width <= 760) return inner;
+        // sizeOf, not of().size: depend on size alone so keyboard-inset
+        // frames don't rebuild the whole app shell.
+        if (MediaQuery.sizeOf(context).width <= 760) return inner;
         return ColoredBox(
           color: Theme.of(context).scaffoldBackgroundColor,
           child: Center(child: SizedBox(width: 760, child: inner)),

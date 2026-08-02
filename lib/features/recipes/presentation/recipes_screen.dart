@@ -7,6 +7,7 @@ import 'package:peckish/features/recipes/domain/recipe.dart';
 import 'package:peckish/features/recipes/import/recipe_fetcher.dart';
 import 'package:peckish/features/recipes/import/schema_org_recipe_parser.dart';
 import 'package:peckish/features/recipes/presentation/recipe_detail_screen.dart';
+import 'package:peckish/shared/extensions/qty_format.dart';
 import 'package:peckish/shared/theme/app_colors.dart';
 import 'package:peckish/shared/theme/app_spacing.dart';
 
@@ -72,8 +73,7 @@ class RecipesScreen extends ConsumerWidget {
 
   String _subtitle(Recipe r) {
     final bits = <String>[
-      if (r.servings != null)
-        '${r.servings! % 1 == 0 ? r.servings!.toInt() : r.servings} servings',
+      if (r.servings != null) '${formatQty(r.servings!)} servings',
       '${r.ingredients.length} ingredients',
     ];
     return bits.join(' · ');

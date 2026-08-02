@@ -133,6 +133,85 @@ void main() {
     await unmount(tester);
   });
 
+  testWidgets('a day logged exactly at target sits ON the target line',
+      (tester) async {
+    await tester.runAsync(() async {
+      await TargetsRepository(db)
+          .set(const DailyTargets(values: MacroSet(kcal: 2000)));
+      final repo = DiaryRepository(db);
+      await repo.log(entry('e-1', dayAgo(0), const MacroSet(kcal: 2000)));
+      await repo.log(entry('e-2', dayAgo(1), const MacroSet(kcal: 1000)));
+    });
+    await tester.pumpWidget(host());
+    await tester.pumpAndSettle();
+
+    // The bar is the only Container inside its keyed InkWell.
+    Rect barRect(String day) => tester.getRect(find.descendant(
+        of: find.byKey(ValueKey('bar-$day')),
+        matching: find.byType(Container)));
+    final line = tester.getRect(find.byKey(const ValueKey('target-line')));
+
+    // Bars and the line must share one coordinate frame: a day logged at
+    // exactly the target touches the line, not a band below it.
+    final atTarget = barRect(dayAgo(0));
+    expect((atTarget.top - line.center.dy).abs(), lessThanOrEqualTo(2.0),
+        reason: 'a bar at exactly the target must sit on the target line');
+
+    // And the frame is linear: half the value draws half the bar.
+    final half = barRect(dayAgo(1));
+    expect(half.height, closeTo(atTarget.height / 2, 2.0),
+        reason: 'a mid-fraction day scales within the same frame');
+    await unmount(tester);
+  });
+
+  testWidgets('the axis picker survives 320dp at 2.5 text scale',
+      (tester) async {
+    // The fleet's recurring accessibility bug: rigid rows overflow at
+    // large text scale on narrow phones. Four segments is a rigid row.
+    tester.view.physicalSize = const Size(320, 640);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    await tester.runAsync(() => DiaryRepository(db)
+        .log(entry('e-1', dayAgo(0), const MacroSet(kcal: 500))));
+
+    await tester.pumpWidget(ProviderScope(
+      overrides: [appDatabaseProvider.overrideWithValue(db)],
+      child: MaterialApp(
+        theme: AppTheme.light,
+        home: MediaQuery(
+          data: const MediaQueryData(
+            size: Size(320, 640),
+            textScaler: TextScaler.linear(2.5),
+          ),
+          child: HistoryScreen(anchorDay: dayAgo(0)),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull,
+        reason: 'no layout exception at 320dp / 2.5x text');
+    expect(
+        tester.getSize(find.byType(SegmentedButton<String>)).width,
+        lessThanOrEqualTo(320),
+        reason: 'the picker fits the narrow screen');
+    // Big text must scale the picker down, not fold labels mid-word into
+    // tall broken columns: every label stays on a single line (one line at
+    // 2.5x is at most ~50px tall).
+    for (final label in const ['kcal', 'Protein', 'Carbs', 'Fat']) {
+      expect(tester.getSize(find.text(label)).height, lessThanOrEqualTo(60),
+          reason: '"$label" must stay a one-line label');
+    }
+
+    // …and stays live: switching to Fat re-labels the bars (no fat was
+    // logged, so the kcal value label goes away).
+    expect(find.text('500'), findsOneWidget);
+    await tester.tap(find.text('Fat'));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(find.text('500'), findsNothing);
+    await unmount(tester);
+  });
+
   testWidgets('tapping a bar opens that day', (tester) async {
     final day = dayAgo(1);
     await tester.runAsync(() => DiaryRepository(db).log(entry(

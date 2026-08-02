@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:peckish/core/providers/core_providers.dart';
 import 'package:peckish/features/diary/domain/diary_entry.dart';
 import 'package:peckish/features/diary/presentation/edit_entry_sheet.dart';
+import 'package:peckish/shared/extensions/qty_format.dart';
 import 'package:peckish/shared/theme/app_colors.dart';
 import 'package:peckish/shared/theme/app_spacing.dart';
 
@@ -36,7 +37,7 @@ class EntryTile extends ConsumerWidget {
         subtitle: Text(
           entry.qty == 1
               ? entry.unitLabel
-              : '${entry.qty % 1 == 0 ? entry.qty.toInt() : entry.qty} × ${entry.unitLabel}',
+              : '${formatQty(entry.qty)} × ${entry.unitLabel}',
         ),
         trailing: Text(
           entry.macros.kcal == null

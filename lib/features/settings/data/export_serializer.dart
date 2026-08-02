@@ -9,12 +9,14 @@ import 'package:peckish/features/food/domain/macro_set.dart';
 import 'package:peckish/features/groceries/domain/grocery_item.dart';
 import 'package:peckish/features/plan/domain/plan_entry.dart';
 import 'package:peckish/features/recipes/domain/recipe.dart';
-import 'package:peckish/shared/extensions/datetime_ext.dart';
 
 /// The date-stamped filename for a data export, e.g.
 /// `peckish-export-2026-07-25.json`. Takes the date explicitly (not
 /// `DateTime.now`) so tests are deterministic; the UI passes `DateTime.now()`.
-String exportFileName(DateTime date) => 'peckish-export-${date.toDateDay()}.json';
+/// Day keys have ONE producer app-wide — [DiaryEntry.dayOf] — so the stamp
+/// here can never drift from the day strings inside the export.
+String exportFileName(DateTime date) =>
+    'peckish-export-${DiaryEntry.dayOf(date)}.json';
 
 /// The whole on-device USER dataset, ready to serialize to a portable JSON
 /// document the user can keep or move. The bundled USDA spine is reference

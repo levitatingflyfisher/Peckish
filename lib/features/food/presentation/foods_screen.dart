@@ -7,9 +7,11 @@ import 'package:peckish/features/diary/domain/diary_entry.dart';
 import 'package:peckish/features/food/domain/custom_food.dart';
 import 'package:peckish/features/food/domain/food_usage.dart';
 import 'package:peckish/features/food/domain/macro_set.dart';
+import 'package:peckish/shared/extensions/qty_format.dart';
 import 'package:peckish/shared/theme/app_colors.dart';
 import 'package:peckish/shared/theme/app_spacing.dart';
 import 'package:peckish/shared/widgets/confirm_dialog.dart';
+import 'package:peckish/shared/widgets/num_field.dart';
 
 /// Foods — the full view behind the rail. Regulars (the persistent usage
 /// record) are manageable here: log again, hide from the rail, bring back.
@@ -39,6 +41,51 @@ class FoodsScreen extends ConsumerWidget {
         (regulars.value ?? const []).isEmpty &&
         (customs.value ?? const []).isEmpty;
 
+    // One flat item list — headers included — so ListView.builder below only
+    // instantiates the tiles that are actually on screen. A long-lived
+    // household accumulates hundreds of regulars; building them all in one
+    // frame is the kind of jank this screen never needs.
+    final items = <Widget>[
+      if (live.isNotEmpty || hidden.isNotEmpty) ...[
+        Text('Regulars', style: text.titleMedium),
+        const SizedBox(height: AppSpacing.xs),
+        Text(
+          'What you actually reach for — deleting diary lines '
+          'never clears this.',
+          style: text.bodySmall?.copyWith(color: AppColors.stone),
+        ),
+        for (final u in live) _RegularTile(usage: u),
+        if (hidden.isNotEmpty)
+          ExpansionTile(
+            tilePadding: EdgeInsets.zero,
+            title: Text('Hidden regulars', style: text.titleSmall),
+            children: [
+              for (final u in hidden)
+                _RegularTile(usage: u, isHidden: true),
+            ],
+          ),
+        const SizedBox(height: AppSpacing.lg),
+      ],
+      if (activeCustoms.isNotEmpty || archivedCustoms.isNotEmpty) ...[
+        Text('My Foods', style: text.titleMedium),
+        const SizedBox(height: AppSpacing.xs),
+        Text(
+          'Household-defined foods — per serving, yours to edit.',
+          style: text.bodySmall?.copyWith(color: AppColors.stone),
+        ),
+        for (final c in activeCustoms) _CustomTile(food: c),
+        if (archivedCustoms.isNotEmpty)
+          ExpansionTile(
+            tilePadding: EdgeInsets.zero,
+            title: Text('Resting', style: text.titleSmall),
+            children: [
+              for (final c in archivedCustoms)
+                _CustomTile(food: c, isArchived: true),
+            ],
+          ),
+      ],
+    ];
+
     return Scaffold(
       appBar: AppBar(title: const Text('Foods')),
       body: empty
@@ -55,52 +102,10 @@ class FoodsScreen extends ConsumerWidget {
                 ),
               ),
             )
-          : ListView(
+          : ListView.builder(
               padding: const EdgeInsets.all(AppSpacing.lg),
-              children: [
-                if (live.isNotEmpty || hidden.isNotEmpty) ...[
-                  Text('Regulars', style: text.titleMedium),
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    'What you actually reach for — deleting diary lines '
-                    'never clears this.',
-                    style:
-                        text.bodySmall?.copyWith(color: AppColors.stone),
-                  ),
-                  for (final u in live) _RegularTile(usage: u),
-                  if (hidden.isNotEmpty)
-                    ExpansionTile(
-                      tilePadding: EdgeInsets.zero,
-                      title: Text('Hidden regulars',
-                          style: text.titleSmall),
-                      children: [
-                        for (final u in hidden)
-                          _RegularTile(usage: u, isHidden: true),
-                      ],
-                    ),
-                  const SizedBox(height: AppSpacing.lg),
-                ],
-                if (activeCustoms.isNotEmpty ||
-                    archivedCustoms.isNotEmpty) ...[
-                  Text('My Foods', style: text.titleMedium),
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    'Household-defined foods — per serving, yours to edit.',
-                    style:
-                        text.bodySmall?.copyWith(color: AppColors.stone),
-                  ),
-                  for (final c in activeCustoms) _CustomTile(food: c),
-                  if (archivedCustoms.isNotEmpty)
-                    ExpansionTile(
-                      tilePadding: EdgeInsets.zero,
-                      title: Text('Resting', style: text.titleSmall),
-                      children: [
-                        for (final c in archivedCustoms)
-                          _CustomTile(food: c, isArchived: true),
-                      ],
-                    ),
-                ],
-              ],
+              itemCount: items.length,
+              itemBuilder: (_, i) => items[i],
             ),
     );
   }
@@ -301,12 +306,10 @@ class _EditFoodDialogState extends ConsumerState<_EditFoodDialog> {
     super.dispose();
   }
 
-  static String _fmt(double? v) => v == null
-      ? ''
-      : (v == v.roundToDouble() ? v.round().toString() : v.toString());
+  static String _fmt(double? v) => v == null ? '' : formatQty(v);
 
   static double? _num(TextEditingController c) =>
-      double.tryParse(c.text.replaceAll(',', '.'));
+      parseFlexibleDouble(c.text);
 
   Future<void> _save() async {
     final name = _name.text.trim();
@@ -326,11 +329,8 @@ class _EditFoodDialogState extends ConsumerState<_EditFoodDialog> {
     if (mounted) Navigator.of(context).pop();
   }
 
-  TextField _numField(TextEditingController c, String label) => TextField(
-        controller: c,
-        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        decoration: InputDecoration(labelText: label),
-      );
+  Widget _numField(TextEditingController c, String label) =>
+      NumField(controller: c, label: label);
 
   @override
   Widget build(BuildContext context) {
