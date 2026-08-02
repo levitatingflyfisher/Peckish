@@ -11,6 +11,7 @@ import 'package:peckish/features/plan/presentation/plan_screen.dart';
 import 'package:peckish/features/recipes/presentation/recipes_screen.dart';
 import 'package:peckish/features/barcode/presentation/scan_screen.dart';
 import 'package:peckish/features/food/presentation/foods_screen.dart';
+import 'package:peckish/features/settings/presentation/privacy_screen.dart';
 import 'package:peckish/features/settings/presentation/settings_screen.dart';
 import 'package:peckish/features/sync/presentation/sync_screen.dart';
 
@@ -83,6 +84,11 @@ GoRouter appRouter(Ref ref) {
         path: '/sync',
         pageBuilder: (c, s) =>
             _fade(key: s.pageKey, child: const SyncScreen()),
+      ),
+      GoRoute(
+        path: '/privacy',
+        pageBuilder: (c, s) =>
+            _fade(key: s.pageKey, child: const PrivacyScreen()),
       ),
       GoRoute(
         path: '/history',

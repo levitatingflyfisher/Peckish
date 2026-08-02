@@ -230,6 +230,15 @@ class _GuessSheetState extends ConsumerState<_GuessSheet> {
           _draft = List.of(guess.foods);
         }
       });
+    } on PlateUnavailableException {
+      if (!mounted) return;
+      setState(() {
+        _busy = false;
+        _message = "This phone can't label photos — that one piece rides "
+            'Google Play services. Everything else, including the '
+            'downloaded on-device model, works without it: describe the '
+            'meal below.';
+      });
     } on Exception {
       if (!mounted) return;
       setState(() {

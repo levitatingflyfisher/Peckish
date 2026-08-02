@@ -55,6 +55,15 @@ class ModelDownloadService {
     return true;
   }
 
+  /// A half-finished transfer is waiting on disk (and the final file
+  /// isn't there yet): the UI shows Resume instead of Download. Leaving
+  /// the app pauses a transfer — the .part is the progress that survives.
+  Future<bool> hasPartial(PeckishModelSpec spec) async {
+    if (await isDownloaded(spec)) return false;
+    final part = await _partFile(spec);
+    return part.existsSync();
+  }
+
   /// Downloads [spec], yielding `(receivedBytes, totalBytes)` tuples
   /// (total is `-1` when the server omits Content-Length).
   ///

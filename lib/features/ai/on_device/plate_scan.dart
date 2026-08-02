@@ -1,6 +1,14 @@
 import 'package:peckish/features/ai/domain/meal_guess.dart';
 import 'package:peckish/features/food/domain/macro_set.dart';
 
+/// The classifier itself can't run here — on Android that means Google
+/// Play services (which hosts ML Kit's bundled labeler) is absent or
+/// broken, the normal state of a de-Googled phone. A typed exception so
+/// the sheet can say exactly that, and what still works.
+class PlateUnavailableException implements Exception {
+  const PlateUnavailableException();
+}
+
 /// One sighting from the on-device classifier.
 typedef DetectedLabel = ({String label, double confidence});
 

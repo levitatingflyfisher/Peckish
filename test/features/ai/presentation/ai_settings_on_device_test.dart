@@ -161,6 +161,30 @@ void main() {
     await unmount(tester);
   });
 
+  testWidgets('an interrupted download says Paused and offers Resume',
+      (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    await tester.runAsync(() async {
+      await File('${tempDir.path}/qwen25-0-5b-it-q8.task.part')
+          .writeAsBytes(Uint8List(1024 * 1024));
+    });
+    await open(tester);
+    await tester.runAsync(() async {
+      await tester.tap(find.text('On this phone'));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    });
+    await tester.pumpAndSettle();
+    await tester
+        .runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Resume'), findsOneWidget,
+        reason: 'leaving the app pauses a download; the .part survives '
+            'and Resume picks up from the same byte');
+    expect(find.textContaining('Paused'), findsOneWidget);
+    await unmount(tester);
+  });
+
   testWidgets('delete asks first, then the model is gone', (tester) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
     await tester.runAsync(() async {

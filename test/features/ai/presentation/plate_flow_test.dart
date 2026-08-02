@@ -26,6 +26,12 @@ class _FakeScanner extends PlateScanner {
   Future<List<DetectedLabel>> labelsOf(String imagePath) async => labels;
 }
 
+class _NoPlayServicesScanner extends PlateScanner {
+  @override
+  Future<List<DetectedLabel>> labelsOf(String imagePath) async =>
+      throw const PlateUnavailableException();
+}
+
 void main() {
   late AppDatabase db;
 
@@ -123,6 +129,35 @@ void main() {
 
     expect(find.textContaining("Couldn't spot any food"), findsOneWidget);
     expect(find.byType(SnackBar), findsNothing);
+    await unmount(tester);
+  });
+
+  testWidgets('no Play services: the button explains and points at the '
+      'paths that still work', (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        appDatabaseProvider.overrideWithValue(db),
+        spineReadyProvider.overrideWith((ref) async {}),
+        platePhotoPickerProvider
+            .overrideWithValue(() async => '/fake/plate.jpg'),
+        plateScannerProvider.overrideWithValue(_NoPlayServicesScanner()),
+      ],
+      child: MaterialApp(theme: AppTheme.light, home: const TodayScreen()),
+    ));
+    await tester.pumpAndSettle();
+    await openSheet(tester);
+
+    await tester.runAsync(() async {
+      await tester.tap(find.byTooltip('Snap your plate'));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    });
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Google Play services'), findsOneWidget,
+        reason: 'name the dependency honestly — GrapheneOS phones exist');
+    expect(find.textContaining('works without it'), findsOneWidget,
+        reason: 'and say what still works, calmly');
     await unmount(tester);
   });
 

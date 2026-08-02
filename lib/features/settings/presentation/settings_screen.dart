@@ -122,6 +122,14 @@ class SettingsScreen extends ConsumerWidget {
           const SizedBox(height: AppSpacing.lg),
 
           ListTile(
+            leading: const Icon(Icons.wifi_off_outlined),
+            title: const Text('What leaves your device'),
+            subtitle: const Text(
+                'The whole network map on one screen — most rows say '
+                '"nothing".'),
+            onTap: () => context.push('/privacy'),
+          ),
+          ListTile(
             leading: const Icon(Icons.info_outline),
             title: const Text('About Peckish'),
             onTap: () => context.push('/about'),

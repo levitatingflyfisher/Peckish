@@ -35,6 +35,10 @@ class _NotDownloaded extends _Status {
   const _NotDownloaded();
 }
 
+class _Paused extends _Status {
+  const _Paused();
+}
+
 class _Downloading extends _Status {
   const _Downloading(this.percent);
   final int? percent; // null while the size is unknown
@@ -61,9 +65,13 @@ class _LocalModelsSectionState extends ConsumerState<LocalModelsSection> {
     final downloads = ref.read(modelDownloadServiceProvider);
     for (final spec in PeckishModelSpec.availableModels) {
       final installed = await downloads.isDownloaded(spec);
+      final paused = !installed && await downloads.hasPartial(spec);
       if (!mounted) return;
-      setState(() => _statuses[spec.id] =
-          installed ? const _Installed() : const _NotDownloaded());
+      setState(() => _statuses[spec.id] = installed
+          ? const _Installed()
+          : paused
+              ? const _Paused()
+              : const _NotDownloaded());
     }
   }
 
@@ -151,6 +159,9 @@ class _LocalModelsSectionState extends ConsumerState<LocalModelsSection> {
       subtitle: switch (status) {
         _NotDownloaded() =>
           Text(spec.description, style: theme.textTheme.bodySmall),
+        _Paused() => Text(
+            'Paused partway — Resume picks up from the same byte.',
+            style: theme.textTheme.bodySmall),
         _Downloading(:final percent) => Text(
             percent == null ? 'Downloading…' : 'Downloading… $percent%',
             style: theme.textTheme.bodySmall),
@@ -163,6 +174,8 @@ class _LocalModelsSectionState extends ConsumerState<LocalModelsSection> {
       trailing: switch (status) {
         _NotDownloaded() => TextButton(
             onPressed: () => _download(spec), child: const Text('Download')),
+        _Paused() => TextButton(
+            onPressed: () => _download(spec), child: const Text('Resume')),
         _Downloading() => const SizedBox(
             width: 20,
             height: 20,

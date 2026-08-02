@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart' show PlatformException;
 import 'package:google_mlkit_image_labeling/google_mlkit_image_labeling.dart';
 
 import 'package:peckish/features/ai/on_device/plate_scan.dart';
@@ -25,6 +26,10 @@ class PlateScanner {
         for (final l in labels)
           (label: l.label, confidence: l.confidence),
       ];
+    } on PlatformException {
+      // ML Kit rides Google Play services; on a de-Googled phone the
+      // channel answers with a platform error. Name it, typed.
+      throw const PlateUnavailableException();
     } finally {
       await labeler.close();
     }

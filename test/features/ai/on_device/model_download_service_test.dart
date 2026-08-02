@@ -95,6 +95,16 @@ void main() {
     expect(finalFile().existsSync(), isFalse);
   });
 
+  test('hasPartial reports a resumable half-download honestly', () async {
+    expect(await service.hasPartial(spec), isFalse);
+    final part = File('${tempDir.path}/${spec.fileName}.part');
+    await writeBytes(part, 1024 * 1024);
+    expect(await service.hasPartial(spec), isTrue);
+    await writeBytes(finalFile(), 2 * 1024 * 1024);
+    expect(await service.hasPartial(spec), isFalse,
+        reason: 'a finished model outranks its leftover .part');
+  });
+
   test('delete removes both the final file and any leftover .part', () async {
     await writeBytes(finalFile(), 2 * 1024 * 1024);
     final part = File('${tempDir.path}/${spec.fileName}.part');
