@@ -1,5 +1,48 @@
 # Changelog
 
+## 0.7.1 — the potato pass
+
+No new features — the same app, faster, smaller, and truer, tuned to
+run well on a modest phone.
+
+- **Boots faster, every time.** The app no longer re-reads its bundled
+  food database on every launch (that was hundreds of milliseconds of
+  freeze, forever). The diary and portion lookups gained indexes, so
+  the app stays quick as your history grows.
+- **Search feels calmer.** Typing in the food search no longer races
+  itself on every keystroke; results settle instead of flickering.
+- **The chart tells the truth.** A day logged exactly at your target
+  now sits exactly on the target line (bars drew slightly low before).
+  The axis picker also survives very large system font sizes.
+- **Downloads are sturdier.** Leaving a download screen now truly
+  pauses the transfer (before, a hidden transfer could keep running and
+  a later Resume could corrupt it); a checksum failure explains itself
+  instead of reading like a Wi-Fi drop; an install interrupted at the
+  last moment resumes without re-downloading; and two downloads at once
+  keep the screen awake for as long as either needs it.
+- **Restore is exact.** Items you'd deleted from the plan or grocery
+  list no longer reappear when restoring a backup.
+- **Smaller.** The app shed dead code and an unused icon font — the
+  APK is smaller than last release, and the web app loads less.
+
+## 0.7.0 — barcode sovereignty
+
+Scans are answered by your phone. The network became a question.
+
+- **Offline barcode databases.** Settings → Offline barcode lookup
+  offers two downloads: US packaged foods from USDA (440,275 barcodes,
+  22 MB, public domain) and an optional Open Food Facts US slice
+  (927,505 products, 47 MB, ODbL — its attribution travels inside the
+  file). Each is verified against a published checksum before install.
+- **A scan never touches the network by itself.** With a database on
+  your phone, scans are answered locally — in a dead zone, in airplane
+  mode, anywhere. A miss shows one button: "Ask openfoodfacts.org."
+  Only that tap sends the digits. The old automatic lookup is gone.
+- **Every answer names its source** — from your phone's USDA database,
+  from your phone's Open Food Facts slice, or from openfoodfacts.org.
+- **The privacy map got truer.** "What leaves your device" now says:
+  barcode scans, usually nothing.
+
 ## 0.6.0 — the hearth release
 
 Phone-test feedback, all five points.
