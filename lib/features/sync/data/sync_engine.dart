@@ -43,7 +43,7 @@ class SyncChangeset {
         payloadSchemaVersion: json['payloadSchemaVersion'] as int? ?? 1,
       );
 
-  String toJsonString() => const JsonEncoder().convert(toJson());
+  String toJsonString() => jsonEncode(toJson());
 
   factory SyncChangeset.fromJsonString(String s) =>
       SyncChangeset.fromJson(json.decode(s) as Map<String, dynamic>);
@@ -276,201 +276,206 @@ class SyncEngine {
     return remoteHlc.compareTo(localHlc) > 0;
   }
 
-  Future<int> _applyCustomFoods(Object? section) async {
+  /// The one skeleton behind all five section appliers: iterate the remote
+  /// rows, look up the local row by id, let [_wins] decide, upsert the
+  /// winner. Parents whose children travel with them pass [replaceChildren],
+  /// invoked after the parent upsert with the running applied count (it
+  /// feeds the fallback child id in [_replaceChildrenOf]).
+  Future<int> _applySection<T extends Table, R>(
+    Object? section,
+    TableInfo<T, R> table,
+    String? Function(R local) localHlc,
+    Insertable<R> Function(String id, Map<String, dynamic> row) toCompanion, {
+    Future<void> Function(String id, Map<String, dynamic> row, int applied)?
+        replaceChildren,
+  }) async {
+    final idColumn = table.columnsByName['id']! as GeneratedColumn<String>;
     var applied = 0;
     for (final row in _rows(section)) {
       final id = row['id'] as String?;
       if (id == null) continue;
-      final local = await (_db.select(_db.customFoods)
-            ..where((f) => f.id.equals(id)))
+      final local = await (_db.select(table)
+            ..where((_) => idColumn.equals(id)))
           .getSingleOrNull();
-      if (!_wins(row['hlc'] as String?, local?.hlc, local != null)) continue;
-      await _db.into(_db.customFoods).insertOnConflictUpdate(
-            CustomFoodsCompanion(
-              id: Value(id),
-              name: Value(row['name'] as String? ?? ''),
-              servingLabel: Value(row['servingLabel'] as String? ?? ''),
-              kcal: Value(_d(row['kcal'])),
-              proteinG: Value(_d(row['proteinG'])),
-              carbG: Value(_d(row['carbG'])),
-              fatG: Value(_d(row['fatG'])),
-              createdAt: Value(_date(row['createdAt'])),
-              archived: Value(row['archived'] as bool? ?? false),
-              hlc: Value(row['hlc'] as String?),
-              nodeId: Value(row['nodeId'] as String?),
-              isDeleted: Value(row['isDeleted'] as bool? ?? false),
-            ),
-          );
-      applied++;
-    }
-    return applied;
-  }
-
-  Future<int> _applySavedMeals(Object? section) async {
-    var applied = 0;
-    for (final row in _rows(section)) {
-      final id = row['id'] as String?;
-      if (id == null) continue;
-      final local = await (_db.select(_db.savedMeals)
-            ..where((m) => m.id.equals(id)))
-          .getSingleOrNull();
-      if (!_wins(row['hlc'] as String?, local?.hlc, local != null)) continue;
-      await _db.into(_db.savedMeals).insertOnConflictUpdate(
-            SavedMealsCompanion(
-              id: Value(id),
-              name: Value(row['name'] as String? ?? ''),
-              position: Value(row['position'] as int? ?? 0),
-              createdAt: Value(_date(row['createdAt'])),
-              lastUsedAt: Value(row['lastUsedAt'] == null
-                  ? null
-                  : _date(row['lastUsedAt'])),
-              archived: Value(row['archived'] as bool? ?? false),
-              hlc: Value(row['hlc'] as String?),
-              nodeId: Value(row['nodeId'] as String?),
-              isDeleted: Value(row['isDeleted'] as bool? ?? false),
-            ),
-          );
-      // Items travel with their meal: replace wholesale.
-      await (_db.delete(_db.savedMealItems)
-            ..where((i) => i.mealId.equals(id)))
-          .go();
-      for (final item in _rows(row['items'])) {
-        await _db.into(_db.savedMealItems).insert(SavedMealItemsCompanion(
-              id: Value(item['id'] as String? ?? '${id}_${applied}_i'),
-              mealId: Value(id),
-              position: Value(item['position'] as int? ?? 0),
-              foodKind: Value(_enumIndex(
-                  FoodKindDb.values, item['foodKind'], FoodKindDb.quick)),
-              usdaFdcId: Value(item['usdaFdcId'] as int?),
-              customFoodId: Value(item['customFoodId'] as String?),
-              label: Value(item['label'] as String? ?? ''),
-              qty: Value(_d(item['qty']) ?? 1),
-              unitLabel: Value(item['unitLabel'] as String? ?? 'serving'),
-              grams: Value(_d(item['grams'])),
-              kcal: Value(_d(item['kcal'])),
-              proteinG: Value(_d(item['proteinG'])),
-              carbG: Value(_d(item['carbG'])),
-              fatG: Value(_d(item['fatG'])),
-            ));
+      if (!_wins(row['hlc'] as String?,
+          local == null ? null : localHlc(local), local != null)) {
+        continue;
       }
+      await _db.into(table).insertOnConflictUpdate(toCompanion(id, row));
+      if (replaceChildren != null) await replaceChildren(id, row, applied);
       applied++;
     }
     return applied;
   }
 
-  Future<int> _applyRecipes(Object? section) async {
-    var applied = 0;
-    for (final row in _rows(section)) {
-      final id = row['id'] as String?;
-      if (id == null) continue;
-      final local = await (_db.select(_db.recipes)
-            ..where((r) => r.id.equals(id)))
-          .getSingleOrNull();
-      if (!_wins(row['hlc'] as String?, local?.hlc, local != null)) continue;
-      await _db.into(_db.recipes).insertOnConflictUpdate(
-            RecipesCompanion(
-              id: Value(id),
-              title: Value(row['title'] as String? ?? ''),
-              servings: Value(_d(row['servings'])),
-              sourceUrl: Value(row['sourceUrl'] as String?),
-              instructions: Value(row['instructions'] as String? ?? ''),
-              declaredKcal: Value(_d(row['declaredKcal'])),
-              declaredProteinG: Value(_d(row['declaredProteinG'])),
-              declaredCarbG: Value(_d(row['declaredCarbG'])),
-              declaredFatG: Value(_d(row['declaredFatG'])),
-              createdAt: Value(_date(row['createdAt'])),
-              archived: Value(row['archived'] as bool? ?? false),
-              hlc: Value(row['hlc'] as String?),
-              nodeId: Value(row['nodeId'] as String?),
-              isDeleted: Value(row['isDeleted'] as bool? ?? false),
-            ),
-          );
-      await (_db.delete(_db.recipeIngredients)
-            ..where((i) => i.recipeId.equals(id)))
-          .go();
-      for (final item in _rows(row['ingredients'])) {
-        await _db
-            .into(_db.recipeIngredients)
-            .insert(RecipeIngredientsCompanion(
-              id: Value(item['id'] as String? ?? '${id}_${applied}_i'),
-              recipeId: Value(id),
-              position: Value(item['position'] as int? ?? 0),
-              line: Value(item['line'] as String? ?? ''),
-              foodKind: Value(item['foodKind'] == null
-                  ? null
-                  : _enumIndex(
-                      FoodKindDb.values, item['foodKind'], FoodKindDb.quick)),
-              usdaFdcId: Value(item['usdaFdcId'] as int?),
-              customFoodId: Value(item['customFoodId'] as String?),
-              grams: Value(_d(item['grams'])),
-              kcal: Value(_d(item['kcal'])),
-              proteinG: Value(_d(item['proteinG'])),
-              carbG: Value(_d(item['carbG'])),
-              fatG: Value(_d(item['fatG'])),
-            ));
-      }
-      applied++;
+  /// Children travel with their parent as one unit: replace wholesale. A
+  /// child arriving without its own id gets a positional fallback derived
+  /// from the parent and the running applied count.
+  Future<void> _replaceChildrenOf<T extends Table, R>(
+    String parentId,
+    int applied,
+    Object? items,
+    TableInfo<T, R> table,
+    GeneratedColumn<String> parentColumn,
+    Insertable<R> Function(String childId, Map<String, dynamic> item)
+        toCompanion,
+  ) async {
+    await (_db.delete(table)..where((_) => parentColumn.equals(parentId)))
+        .go();
+    for (final item in _rows(items)) {
+      await _db.into(table).insert(toCompanion(
+          item['id'] as String? ?? '${parentId}_${applied}_i', item));
     }
-    return applied;
   }
 
-  Future<int> _applyPlanEntries(Object? section) async {
-    var applied = 0;
-    for (final row in _rows(section)) {
-      final id = row['id'] as String?;
-      if (id == null) continue;
-      final local = await (_db.select(_db.planEntries)
-            ..where((p) => p.id.equals(id)))
-          .getSingleOrNull();
-      if (!_wins(row['hlc'] as String?, local?.hlc, local != null)) continue;
-      await _db.into(_db.planEntries).insertOnConflictUpdate(
-            PlanEntriesCompanion(
-              id: Value(id),
-              day: Value(row['day'] as String? ?? ''),
-              slot: Value(_enumIndex(
-                  PlanSlotDb.values, row['slot'], PlanSlotDb.other)),
-              kind: Value(_enumIndex(
-                  PlanKindDb.values, row['kind'], PlanKindDb.note)),
-              refId: Value(row['refId'] as String?),
-              note: Value(row['note'] as String?),
-              hlc: Value(row['hlc'] as String?),
-              nodeId: Value(row['nodeId'] as String?),
-              isDeleted: Value(row['isDeleted'] as bool? ?? false),
-            ),
-          );
-      applied++;
-    }
-    return applied;
-  }
+  Future<int> _applyCustomFoods(Object? section) => _applySection(
+        section,
+        _db.customFoods,
+        (local) => local.hlc,
+        (id, row) => CustomFoodsCompanion(
+          id: Value(id),
+          name: Value(row['name'] as String? ?? ''),
+          servingLabel: Value(row['servingLabel'] as String? ?? ''),
+          kcal: Value(_d(row['kcal'])),
+          proteinG: Value(_d(row['proteinG'])),
+          carbG: Value(_d(row['carbG'])),
+          fatG: Value(_d(row['fatG'])),
+          createdAt: Value(_date(row['createdAt'])),
+          archived: Value(row['archived'] as bool? ?? false),
+          hlc: Value(row['hlc'] as String?),
+          nodeId: Value(row['nodeId'] as String?),
+          isDeleted: Value(row['isDeleted'] as bool? ?? false),
+        ),
+      );
 
-  Future<int> _applyGroceryItems(Object? section) async {
-    var applied = 0;
-    for (final row in _rows(section)) {
-      final id = row['id'] as String?;
-      if (id == null) continue;
-      final local = await (_db.select(_db.groceryItems)
-            ..where((g) => g.id.equals(id)))
-          .getSingleOrNull();
-      if (!_wins(row['hlc'] as String?, local?.hlc, local != null)) continue;
-      await _db.into(_db.groceryItems).insertOnConflictUpdate(
-            GroceryItemsCompanion(
-              id: Value(id),
-              name: Value(row['name'] as String? ?? ''),
-              aisle: Value(_enumIndex(
-                  GroceryAisleDb.values, row['aisle'], GroceryAisleDb.other)),
-              checked: Value(row['checked'] as bool? ?? false),
-              manual: Value(row['manual'] as bool? ?? false),
-              sourceRecipeId: Value(row['sourceRecipeId'] as String?),
-              createdAt: Value(_date(row['createdAt'])),
-              hlc: Value(row['hlc'] as String?),
-              nodeId: Value(row['nodeId'] as String?),
-              isDeleted: Value(row['isDeleted'] as bool? ?? false),
-            ),
-          );
-      applied++;
-    }
-    return applied;
-  }
+  Future<int> _applySavedMeals(Object? section) => _applySection(
+        section,
+        _db.savedMeals,
+        (local) => local.hlc,
+        (id, row) => SavedMealsCompanion(
+          id: Value(id),
+          name: Value(row['name'] as String? ?? ''),
+          position: Value(row['position'] as int? ?? 0),
+          createdAt: Value(_date(row['createdAt'])),
+          lastUsedAt: Value(row['lastUsedAt'] == null
+              ? null
+              : _date(row['lastUsedAt'])),
+          archived: Value(row['archived'] as bool? ?? false),
+          hlc: Value(row['hlc'] as String?),
+          nodeId: Value(row['nodeId'] as String?),
+          isDeleted: Value(row['isDeleted'] as bool? ?? false),
+        ),
+        // Items travel with their meal: replace wholesale.
+        replaceChildren: (id, row, applied) => _replaceChildrenOf(
+          id,
+          applied,
+          row['items'],
+          _db.savedMealItems,
+          _db.savedMealItems.mealId,
+          (childId, item) => SavedMealItemsCompanion(
+            id: Value(childId),
+            mealId: Value(id),
+            position: Value(item['position'] as int? ?? 0),
+            foodKind: Value(_enumIndex(
+                FoodKindDb.values, item['foodKind'], FoodKindDb.quick)),
+            usdaFdcId: Value(item['usdaFdcId'] as int?),
+            customFoodId: Value(item['customFoodId'] as String?),
+            label: Value(item['label'] as String? ?? ''),
+            qty: Value(_d(item['qty']) ?? 1),
+            unitLabel: Value(item['unitLabel'] as String? ?? 'serving'),
+            grams: Value(_d(item['grams'])),
+            kcal: Value(_d(item['kcal'])),
+            proteinG: Value(_d(item['proteinG'])),
+            carbG: Value(_d(item['carbG'])),
+            fatG: Value(_d(item['fatG'])),
+          ),
+        ),
+      );
+
+  Future<int> _applyRecipes(Object? section) => _applySection(
+        section,
+        _db.recipes,
+        (local) => local.hlc,
+        (id, row) => RecipesCompanion(
+          id: Value(id),
+          title: Value(row['title'] as String? ?? ''),
+          servings: Value(_d(row['servings'])),
+          sourceUrl: Value(row['sourceUrl'] as String?),
+          instructions: Value(row['instructions'] as String? ?? ''),
+          declaredKcal: Value(_d(row['declaredKcal'])),
+          declaredProteinG: Value(_d(row['declaredProteinG'])),
+          declaredCarbG: Value(_d(row['declaredCarbG'])),
+          declaredFatG: Value(_d(row['declaredFatG'])),
+          createdAt: Value(_date(row['createdAt'])),
+          archived: Value(row['archived'] as bool? ?? false),
+          hlc: Value(row['hlc'] as String?),
+          nodeId: Value(row['nodeId'] as String?),
+          isDeleted: Value(row['isDeleted'] as bool? ?? false),
+        ),
+        // Ingredients travel with their recipe: replace wholesale.
+        replaceChildren: (id, row, applied) => _replaceChildrenOf(
+          id,
+          applied,
+          row['ingredients'],
+          _db.recipeIngredients,
+          _db.recipeIngredients.recipeId,
+          (childId, item) => RecipeIngredientsCompanion(
+            id: Value(childId),
+            recipeId: Value(id),
+            position: Value(item['position'] as int? ?? 0),
+            line: Value(item['line'] as String? ?? ''),
+            foodKind: Value(item['foodKind'] == null
+                ? null
+                : _enumIndex(
+                    FoodKindDb.values, item['foodKind'], FoodKindDb.quick)),
+            usdaFdcId: Value(item['usdaFdcId'] as int?),
+            customFoodId: Value(item['customFoodId'] as String?),
+            grams: Value(_d(item['grams'])),
+            kcal: Value(_d(item['kcal'])),
+            proteinG: Value(_d(item['proteinG'])),
+            carbG: Value(_d(item['carbG'])),
+            fatG: Value(_d(item['fatG'])),
+          ),
+        ),
+      );
+
+  Future<int> _applyPlanEntries(Object? section) => _applySection(
+        section,
+        _db.planEntries,
+        (local) => local.hlc,
+        (id, row) => PlanEntriesCompanion(
+          id: Value(id),
+          day: Value(row['day'] as String? ?? ''),
+          slot: Value(_enumIndex(
+              PlanSlotDb.values, row['slot'], PlanSlotDb.other)),
+          kind: Value(_enumIndex(
+              PlanKindDb.values, row['kind'], PlanKindDb.note)),
+          refId: Value(row['refId'] as String?),
+          note: Value(row['note'] as String?),
+          hlc: Value(row['hlc'] as String?),
+          nodeId: Value(row['nodeId'] as String?),
+          isDeleted: Value(row['isDeleted'] as bool? ?? false),
+        ),
+      );
+
+  Future<int> _applyGroceryItems(Object? section) => _applySection(
+        section,
+        _db.groceryItems,
+        (local) => local.hlc,
+        (id, row) => GroceryItemsCompanion(
+          id: Value(id),
+          name: Value(row['name'] as String? ?? ''),
+          aisle: Value(_enumIndex(
+              GroceryAisleDb.values, row['aisle'], GroceryAisleDb.other)),
+          checked: Value(row['checked'] as bool? ?? false),
+          manual: Value(row['manual'] as bool? ?? false),
+          sourceRecipeId: Value(row['sourceRecipeId'] as String?),
+          createdAt: Value(_date(row['createdAt'])),
+          hlc: Value(row['hlc'] as String?),
+          nodeId: Value(row['nodeId'] as String?),
+          isDeleted: Value(row['isDeleted'] as bool? ?? false),
+        ),
+      );
 
   // ── Tolerant decoding ────────────────────────────────────────────────────
 
