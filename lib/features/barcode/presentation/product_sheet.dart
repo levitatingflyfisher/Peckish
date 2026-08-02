@@ -11,18 +11,24 @@ import 'package:uuid/uuid.dart';
 /// until the user confirms the grams. What lands is a snapshot scaled to
 /// that amount, provenance `scan`. Resolves true when a line was logged,
 /// null/false on dismiss — the scan screen pops itself on a log.
-Future<bool?> showProductSheet(BuildContext context, OffProduct product) =>
+///
+/// [sourceNote] names where the answer came from ("From your phone — USDA
+/// database" / "From openfoodfacts.org") — the per-answer face of
+/// ADR-0010's per-source crediting.
+Future<bool?> showProductSheet(BuildContext context, OffProduct product,
+        {String? sourceNote}) =>
     showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      builder: (_) => _ProductSheet(product: product),
+      builder: (_) => _ProductSheet(product: product, sourceNote: sourceNote),
     );
 
 class _ProductSheet extends ConsumerStatefulWidget {
-  const _ProductSheet({required this.product});
+  const _ProductSheet({required this.product, this.sourceNote});
 
   final OffProduct product;
+  final String? sourceNote;
 
   @override
   ConsumerState<_ProductSheet> createState() => _ProductSheetState();
@@ -66,6 +72,12 @@ class _ProductSheetState extends ConsumerState<_ProductSheet> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(product.displayName, style: theme.textTheme.titleLarge),
+          if (widget.sourceNote != null)
+            Padding(
+              padding: const EdgeInsets.only(top: AppSpacing.xs),
+              child: Text(widget.sourceNote!,
+                  style: theme.textTheme.bodySmall),
+            ),
           if (product.servingLabel != null)
             Padding(
               padding: const EdgeInsets.only(top: AppSpacing.xs),

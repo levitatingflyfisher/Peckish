@@ -1,9 +1,14 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:peckish/features/barcode/data/barcode_resolver.dart';
+import 'package:peckish/features/barcode/data/barcode_resolver_provider.dart';
 import 'package:peckish/features/barcode/data/off_client.dart';
 import 'package:peckish/features/barcode/domain/barcode_code.dart';
+import 'package:peckish/features/barcode/domain/off_product.dart';
 import 'package:peckish/features/barcode/presentation/barcode_sketch.dart';
 import 'package:peckish/features/barcode/presentation/product_sheet.dart';
 import 'package:peckish/features/barcode/presentation/scan_mode_store.dart';
@@ -15,9 +20,13 @@ final offClientProvider = Provider<OffClient>((ref) => OffClient());
 
 /// Scan a barcode (camera, where there is one) or type the digits under the
 /// bars (everywhere). Camera platforms get a Scan/Type toggle — Type it
-/// unmounts the camera entirely — and the choice is remembered. One code =
-/// one request to Open Food Facts = one confirm-before-commit sheet.
-/// Failures are states with next steps, not errors.
+/// unmounts the camera entirely — and the choice is remembered.
+///
+/// ADR-0010's law: the phone answers first. A code resolves against the
+/// downloaded slices; a local hit opens the confirm sheet with zero
+/// network. A miss is a STATE offering an explicit "Ask openfoodfacts.org"
+/// button — no code path in this screen reaches the network without that
+/// tap. Failures are states with next steps, not errors.
 class ScanScreen extends ConsumerStatefulWidget {
   const ScanScreen({super.key, this.debugCameraOverride});
 
@@ -35,6 +44,14 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
   bool _busy = false; // lookup in flight → spinner + disabled field
   bool _sheetOpen = false; // confirm sheet up → repeat scans are swallowed
   String? _message;
+
+  /// The code the local slices didn't know, held so the Ask button can
+  /// forward it unchanged. Non-null = the miss state is showing.
+  BarcodeCode? _missCode;
+
+  /// Whether any slice was actually consulted for [_missCode] — false
+  /// truthfully points the miss at the offline download instead.
+  bool _missAnyLocalDb = false;
 
   /// Null while the remembered choice loads (camera platforms): the camera
   /// must not warm up in that gap for a user who chose typing.
@@ -67,6 +84,7 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
     setState(() {
       _mode = mode;
       _message = null;
+      _missCode = null;
     });
     unawaited(ref.read(scanModeStoreProvider).save(mode));
   }
@@ -137,6 +155,21 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
                       child: Text(_message!,
                           style: theme.textTheme.bodyMedium),
                     ),
+                  // The miss state: the network is a question, asked out
+                  // loud. Nothing fetches until this button is tapped.
+                  if (_missCode != null) ...[
+                    OutlinedButton(
+                      onPressed: _busy ? null : _askOnline,
+                      child: const Text('Ask openfoodfacts.org'),
+                    ),
+                    // Web has no local slices (ADR-0010): no pointer there.
+                    if (!_missAnyLocalDb && !kIsWeb)
+                      TextButton(
+                        onPressed: () => context.push('/barcode-db'),
+                        child: const Text('Get the offline database'),
+                      ),
+                    const SizedBox(height: AppSpacing.sm),
+                  ],
                   TextField(
                     controller: _controller,
                     enabled: !_busy && !_sheetOpen,
@@ -213,37 +246,82 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
     setState(() {
       _busy = true;
       _message = null;
+      _missCode = null;
     });
+    // The phone answers first — and only the phone. The one network path
+    // in this screen is _askOnline, behind its explicit tap.
+    final resolution =
+        await ref.read(barcodeResolverProvider).resolveLocal(code);
+    if (!mounted) return;
+    switch (resolution) {
+      case BarcodeHit(:final product, :final sourceId):
+        await _openSheet(product, sourceNote: _sourceNote(sourceId));
+      case BarcodeMiss(:final anyLocalDb):
+        setState(() {
+          _busy = false;
+          _missCode = code;
+          _missAnyLocalDb = anyLocalDb;
+          _message = anyLocalDb
+              ? "Not in your phone's food database."
+              : "Peckish hasn't looked this up — barcode answers can live "
+                  'on your phone.';
+        });
+    }
+  }
+
+  /// The one sanctioned network path: the user tapped Ask, so this code —
+  /// the 13 digits, nothing else — goes to Open Food Facts once.
+  Future<void> _askOnline() async {
+    final code = _missCode;
+    if (code == null || _busy || _sheetOpen) return;
+    setState(() => _busy = true);
     try {
-      final product =
-          await ref.read(offClientProvider).fetchProduct(code);
+      final product = await ref.read(offClientProvider).fetchProduct(code);
       if (!mounted) return;
-      // Latch held across the sheet's whole lifetime: the camera keeps
-      // decoding underneath and must not stack a second sheet. Kept apart
-      // from _busy so no spinner runs under the open sheet.
-      setState(() {
-        _busy = false;
-        _sheetOpen = true;
-      });
-      final logged = await showProductSheet(context, product);
-      if (!mounted) return;
-      setState(() => _sheetOpen = false);
-      // A log finishes the errand — back to where the user came from.
-      if (logged == true) Navigator.of(context).pop();
+      await _openSheet(product, sourceNote: 'From openfoodfacts.org');
     } on OffProductNotFound {
       if (!mounted) return;
       setState(() {
         _busy = false;
+        _missCode = null;
         _message =
             "This one's not in the shared database yet. Quick add it with "
             'the numbers from the label — takes ten seconds.';
       });
     } on OffLookupException catch (e) {
       if (!mounted) return;
+      // The miss state stays up: a flaky connection deserves a second tap
+      // without rescanning.
       setState(() {
         _busy = false;
         _message = e.message;
       });
     }
   }
+
+  Future<void> _openSheet(OffProduct product, {String? sourceNote}) async {
+    // Latch held across the sheet's whole lifetime: the camera keeps
+    // decoding underneath and must not stack a second sheet. Kept apart
+    // from _busy so no spinner runs under the open sheet.
+    setState(() {
+      _busy = false;
+      _sheetOpen = true;
+      _missCode = null;
+      _message = null;
+    });
+    final logged =
+        await showProductSheet(context, product, sourceNote: sourceNote);
+    if (!mounted) return;
+    setState(() => _sheetOpen = false);
+    // A log finishes the errand — back to where the user came from.
+    if (logged == true) Navigator.of(context).pop();
+  }
+
+  /// Credits the slice that answered — ODbL wants attribution pinned to
+  /// the OFF data (ADR-0010).
+  static String _sourceNote(String sourceId) => switch (sourceId) {
+        'usda' => 'From your phone — USDA database',
+        'off_us' => 'From your phone — Open Food Facts',
+        _ => 'From your phone',
+      };
 }
