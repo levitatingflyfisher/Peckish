@@ -13,6 +13,7 @@
 - [Answer barcode scans on the phone](how-to/offline-barcode-databases.md)
 - [Sync the household](how-to/household-sync.md)
 - [Regenerate the bundled USDA spine](../tool/usda/README.md)
+- [Regenerate the offline barcode databases](../tool/barcode_db/README.md)
 
 ## Reference
 - [The permission surface](reference/permissions.md)
