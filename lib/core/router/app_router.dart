@@ -9,6 +9,7 @@ import 'package:peckish/features/diary/presentation/today_screen.dart';
 import 'package:peckish/features/groceries/presentation/groceries_screen.dart';
 import 'package:peckish/features/plan/presentation/plan_screen.dart';
 import 'package:peckish/features/recipes/presentation/recipes_screen.dart';
+import 'package:peckish/features/barcode/presentation/barcode_db_screen.dart';
 import 'package:peckish/features/barcode/presentation/scan_screen.dart';
 import 'package:peckish/features/food/presentation/foods_screen.dart';
 import 'package:peckish/features/settings/presentation/privacy_screen.dart';
@@ -74,6 +75,11 @@ GoRouter appRouter(Ref ref) {
         path: '/scan',
         pageBuilder: (c, s) =>
             _fade(key: s.pageKey, child: const ScanScreen()),
+      ),
+      GoRoute(
+        path: '/barcode-db',
+        pageBuilder: (c, s) =>
+            _fade(key: s.pageKey, child: const BarcodeDbScreen()),
       ),
       GoRoute(
         path: '/foods',

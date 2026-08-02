@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -79,6 +80,16 @@ class SettingsScreen extends ConsumerWidget {
               );
             },
           ),
+          // Web has no local slices (ADR-0010): the tile would promise a
+          // phone-side answer the platform can't keep.
+          if (!kIsWeb)
+            ListTile(
+              leading: const Icon(Icons.qr_code_2_outlined),
+              title: const Text('Offline barcode lookup'),
+              subtitle: const Text(
+                  'Answer scans from this phone — nothing leaves.'),
+              onTap: () => context.push('/barcode-db'),
+            ),
           ListTile(
             leading: const Icon(Icons.delete_outline),
             title: const Text('Erase all data'),
