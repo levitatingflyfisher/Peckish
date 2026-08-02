@@ -40,6 +40,6 @@ one local-first, no-accounts app.
 | Ingredient→food matching for computed recipe nutrition | **Schema shipped, UI minimal** — declared (site) nutrition works today; hand-matching lines is future polish |
 | Family shared plan/groceries across devices | **Shipped v0.2 (LAN)** — encrypted Wi-Fi pairing, HLC last-write-wins with tombstones (ADR-0006); diaries and targets never leave a device. Internet sync (CRDT over a blind relay) remains not built |
 | Barcode scanning (offline-first) | **Shipped v0.7** — camera scan + typed digits, answered from downloadable USDA/OFF database slices on the phone (ADR-0010); the network is a question — one Open Food Facts lookup per explicit "Ask openfoodfacts.org" tap |
-| AI meal guesstimate (local model / BYOK) | **Shipped** — BYOK v0.2, fully on-device model v0.5 (Qwen via flutter_gemma, ADR-0009); the parser drafts and you confirm — every logged line carries `ai` provenance |
+| AI meal guesstimate (on-phone / household stove / BYOK) | **Shipped** — BYOK v0.2, fully on-device model v0.5 (Qwen via flutter_gemma, ADR-0009), and the **household stove**: the same ask answered by a far larger model on the family's own desktop, over domovoi's encrypted protocol keyed by the household phrase. The parser drafts and you confirm — every logged line carries `ai` provenance |
 | Plate photo → draft lines (on-device CV) | **Shipped v0.5** — ML Kit labeler, Android; labels are hand-mapped through the bundled spine or skipped, never guessed |
 | iOS | Not planned (fleet convention: Android + PWA) |

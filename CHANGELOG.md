@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- **Ask the household stove.** Settings → AI gains a third place for the
+  guess to think: a model running on your own desktop, reached over an
+  encrypted channel keyed by the same household phrase you use for
+  backups. The phone's small parser gives up on rambling meals; the
+  desktop's larger one doesn't — and the honest privacy answer is
+  unchanged, because nothing left the house.
+
 ## 0.7.1 — the potato pass
 
 No new features — the same app, faster, smaller, and truer, tuned to

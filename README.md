@@ -29,10 +29,11 @@ ads, no tracking, no subscriptions.
   downloadable offline databases on your phone; a code they don't know
   shows one button, "Ask openfoodfacts.org", and only that tap sends the
   digits.
-- **Guess it** — describe the meal, or snap the plate (Android), and
-  on-device AI drafts lines you prune and confirm — a downloaded local
-  model or your own key; ships off, and every AI-drafted line carries its
-  provenance.
+- **Guess it** — describe the meal, or snap the plate (Android), and AI
+  drafts lines you prune and confirm. Pick where it thinks: a model
+  downloaded to the phone, your household's own desktop over an
+  encrypted LAN channel, or your own cloud key. Ships off; every
+  AI-drafted line carries its provenance.
 - **The household kitchen** — recipes, the plan, groceries, custom foods
   and saved meals can sync over an encrypted pairing on your own Wi-Fi;
   diaries and targets never leave their device.
