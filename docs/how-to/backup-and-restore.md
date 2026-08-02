@@ -10,8 +10,8 @@ replace, and only then writes. Restores are atomic: a failure partway leaves
 current data untouched.
 
 **Plain export** — a readable JSON copy of everything (diary, foods, meals,
-recipes, plan, groceries, targets). The file is the interface: keep it,
-grep it, move it.
+recipes, plan, groceries, targets, regulars). The file is the interface:
+keep it, grep it, move it.
 
 **Erase all data** — deletes the user tables, keeps your theme and the
 built-in food database. The confirmation lists what goes; the list is

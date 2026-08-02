@@ -23,5 +23,11 @@ unchecked generated lines follow the plan wholesale. The aisle classifier is
 deliberately dumb — a roughly-sorted list beats an unsorted one, and the
 user out-ranks the classifier by simply not caring.
 
+**The network is a question, never a reflex.** Nothing looks anything up
+by itself: a pasted URL fetches, a tapped Download downloads, a scanned
+barcode that misses the phone's own databases shows a button that names
+where the digits would go. The privacy screen (Settings → What leaves your
+device) is the contract; ADR-0010 is the fullest expression.
+
 **CRUD completeness is table stakes.** Everything visible can be edited,
 deleted, archived, or reset. Forgiveness over prevention applies to data.

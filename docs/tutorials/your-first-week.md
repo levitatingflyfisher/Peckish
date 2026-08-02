@@ -13,10 +13,12 @@
 **If you want your own numbers** (entirely optional):
 
 4. On **Today**, tap **+** and log what you actually eat for a day or two —
-   search works offline over 13,652 foods. Your regulars appear on the
-   recents rail; from then on, logging them is one tap.
+   search works offline over 13,652 foods, or scan a package's barcode.
+   Your regulars appear on the recents rail; from then on, logging them
+   is one tap.
 5. Build a saved meal for your standing order (the whole Panda run, one
-   tap), and set static targets in the + sheet's totals if numbers help.
+   tap). If numbers help, set targets in Settings → **Your day** — each
+   gets a role: a floor, a budget, or a land-near.
 
 That's the entire system. The app never pings you, never scores you, and
 works in airplane mode.
