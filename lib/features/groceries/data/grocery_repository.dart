@@ -48,6 +48,27 @@ class GroceryRepository {
         ));
   }
 
+  /// Re-insert a whole item verbatim (the backup-restore path): every field
+  /// survives as exported, and the write is stamped like any other so the
+  /// restored row can travel to peers instead of only ever filling holes.
+  Future<void> upsert(GroceryItem item) async {
+    final s = await _clock.stamp();
+    await _db.into(_db.groceryItems).insertOnConflictUpdate(
+          GroceryItemsCompanion(
+            id: Value(item.id),
+            name: Value(item.name),
+            aisle: Value(GroceryAisleDb.values[item.aisle.index]),
+            checked: Value(item.checked),
+            manual: Value(item.manual),
+            sourceRecipeId: Value(item.sourceRecipeId),
+            createdAt: Value(item.createdAt),
+            hlc: Value(s.hlc),
+            nodeId: Value(s.nodeId),
+            isDeleted: const Value(false),
+          ),
+        );
+  }
+
   Future<void> setChecked(String id, {required bool checked}) async {
     final s = await _clock.stamp();
     await (_db.update(_db.groceryItems)..where((g) => g.id.equals(id)))

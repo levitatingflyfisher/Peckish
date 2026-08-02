@@ -41,6 +41,31 @@ class PlanRepository {
     ));
   }
 
+  /// Every live cell, for the export/backup snapshot. Mirrors
+  /// `GroceryRepository.getAll`: the tombstone filter lives HERE, so a
+  /// backup can never carry a deletion out as a live row. Titles stay
+  /// unresolved — they are read-side display only and the export omits them.
+  Future<List<PlanEntry>> getAll() async {
+    final rows = await (_db.select(_db.planEntries)
+          ..where((p) => p.isDeleted.equals(false))
+          ..orderBy([
+            (p) => OrderingTerm.asc(p.day),
+            (p) => OrderingTerm.asc(p.slot),
+          ]))
+        .get();
+    return [
+      for (final r in rows)
+        PlanEntry(
+          id: r.id,
+          day: r.day,
+          slot: PlanSlot.values[r.slot.index],
+          kind: PlanKind.values[r.kind.index],
+          refId: r.refId,
+          note: r.note,
+        ),
+    ];
+  }
+
   Future<List<PlanEntry>> entriesForDays(List<String> days) async {
     if (days.isEmpty) return const [];
     final rows = await (_db.select(_db.planEntries)

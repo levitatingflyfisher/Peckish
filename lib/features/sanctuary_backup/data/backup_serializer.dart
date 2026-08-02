@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:drift/drift.dart' show Value;
 import 'package:flutter/foundation.dart';
 import 'package:sanctuary_backup_ui/sanctuary_backup_ui.dart';
 
@@ -10,8 +9,8 @@ import '../../diary/data/saved_meal_repository.dart';
 import '../../diary/data/targets_repository.dart';
 import '../../food/data/custom_food_repository.dart';
 import '../../food/data/food_usage_repository.dart';
-import '../../groceries/domain/grocery_item.dart';
-import '../../plan/domain/plan_entry.dart';
+import '../../groceries/data/grocery_repository.dart';
+import '../../plan/data/plan_repository.dart';
 import '../../recipes/data/recipe_repository.dart';
 import '../../settings/data/export_serializer.dart';
 
@@ -50,29 +49,11 @@ class PeckishBackupSerializer
       savedMeals:
           await SavedMealRepository(_db).getAll(includeArchived: true),
       recipes: await RecipeRepository(_db).getAll(includeArchived: true),
-      planEntries: [
-        for (final r in await (_db.select(_db.planEntries)).get())
-          PlanEntry(
-            id: r.id,
-            day: r.day,
-            slot: PlanSlot.values[r.slot.index],
-            kind: PlanKind.values[r.kind.index],
-            refId: r.refId,
-            note: r.note,
-          ),
-      ],
-      groceryItems: [
-        for (final r in await (_db.select(_db.groceryItems)).get())
-          GroceryItem(
-            id: r.id,
-            name: r.name,
-            aisle: GroceryAisle.values[r.aisle.index],
-            checked: r.checked,
-            manual: r.manual,
-            sourceRecipeId: r.sourceRecipeId,
-            createdAt: r.createdAt,
-          ),
-      ],
+      // Through the repositories, never raw selects: their getAll filters
+      // tombstoned rows, which are sync deletions — not user data. (v0.6
+      // exported them as live groceries and plan cells.)
+      planEntries: await PlanRepository(_db).getAll(),
+      groceryItems: await GroceryRepository(_db).getAll(),
       foodUsages: await FoodUsageRepository(_db).getAll(),
       targets: await TargetsRepository(_db).get(),
     );
@@ -131,26 +112,17 @@ class PeckishBackupSerializer
       for (final recipe in export.recipes) {
         await recipes.create(recipe);
       }
+      // Through the repositories, never raw companions: their write paths
+      // HLC-stamp every row, so a restored plan/grocery can travel to peers.
+      // (v0.6 inserted them unstamped — invisible to LWW until the
+      // stampUnstamped backfill happened to run.)
+      final plan = PlanRepository(_db);
       for (final p in export.planEntries) {
-        await _db.into(_db.planEntries).insert(PlanEntriesCompanion(
-              id: Value(p.id),
-              day: Value(p.day),
-              slot: Value(PlanSlotDb.values[p.slot.index]),
-              kind: Value(PlanKindDb.values[p.kind.index]),
-              refId: Value(p.refId),
-              note: Value(p.note),
-            ));
+        await plan.upsert(p);
       }
+      final groceries = GroceryRepository(_db);
       for (final g in export.groceryItems) {
-        await _db.into(_db.groceryItems).insert(GroceryItemsCompanion(
-              id: Value(g.id),
-              name: Value(g.name),
-              aisle: Value(GroceryAisleDb.values[g.aisle.index]),
-              checked: Value(g.checked),
-              manual: Value(g.manual),
-              sourceRecipeId: Value(g.sourceRecipeId),
-              createdAt: Value(g.createdAt),
-            ));
+        await groceries.upsert(g);
       }
       // Last, after the diary replay: replayed logs re-derive usage rows,
       // and the exported regulars (true counts + hidden flags — not

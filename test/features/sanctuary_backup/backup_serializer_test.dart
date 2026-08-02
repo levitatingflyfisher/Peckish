@@ -1,8 +1,13 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:peckish/core/storage/app_database.dart';
+import 'package:peckish/features/groceries/data/grocery_repository.dart';
+import 'package:peckish/features/plan/data/plan_repository.dart';
+import 'package:peckish/features/plan/domain/plan_entry.dart';
+import 'package:peckish/features/sync/data/sync_engine.dart';
 import 'package:peckish/features/diary/data/diary_repository.dart';
 import 'package:peckish/features/diary/data/saved_meal_repository.dart';
 import 'package:peckish/features/diary/data/targets_repository.dart';
@@ -95,6 +100,85 @@ void main() {
     expect(restored.single.identityKey, 'c:cf-1');
     expect(restored.single.hidden, isTrue,
         reason: 'the exported regular overrides the replay-derived row');
+  });
+
+  // v0.6 shipped a bug here: snapshot() and restoreAll() hand-mapped the
+  // plan/grocery tables instead of going through their repositories — so a
+  // tombstoned (deleted) row was exported as LIVE, and restored rows came
+  // back UNSTAMPED (invisible to LWW sync until the stampUnstamped
+  // backfill). The serializer now routes through PlanRepository /
+  // GroceryRepository, inheriting their isDeleted filter and HLC stamping.
+  group('tombstones and stamping:', () {
+    test('a deleted grocery item does not ride along in the export',
+        () async {
+      final db = AppDatabase(NativeDatabase.memory());
+      addTearDown(db.close);
+      final groceries = GroceryRepository(db);
+      await groceries.addManual('Bananas');
+      await groceries.addManual('Regretted kombucha');
+      final doomed = (await groceries.getAll())
+          .firstWhere((g) => g.name == 'Regretted kombucha');
+      await groceries.remove(doomed.id);
+
+      final json = utf8.decode(await PeckishBackupSerializer(db).dumpAll());
+      expect(json, contains('Bananas'),
+          reason: 'live rows still export');
+      expect(json, isNot(contains('Regretted kombucha')),
+          reason: 'a tombstone is a deletion, not a grocery');
+    });
+
+    test('a removed plan cell does not ride along in the export', () async {
+      final db = AppDatabase(NativeDatabase.memory());
+      addTearDown(db.close);
+      final plan = PlanRepository(db);
+      await plan.upsert(const PlanEntry(
+          id: 'p-live',
+          day: '2026-08-03',
+          slot: PlanSlot.dinner,
+          kind: PlanKind.note,
+          note: 'Tacos'));
+      await plan.upsert(const PlanEntry(
+          id: 'p-doomed',
+          day: '2026-08-04',
+          slot: PlanSlot.dinner,
+          kind: PlanKind.note,
+          note: 'Cancelled fondue'));
+      await plan.remove('p-doomed');
+
+      final json = utf8.decode(await PeckishBackupSerializer(db).dumpAll());
+      expect(json, contains('Tacos'), reason: 'live cells still export');
+      expect(json, isNot(contains('Cancelled fondue')),
+          reason: 'a removed cell must not restore as a live plan');
+      expect(json, isNot(contains('p-doomed')));
+    });
+
+    test('restored plan and grocery rows come back stamped for sync',
+        () async {
+      final db = AppDatabase(NativeDatabase.memory());
+      addTearDown(db.close);
+      final serializer = PeckishBackupSerializer(db);
+      await GroceryRepository(db).addManual('Milk');
+      await PlanRepository(db).upsert(const PlanEntry(
+          id: 'p-1',
+          day: '2026-08-03',
+          slot: PlanSlot.lunch,
+          kind: PlanKind.note,
+          note: 'Leftovers'));
+
+      final blob = await serializer.dumpAll();
+      await db.eraseUserData();
+      await serializer.restoreAll(blob);
+
+      final grocery = await db.select(db.groceryItems).getSingle();
+      expect(grocery.hlc, isNotEmpty,
+          reason: 'an unstamped row can only ever fill a hole on a peer');
+      expect(grocery.nodeId, isNotEmpty);
+      final cell = await db.select(db.planEntries).getSingle();
+      expect(cell.hlc, isNotEmpty);
+      expect(cell.nodeId, isNotEmpty);
+      expect(await SyncEngine(db).stampUnstamped(), 0,
+          reason: 'a restore leaves nothing for the backfill to find');
+    });
   });
 
   test('restore refuses a blob from a different app', () async {
