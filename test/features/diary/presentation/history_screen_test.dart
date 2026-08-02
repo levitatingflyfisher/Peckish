@@ -106,6 +106,58 @@ void main() {
     await unmount(tester);
   });
 
+  testWidgets('the chart speaks every macro, not just kcal', (tester) async {
+    await tester.runAsync(() async {
+      await TargetsRepository(db).set(const DailyTargets(
+          values: MacroSet(proteinG: 150))); // floor by default
+      await DiaryRepository(db).log(entry('e-1', dayAgo(0),
+          const MacroSet(kcal: 1820, proteinG: 82)));
+    });
+    await tester.pumpWidget(host());
+    await tester.pumpAndSettle();
+
+    // kcal view first: compact value label on the bar, no kcal target set.
+    expect(find.text('1.8k'), findsOneWidget,
+        reason: 'kcal value labels ride their bars, compacted');
+    expect(find.textContaining('protein target'), findsNothing);
+
+    await tester.tap(find.text('Protein'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('82'), findsOneWidget,
+        reason: 'the protein view labels bars in grams');
+    expect(find.text('1.8k'), findsNothing,
+        reason: 'one axis at a time');
+    expect(find.text('≥150g protein target'), findsOneWidget,
+        reason: 'the target line wears its role mark, per axis');
+    await unmount(tester);
+  });
+
+  testWidgets('tapping a bar opens that day', (tester) async {
+    final day = dayAgo(1);
+    await tester.runAsync(() => DiaryRepository(db).log(entry(
+        'e-1', day, const MacroSet(kcal: 700),
+        label: 'Bar-tap stew')));
+
+    await tester.pumpWidget(ProviderScope(
+      overrides: [appDatabaseProvider.overrideWithValue(db)],
+      child: Consumer(
+        builder: (context, ref, _) => MaterialApp.router(
+          theme: AppTheme.light,
+          routerConfig: ref.watch(appRouterProvider),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('History'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(ValueKey('bar-$day')));
+    await tester.pumpAndSettle();
+    expect(find.text('Bar-tap stew'), findsOneWidget);
+    await unmount(tester);
+  });
+
   testWidgets('a past day opens to its own plate', (tester) async {
     await tester.runAsync(() => DiaryRepository(db).log(entry(
         'e-1', dayAgo(1), const MacroSet(kcal: 700),

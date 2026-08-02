@@ -65,7 +65,7 @@ class HistoryScreen extends ConsumerWidget {
               ),
             )
           else ...[
-            _WeekBars(week: week, totals: totals, targets: targets),
+            _Chart(week: week, totals: totals, targets: targets),
             const SizedBox(height: AppSpacing.sm),
             _WeekStats(logged: loggedWeek),
             const SizedBox(height: AppSpacing.lg),
@@ -95,10 +95,13 @@ final _dayEntriesProvider = StreamProvider.autoDispose
     .family((ref, String day) =>
         ref.watch(diaryRepositoryProvider).watchEntriesForDay(day));
 
-/// Seven simple bars, oldest → newest, today accented. Plain boxes, not a
-/// chart library: theme-aware, nothing to configure, nothing to bloat.
-class _WeekBars extends StatelessWidget {
-  const _WeekBars(
+/// The week, one macro at a time: a segmented axis picker over seven
+/// tappable bars (each opens its day), value labels riding the bars, and
+/// the selected axis's target drawn as a line wearing its role mark.
+/// Still plain boxes — theme-aware, nothing to configure, nothing to
+/// bloat.
+class _Chart extends StatefulWidget {
+  const _Chart(
       {required this.week, required this.totals, required this.targets});
 
   final List<String> week; // newest first
@@ -106,58 +109,91 @@ class _WeekBars extends StatelessWidget {
   final DailyTargets targets;
 
   @override
+  State<_Chart> createState() => _ChartState();
+}
+
+class _ChartState extends State<_Chart> {
+  String _axis = 'kcal';
+
+  static const _axes = ['kcal', 'Protein', 'Carbs', 'Fat'];
+
+  double? _of(MacroSet? m) => switch (_axis) {
+        'Protein' => m?.proteinG,
+        'Carbs' => m?.carbG,
+        'Fat' => m?.fatG,
+        _ => m?.kcal,
+      };
+
+  double? get _target => switch (_axis) {
+        'Protein' => widget.targets.values.proteinG,
+        'Carbs' => widget.targets.values.carbG,
+        'Fat' => widget.targets.values.fatG,
+        _ => widget.targets.values.kcal,
+      };
+
+  TargetRole get _role => switch (_axis) {
+        'Protein' => widget.targets.resolvedProteinRole,
+        'Carbs' => widget.targets.resolvedCarbRole,
+        'Fat' => widget.targets.resolvedFatRole,
+        _ => widget.targets.resolvedKcalRole,
+      };
+
+  /// '1.8k' for four-digit kcal, plain rounds otherwise — a label, not a
+  /// spreadsheet cell.
+  String _fmt(double v) => _axis == 'kcal' && v >= 1000
+      ? '${(v / 1000).toStringAsFixed(1)}k'
+      : v.round().toString();
+
+  @override
   Widget build(BuildContext context) {
-    final ordered = week.reversed.toList();
-    final target = targets.values.kcal;
+    final theme = Theme.of(context);
+    final ordered = widget.week.reversed.toList();
+    final target = _target;
     var scale = target ?? 0;
     for (final d in ordered) {
-      final k = totals[d]?.kcal ?? 0;
-      if (k > scale) scale = k;
+      final v = _of(widget.totals[d]) ?? 0;
+      if (v > scale) scale = v;
     }
     if (scale <= 0) scale = 1;
-
-    final targetFraction = target == null ? null : target / (scale * 1.1);
-    final mark = switch (targets.resolvedKcalRole) {
+    final ceiling = scale * 1.15;
+    final targetFraction = target == null ? null : target / ceiling;
+    final mark = switch (_role) {
       TargetRole.about => '',
       TargetRole.atLeast => '≥',
       TargetRole.under => '≤',
     };
+    final unit = _axis == 'kcal' ? ' kcal' : 'g ${_axis.toLowerCase()}';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        SegmentedButton<String>(
+          segments: [
+            for (final a in _axes)
+              ButtonSegment(value: a, label: Text(a)),
+          ],
+          selected: {_axis},
+          showSelectedIcon: false,
+          style: const ButtonStyle(
+              visualDensity: VisualDensity.compact,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+          onSelectionChanged: (s) => setState(() => _axis = s.first),
+        ),
+        const SizedBox(height: AppSpacing.md),
         SizedBox(
-          height: 120,
+          height: 160,
           child: Stack(
             children: [
               Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  for (final d in ordered)
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 3),
-                        child: FractionallySizedBox(
-                          heightFactor: ((totals[d]?.kcal ?? 0) /
-                                  (scale * 1.1))
-                              .clamp(0.0, 1.0),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: d == week.first
-                                  ? AppColors.paprika
-                                  : AppColors.paprika.withValues(alpha: 0.45),
-                              borderRadius: const BorderRadius.vertical(
-                                  top: Radius.circular(4)),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
+                  for (final d in ordered) _bar(context, theme, d, ceiling),
                 ],
               ),
               if (targetFraction != null)
                 Align(
-                  alignment: Alignment(0, 1 - 2 * targetFraction.clamp(0.0, 1.0)),
+                  alignment:
+                      Alignment(0, 1 - 2 * targetFraction.clamp(0.0, 1.0)),
                   child: Container(height: 1.5, color: AppColors.stone),
                 ),
             ],
@@ -171,9 +207,7 @@ class _WeekBars extends StatelessWidget {
                 child: Text(
                   weekdayLetters[DateTime.parse(d).weekday - 1],
                   textAlign: TextAlign.center,
-                  style: Theme.of(context)
-                      .textTheme
-                      .labelSmall
+                  style: theme.textTheme.labelSmall
                       ?.copyWith(color: AppColors.stone),
                 ),
               ),
@@ -183,15 +217,53 @@ class _WeekBars extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(top: AppSpacing.xs),
             child: Text(
-              '$mark${target.round()} kcal target',
+              '$mark${target.round()}$unit target',
               textAlign: TextAlign.end,
-              style: Theme.of(context)
-                  .textTheme
-                  .labelSmall
+              style: theme.textTheme.labelSmall
                   ?.copyWith(color: AppColors.stone),
             ),
           ),
       ],
+    );
+  }
+
+  Widget _bar(
+      BuildContext context, ThemeData theme, String day, double ceiling) {
+    final value = _of(widget.totals[day]);
+    final fraction = ((value ?? 0) / ceiling).clamp(0.0, 1.0);
+    final barFlex = (fraction * 1000).round();
+    final isToday = day == widget.week.first;
+    return Expanded(
+      child: InkWell(
+        key: ValueKey('bar-$day'),
+        onTap: () => context.push('/history/$day'),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 3),
+          child: Column(
+            children: [
+              Spacer(flex: (1000 - barFlex).clamp(1, 1000)),
+              if (value != null)
+                Text(_fmt(value),
+                    style: theme.textTheme.labelSmall
+                        ?.copyWith(color: AppColors.stone)),
+              const SizedBox(height: 2),
+              Expanded(
+                flex: barFlex.clamp(1, 1000),
+                child: Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: isToday
+                        ? AppColors.paprika
+                        : AppColors.paprika.withValues(alpha: 0.45),
+                    borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(4)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
