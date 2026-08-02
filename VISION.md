@@ -35,10 +35,11 @@ one local-first, no-accounts app.
 | Offline food search over 13,652 USDA foods | **Shipped** — bundled CC0 spine, version-stamped import |
 | Recipe box with paste-a-URL import | **Shipped** — generic schema.org extractor; per-site long tail NOT covered (recipe-scrapers has 649 subclasses for a reason); manual entry is the honest fallback |
 | Weekly plan + self-writing grocery list | **Shipped** — three regeneration laws, keyword aisle sort (deliberately dumb, user-correctable) |
-| One-tap diary + staples + static targets | **Shipped** |
+| One-tap diary + staples + targets + history | **Shipped** — target roles (floor / budget / about) with "round out your day" suggestions drawn from your own regulars (v0.4, ADR-0008); week chart + fortnight of day pages, blank days stay visibly blank |
 | Encrypted backup / restore (.ohbk) | **Shipped** — sanctuary spine, consequence copy test-bound to the erase set |
 | Ingredient→food matching for computed recipe nutrition | **Schema shipped, UI minimal** — declared (site) nutrition works today; hand-matching lines is future polish |
-| Family shared plan/groceries across devices | **Not built** — v0.1 is single-device; the researched path is CRDT (tudo-pattern sqlite_crdt) over a blind relay, LAN-first |
+| Family shared plan/groceries across devices | **Shipped v0.2 (LAN)** — encrypted Wi-Fi pairing, HLC last-write-wins with tombstones (ADR-0006); diaries and targets never leave a device. Internet sync (CRDT over a blind relay) remains not built |
 | Barcode scanning (offline-first) | **Shipped v0.7** — camera scan + typed digits, answered from downloadable USDA/OFF database slices on the phone (ADR-0010); the network is a question — one Open Food Facts lookup per explicit "Ask openfoodfacts.org" tap |
-| AI meal guesstimate (local model / BYOK) | **Not built** — Reckon's spine is the template when it earns its place |
+| AI meal guesstimate (local model / BYOK) | **Shipped** — BYOK v0.2, fully on-device model v0.5 (Qwen via flutter_gemma, ADR-0009); the parser drafts and you confirm — every logged line carries `ai` provenance |
+| Plate photo → draft lines (on-device CV) | **Shipped v0.5** — ML Kit labeler, Android; labels are hand-mapped through the bundled spine or skipped, never guessed |
 | iOS | Not planned (fleet convention: Android + PWA) |
