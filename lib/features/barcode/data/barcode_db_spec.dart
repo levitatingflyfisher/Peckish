@@ -50,12 +50,14 @@ const List<BarcodeDbSpec> barcodeDbCatalog = [
     downloadUrl: 'https://github.com/levitatingflyfisher/Peckish/releases/'
         'download/v0-data/peckish-barcodes-usda-2025-12-18.sqlite.gz',
     fileName: 'barcodes_usda_v1.sqlite',
-    sha256Gz: 'PENDING',
+    // Measured from the 2025-12-18 release asset: 440,275 unique barcodes.
+    sha256Gz:
+        '4321a562a3fb1d1dc27ba466e156236e6e1931ed54673dabb0c6c51b74abb75a',
     licenseName: 'CC0 1.0 (public domain)',
     licenseUrl: 'https://creativecommons.org/publicdomain/zero/1.0/',
     attribution: 'U.S. Department of Agriculture, Agricultural Research '
         'Service. FoodData Central Branded Foods, 2025.',
-    approxBytes: 0,
+    approxBytes: 22327494,
   ),
   BarcodeDbSpec(
     id: 'off_us',
@@ -63,12 +65,14 @@ const List<BarcodeDbSpec> barcodeDbCatalog = [
     downloadUrl: 'https://github.com/levitatingflyfisher/Peckish/releases/'
         'download/v0-data/peckish-barcodes-off-us.sqlite.gz',
     fileName: 'barcodes_off_us_v1.sqlite',
-    sha256Gz: 'PENDING',
+    // Measured from the 2026-08-01 build: 927,505 US-tagged products.
+    sha256Gz:
+        'b38ef015debee91cbc9ee2a149879932177c45353a2092ecd99b54421f6ea7f2',
     licenseName: 'Open Database License (ODbL) v1.0',
     licenseUrl: 'https://opendatacommons.org/licenses/odbl/1-0/',
     attribution: 'Contains information from Open Food Facts '
         '(openfoodfacts.org), made available under the Open Database License.',
-    approxBytes: 0,
+    approxBytes: 46963179,
   ),
 ];
 
