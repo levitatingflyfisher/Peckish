@@ -1,6 +1,7 @@
 import 'package:peckish/features/barcode/data/local_barcode_db.dart';
 import 'package:peckish/features/barcode/domain/barcode_code.dart';
 import 'package:peckish/features/barcode/domain/off_product.dart';
+import 'package:peckish/features/food/domain/custom_food.dart';
 
 /// The answer of one local resolution pass. Sealed so the UI must handle
 /// both shapes — there is no silent third outcome.
@@ -15,6 +16,15 @@ class BarcodeHit extends BarcodeResolution {
   /// Which slice answered: 'usda' | 'off_us'. The UI credits per source —
   /// ODbL wants attribution pinned to the OFF data (ADR-0010).
   final String sourceId;
+}
+
+/// The household already saved this code as one of its own foods. Beats
+/// every slice: it is the answer the user chose, at the portion they chose,
+/// and it costs no lookup at all.
+class BarcodeSavedFood extends BarcodeResolution {
+  BarcodeSavedFood(this.food);
+
+  final CustomFood food;
 }
 
 /// No local slice knew the code. The network is a question the UI asks the
@@ -35,11 +45,16 @@ class BarcodeMiss extends BarcodeResolution {
 class BarcodeResolver {
   /// [installedDbPath] is the seam to the download service: the file path
   /// of an installed slice by id, or null when it isn't installed.
+  /// [savedFood] is the seam to the household's own foods — omit it and the
+  /// resolver behaves exactly as it did before saved foods answered.
   BarcodeResolver({
     required Future<String?> Function(String dbId) installedDbPath,
-  }) : _installedDbPath = installedDbPath;
+    Future<CustomFood?> Function(BarcodeCode code)? savedFood,
+  })  : _installedDbPath = installedDbPath,
+        _savedFood = savedFood;
 
   final Future<String?> Function(String dbId) _installedDbPath;
+  final Future<CustomFood?> Function(BarcodeCode code)? _savedFood;
 
   /// USDA first — CC0 and the default recommendation — then OFF.
   static const chain = ['usda', 'off_us'];
@@ -50,6 +65,18 @@ class BarcodeResolver {
   final _open = <String, LocalBarcodeDb>{};
 
   Future<BarcodeResolution> resolveLocal(BarcodeCode code) async {
+    // Your own shelf first. A food you already saved off this package is
+    // the most authoritative answer there is, and the cheapest — no file
+    // opened, and certainly no network.
+    if (_savedFood != null) {
+      try {
+        final mine = await _savedFood(code);
+        if (mine != null) return BarcodeSavedFood(mine);
+      } on Object {
+        // A read that fails is "nothing saved", never a crash escaping to
+        // the scan screen — the slices below can still answer.
+      }
+    }
     var anyLocalDb = false;
     for (final id in chain) {
       // The seam does real file I/O and may throw mid-probe (the management

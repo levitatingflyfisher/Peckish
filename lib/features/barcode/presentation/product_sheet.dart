@@ -129,7 +129,7 @@ class _ProductSheetState extends ConsumerState<_ProductSheet> {
             contentPadding: EdgeInsets.zero,
             controlAffinity: ListTileControlAffinity.leading,
             title: const Text('Save to My Foods'),
-            subtitle: const Text('So next time is one tap'),
+            subtitle: const Text('Scanning it again logs it straight away'),
           ),
           const SizedBox(height: AppSpacing.sm),
           SizedBox(
@@ -159,6 +159,10 @@ class _ProductSheetState extends ConsumerState<_ProductSheet> {
             servingLabel: product.servingLabel ?? '100 g',
             perServing: product.per100g.forGrams(servingGrams).clamped(),
             createdAt: DateTime.now(),
+            // The code comes home with the food, so scanning this tin
+            // again answers off your own shelf instead of asking the
+            // network a question it already answered.
+            barcode: product.barcode,
           ));
       food = FoodRef.custom(id);
     }

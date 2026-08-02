@@ -21,6 +21,14 @@ PeckishExport fullExport() => PeckishExport(
           createdAt: DateTime.utc(2026, 7, 1),
           archived: false,
         ),
+        CustomFood(
+          id: 'cf-2',
+          name: 'Spam',
+          servingLabel: '2 slices',
+          perServing: const MacroSet(kcal: 360),
+          createdAt: DateTime.utc(2026, 7, 2),
+          barcode: '27000612323',
+        ),
       ],
       diaryEntries: [
         DiaryEntry(
@@ -129,9 +137,13 @@ void main() {
   test('encode → decode round-trips every section', () {
     final decoded = PeckishExport.fromJson(fullExport().toPrettyJson());
 
-    expect(decoded.customFoods.single.name, 'Cafe Rio salad');
-    expect(decoded.customFoods.single.perServing.kcal, 640);
-    expect(decoded.customFoods.single.perServing.carbG, isNull);
+    expect(decoded.customFoods.first.name, 'Cafe Rio salad');
+    expect(decoded.customFoods.first.perServing.kcal, 640);
+    expect(decoded.customFoods.first.perServing.carbG, isNull);
+    // A restored food must still answer its own barcode, or the restore
+    // quietly costs you every one-tap scan you had built up.
+    expect(decoded.customFoods.last.barcode, '27000612323');
+    expect(decoded.customFoods.first.barcode, isNull);
 
     final e = decoded.diaryEntries.single;
     expect(e.food.kind, FoodKind.usda);

@@ -74,6 +74,12 @@ class CustomFoods extends Table with SyncColumns {
   DateTimeColumn get createdAt => dateTime()();
   BoolColumn get archived => boolean().withDefault(const Constant(false))();
 
+  /// The barcode this food was saved from, normalized per ADR-0010 (leading
+  /// zeros stripped), or null for a food that was never scanned. Present so
+  /// that scanning the tin again answers from the household's own shelf
+  /// instead of asking the network a question it already answered.
+  TextColumn get barcode => text().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -312,7 +318,7 @@ class AppDatabase extends _$AppDatabase {
             ));
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   /// Wipe every user-data table in one transaction — the "Erase all data"
   /// path. Leaves the key→value shell prefs (theme) in place. This list grows
@@ -382,6 +388,12 @@ class AppDatabase extends _$AppDatabase {
               await _addColumnIfMissing(m, targets, column);
             }
           }
+          if (from < 5) {
+            // v5: the barcode a custom food was saved from. Nothing to
+            // backfill — foods saved before this release never recorded
+            // one, and they keep working exactly as they did.
+            await _addColumnIfMissing(m, customFoods, customFoods.barcode);
+          }
         },
         beforeOpen: (details) async {
           await customStatement('PRAGMA foreign_keys = ON');
@@ -410,6 +422,12 @@ class AppDatabase extends _$AppDatabase {
 
   Future<void> _addColumnIfMissing(
       Migrator m, TableInfo table, GeneratedColumn column) async {
+    // Table-guarded as well as column-guarded: migration fixtures open
+    // partial schemas, and a database damaged in the field can too. An
+    // ALTER against a table that isn't there throws — which would turn a
+    // missing table into an app that cannot open at all, instead of one
+    // that opens and reports the real problem.
+    if (!await _tableExists(table.actualTableName)) return;
     final info = await customSelect(
       'PRAGMA table_info(${table.actualTableName})',
     ).get();

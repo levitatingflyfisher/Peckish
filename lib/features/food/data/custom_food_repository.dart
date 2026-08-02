@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 
 import 'package:peckish/core/storage/app_database.dart';
+import 'package:peckish/features/barcode/domain/barcode_normalize.dart';
 import 'package:peckish/features/food/domain/custom_food.dart';
 import 'package:peckish/features/food/domain/macro_set.dart';
 import 'package:peckish/features/sync/data/sync_clock.dart';
@@ -44,6 +45,20 @@ class CustomFoodRepository {
     ));
   }
 
+  /// The household's own answer to a scanned code. Matched on the
+  /// normalized form, so a UPC-A saved off a tin answers the EAN-13 the
+  /// camera reads. Resting foods still answer: archiving hides a food from
+  /// the pickers, and holding its barcode up is not picking from a list.
+  Future<CustomFood?> byBarcode(String barcode) async {
+    final key = normalizeBarcode(barcode);
+    final row = await (_db.select(_db.customFoods)
+          ..where((f) => f.barcode.equals(key) & f.isDeleted.equals(false))
+          ..orderBy([(f) => OrderingTerm.desc(f.createdAt)])
+          ..limit(1))
+        .getSingleOrNull();
+    return row == null ? null : _toDomain(row);
+  }
+
   Future<CustomFood?> byId(String id) async {
     final row = await (_db.select(_db.customFoods)
           ..where((f) => f.id.equals(id) & f.isDeleted.equals(false)))
@@ -80,6 +95,9 @@ class CustomFoodRepository {
         fatG: Value(f.perServing.fatG),
         createdAt: Value(f.createdAt),
         archived: Value(f.archived),
+        // Normalized on the way IN, so every read is a plain equality.
+        barcode: Value(
+            f.barcode == null ? null : normalizeBarcode(f.barcode!)),
       );
 
   static CustomFood _toDomain(CustomFoodRow r) => CustomFood(
@@ -94,5 +112,6 @@ class CustomFoodRepository {
         ),
         createdAt: r.createdAt,
         archived: r.archived,
+        barcode: r.barcode,
       );
 }

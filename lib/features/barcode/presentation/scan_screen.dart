@@ -13,6 +13,7 @@ import 'package:peckish/features/barcode/presentation/barcode_sketch.dart';
 import 'package:peckish/features/barcode/presentation/product_sheet.dart';
 import 'package:peckish/features/barcode/presentation/scan_mode_store.dart';
 import 'package:peckish/features/barcode/presentation/scanner_view.dart';
+import 'package:peckish/features/diary/presentation/regulars_rail.dart';
 import 'package:peckish/shared/theme/app_spacing.dart';
 
 /// One lookup client for the app; overridable in tests.
@@ -275,6 +276,14 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
     }
     if (!mounted) return;
     switch (resolution) {
+      // Your own shelf: you already decided what this is and how much of
+      // it you eat, so there is nothing left to confirm. "Save to My Foods"
+      // promises the next scan is one tap — this is that tap.
+      case BarcodeSavedFood(:final food):
+        setState(() => _busy = false);
+        await logRegular(context, ref, food.asTemplateEntry(),
+            day: widget.day);
+        if (mounted) Navigator.of(context).pop();
       case BarcodeHit(:final product, :final sourceId):
         await _openSheet(product, sourceNote: _sourceNote(sourceId));
       case BarcodeMiss(:final anyLocalDb):

@@ -175,6 +175,9 @@ class PeckishExport {
         'perServing': _macros(f.perServing),
         'createdAt': f.createdAt.toIso8601String(),
         'archived': f.archived,
+        // Omitted for a food that never came off a package, so an export
+        // stays as small as the data actually is.
+        if (f.barcode != null) 'barcode': f.barcode,
       };
 
   static CustomFood _foodFrom(Map<String, dynamic> raw) => CustomFood(
@@ -184,6 +187,9 @@ class PeckishExport {
         perServing: _macrosFrom(raw['perServing']),
         createdAt: DateTime.parse(raw['createdAt'] as String),
         archived: raw['archived'] as bool? ?? false,
+        // Absent in every export written before v0.9 — those foods simply
+        // have no code, which is exactly what they had before.
+        barcode: raw['barcode'] as String?,
       );
 
   static Map<String, Object?> _refMap(FoodRef ref) => {
