@@ -8,6 +8,7 @@ import 'package:peckish/features/ai/on_device/on_device_providers.dart';
 import 'package:peckish/features/ai/on_device/plate_scanner.dart';
 import 'package:peckish/features/ai/presentation/guess_sheet.dart';
 import 'package:peckish/features/diary/domain/diary_entry.dart';
+import 'package:peckish/features/diary/presentation/day_format.dart';
 import 'package:peckish/features/food/domain/custom_food.dart';
 import 'package:peckish/features/food/domain/macro_set.dart';
 import 'package:peckish/features/food/domain/usda_food.dart';
@@ -15,16 +16,33 @@ import 'package:peckish/shared/theme/app_colors.dart';
 import 'package:peckish/shared/theme/app_spacing.dart';
 
 /// The + sheet: offline search over the bundled spine + custom foods, the
-/// staples list, and a quick-add line. Two taps end to end.
-Future<void> showAddSheet(BuildContext context) => showModalBottomSheet(
+/// staples list, and a quick-add line. Two taps end to end. Pass [day] to
+/// feed a PAST day (the history + button): the sheet says so, and the
+/// now-flows (barcode, AI guess) stay off days that already happened.
+Future<void> showAddSheet(BuildContext context, {String? day}) =>
+    showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      builder: (_) => const _AddSheet(),
+      builder: (_) => _AddSheet(day: day),
     );
 
+/// Where a log for [targetDay] lands. Null = today, resolved AT LOG TIME
+/// (a sheet left open across midnight logs to the real now); a past day
+/// logs at that day's noon so it sorts naturally among real entries.
+({String day, DateTime at}) _stamp(String? targetDay) {
+  final now = DateTime.now();
+  if (targetDay == null || targetDay == DiaryEntry.dayOf(now)) {
+    return (day: DiaryEntry.dayOf(now), at: now);
+  }
+  return (day: targetDay, at: DateTime.parse('${targetDay}T12:00:00'));
+}
+
 class _AddSheet extends ConsumerStatefulWidget {
-  const _AddSheet();
+  const _AddSheet({this.day});
+
+  /// Null = today; otherwise the past day this sheet feeds.
+  final String? day;
 
   @override
   ConsumerState<_AddSheet> createState() => _AddSheetState();
@@ -54,8 +72,9 @@ class _AddSheetState extends ConsumerState<_AddSheet> {
           ),
           Expanded(
             child: _query.trim().isEmpty
-                ? _IdleSheet(scroll: scroll)
-                : _Results(query: _query, scroll: scroll),
+                ? _IdleSheet(scroll: scroll, day: widget.day)
+                : _Results(
+                    query: _query, scroll: scroll, day: widget.day),
           ),
         ],
       ),
@@ -66,9 +85,10 @@ class _AddSheetState extends ConsumerState<_AddSheet> {
 /// What the sheet shows before any search: staples first (the point of the
 /// app), then quick add.
 class _IdleSheet extends ConsumerWidget {
-  const _IdleSheet({required this.scroll});
+  const _IdleSheet({required this.scroll, this.day});
 
   final ScrollController scroll;
+  final String? day;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -86,22 +106,32 @@ class _IdleSheet extends ConsumerWidget {
       controller: scroll,
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
       children: [
+        if (day != null)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+            child: Text('Adding to ${prettyDay(day!)}',
+                style: Theme.of(context)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(color: AppColors.paprika)),
+          ),
         ListTile(
           leading: const Icon(Icons.bolt_outlined, color: AppColors.butter),
           title: const Text('Quick add'),
           subtitle: const Text('Just a name and numbers you know'),
-          onTap: () => _showQuickAdd(context, ref),
+          onTap: () => _showQuickAdd(context, ref, day: day),
         ),
-        ListTile(
-          leading: const Icon(Icons.qr_code_scanner, color: AppColors.sage),
-          title: const Text('Scan a barcode'),
-          subtitle: const Text('Packaged food — one scan, one lookup'),
-          onTap: () {
-            Navigator.of(context).pop();
-            context.push('/scan');
-          },
-        ),
-        if (aiReady)
+        if (day == null)
+          ListTile(
+            leading: const Icon(Icons.qr_code_scanner, color: AppColors.sage),
+            title: const Text('Scan a barcode'),
+            subtitle: const Text('Packaged food — one scan, one lookup'),
+            onTap: () {
+              Navigator.of(context).pop();
+              context.push('/scan');
+            },
+          ),
+        if (aiReady && day == null)
           ListTile(
             leading: const Icon(Icons.auto_awesome, color: AppColors.paprika),
             title: const Text('Guess it for me'),
@@ -126,9 +156,9 @@ class _IdleSheet extends ConsumerWidget {
                   ? '${meal.items.length} items'
                   : '${meal.items.length} items · ${meal.totals.kcal!.round()} kcal'),
               onTap: () async {
-                final now = DateTime.now();
+                final stamp = _stamp(day);
                 await ref.read(savedMealRepositoryProvider).logMeal(meal.id,
-                    at: now, day: DiaryEntry.dayOf(now));
+                    at: stamp.at, day: stamp.day);
                 if (context.mounted) Navigator.of(context).pop();
               },
             ),
@@ -142,10 +172,11 @@ final _mealsProvider = FutureProvider.autoDispose(
     (ref) => ref.watch(savedMealRepositoryProvider).getAll());
 
 class _Results extends ConsumerWidget {
-  const _Results({required this.query, required this.scroll});
+  const _Results({required this.query, required this.scroll, this.day});
 
   final String query;
   final ScrollController scroll;
+  final String? day;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -196,11 +227,11 @@ class _Results extends ConsumerWidget {
 
   Future<void> _logCustom(
       BuildContext context, WidgetRef ref, CustomFood c) async {
-    final now = DateTime.now();
+    final stamp = _stamp(day);
     await ref.read(diaryRepositoryProvider).log(DiaryEntry(
           id: const Uuid().v4(),
-          day: DiaryEntry.dayOf(now),
-          at: now,
+          day: stamp.day,
+          at: stamp.at,
           food: FoodRef.custom(c.id),
           label: c.name,
           qty: 1,
@@ -208,7 +239,7 @@ class _Results extends ConsumerWidget {
           grams: null,
           macros: c.perServing,
           source: EntrySource.search,
-          createdAt: now,
+          createdAt: DateTime.now(),
         ));
     if (context.mounted) Navigator.of(context).pop();
   }
@@ -219,7 +250,7 @@ class _Results extends ConsumerWidget {
     if (!context.mounted) return;
     await showModalBottomSheet(
       context: context,
-      builder: (_) => _PortionSheet(food: food, portions: portions),
+      builder: (_) => _PortionSheet(food: food, portions: portions, day: day),
     );
     if (context.mounted) Navigator.of(context).pop();
   }
@@ -235,18 +266,20 @@ final _searchProvider = FutureProvider.autoDispose
         ));
 
 class _PortionSheet extends ConsumerWidget {
-  const _PortionSheet({required this.food, required this.portions});
+  const _PortionSheet(
+      {required this.food, required this.portions, this.day});
 
   final UsdaFood food;
   final List<UsdaPortion> portions;
+  final String? day;
 
   Future<void> _log(BuildContext context, WidgetRef ref, String unitLabel,
       double grams) async {
-    final now = DateTime.now();
+    final stamp = _stamp(day);
     await ref.read(diaryRepositoryProvider).log(DiaryEntry(
           id: const Uuid().v4(),
-          day: DiaryEntry.dayOf(now),
-          at: now,
+          day: stamp.day,
+          at: stamp.at,
           food: FoodRef.usda(food.fdcId),
           label: food.name,
           qty: 1,
@@ -254,7 +287,7 @@ class _PortionSheet extends ConsumerWidget {
           grams: grams,
           macros: food.per100g.forGrams(grams).clamped(),
           source: EntrySource.search,
-          createdAt: now,
+          createdAt: DateTime.now(),
         ));
     if (context.mounted) Navigator.of(context).pop();
   }
@@ -289,12 +322,13 @@ class _PortionSheet extends ConsumerWidget {
   }
 }
 
-Future<void> _showQuickAdd(BuildContext context, WidgetRef ref) async {
+Future<void> _showQuickAdd(BuildContext context, WidgetRef ref,
+    {String? day}) async {
   // Pops with true only when a line was logged — Cancel returns to the +
   // sheet instead of closing it (the sheet is where you'd try again).
   final logged = await showDialog<bool>(
     context: context,
-    builder: (_) => const _QuickAddDialog(),
+    builder: (_) => _QuickAddDialog(day: day),
   );
   if (logged == true && context.mounted) Navigator.of(context).pop();
 }
@@ -303,7 +337,9 @@ Future<void> _showQuickAdd(BuildContext context, WidgetRef ref) async {
 /// enterable, none is required. "Remember this food" turns the one-off line
 /// into a custom food so search (and My Foods) finds it next time.
 class _QuickAddDialog extends ConsumerStatefulWidget {
-  const _QuickAddDialog();
+  const _QuickAddDialog({this.day});
+
+  final String? day;
 
   @override
   ConsumerState<_QuickAddDialog> createState() => _QuickAddDialogState();
@@ -365,10 +401,11 @@ class _QuickAddDialogState extends ConsumerState<_QuickAddDialog> {
       food = FoodRef.custom(id);
     }
 
+    final stamp = _stamp(widget.day);
     await ref.read(diaryRepositoryProvider).log(DiaryEntry(
           id: const Uuid().v4(),
-          day: DiaryEntry.dayOf(now),
-          at: now,
+          day: stamp.day,
+          at: stamp.at,
           food: food,
           label: name,
           qty: 1,

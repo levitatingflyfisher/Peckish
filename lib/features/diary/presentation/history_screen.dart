@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import 'package:peckish/core/providers/core_providers.dart';
 import 'package:peckish/features/diary/domain/daily_targets.dart';
 import 'package:peckish/features/diary/domain/diary_entry.dart';
+import 'package:peckish/features/diary/presentation/add_sheet.dart';
+import 'package:peckish/features/diary/presentation/day_format.dart';
 import 'package:peckish/features/diary/presentation/entry_tile.dart';
 import 'package:peckish/features/food/domain/macro_set.dart';
 import 'package:peckish/shared/theme/app_colors.dart';
@@ -93,19 +95,6 @@ final _dayEntriesProvider = StreamProvider.autoDispose
     .family((ref, String day) =>
         ref.watch(diaryRepositoryProvider).watchEntriesForDay(day));
 
-const _weekdayLetters = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-const _weekdayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-const _monthNames = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-];
-
-String _pretty(String day) {
-  final d = DateTime.parse(day);
-  return '${_weekdayNames[d.weekday - 1]} · ${_monthNames[d.month - 1]} '
-      '${d.day}';
-}
-
 /// Seven simple bars, oldest → newest, today accented. Plain boxes, not a
 /// chart library: theme-aware, nothing to configure, nothing to bloat.
 class _WeekBars extends StatelessWidget {
@@ -180,7 +169,7 @@ class _WeekBars extends StatelessWidget {
             for (final d in ordered)
               Expanded(
                 child: Text(
-                  _weekdayLetters[DateTime.parse(d).weekday - 1],
+                  weekdayLetters[DateTime.parse(d).weekday - 1],
                   textAlign: TextAlign.center,
                   style: Theme.of(context)
                       .textTheme
@@ -257,7 +246,7 @@ class _DayRow extends StatelessWidget {
     final kcal = totals?.kcal;
     return ListTile(
       contentPadding: EdgeInsets.zero,
-      title: Text(day == anchorDay ? 'Today' : _pretty(day)),
+      title: Text(day == anchorDay ? 'Today' : prettyDay(day)),
       trailing: Text(
         kcal == null ? '—' : '${kcal.round()} kcal',
         style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -279,7 +268,12 @@ class HistoryDayScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final entries = ref.watch(_dayEntriesProvider(day)).valueOrNull ?? const [];
     return Scaffold(
-      appBar: AppBar(title: Text(_pretty(day))),
+      appBar: AppBar(title: Text(prettyDay(day))),
+      floatingActionButton: FloatingActionButton(
+        tooltip: 'Add food to this day',
+        onPressed: () => showAddSheet(context, day: day),
+        child: const Icon(Icons.add),
+      ),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.lg),
         children: [

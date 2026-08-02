@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:peckish/core/providers/core_providers.dart';
 import 'package:peckish/core/storage/app_database.dart';
 import 'package:peckish/features/diary/domain/diary_entry.dart';
+import 'package:peckish/features/diary/presentation/entry_tile.dart';
 import 'package:peckish/features/diary/presentation/history_screen.dart';
 import 'package:peckish/features/diary/presentation/today_screen.dart';
 import 'package:peckish/shared/theme/app_theme.dart';
@@ -80,11 +81,13 @@ void main() {
       child: MaterialApp(theme: AppTheme.light, home: const TodayScreen()),
     ));
     await tester.pumpAndSettle();
+    // The regulars RAIL may (rightly) show the food — logging to any day
+    // records the habit. What must NOT exist is a diary LINE for today.
     expect(find.descendant(
-            of: find.byType(ListView),
+            of: find.byType(EntryTile),
             matching: find.text('Forgotten stew')),
         findsNothing,
-        reason: "yesterday's fix must not appear in today's log list");
+        reason: "yesterday's fix must not appear as one of today's lines");
     await unmount(tester);
   });
 
