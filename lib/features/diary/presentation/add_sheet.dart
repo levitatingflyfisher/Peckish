@@ -157,14 +157,14 @@ class _IdleSheet extends ConsumerWidget {
             context.push(day == null ? '/scan' : '/scan?day=$day');
           },
         ),
-        if (aiReady && day == null)
+        if (aiReady)
           ListTile(
             leading: const Icon(Icons.auto_awesome, color: AppColors.paprika),
             title: const Text('Guess it for me'),
             subtitle: const Text('Describe the meal — AI drafts, you confirm'),
             onTap: () {
               Navigator.of(context).pop();
-              showGuessSheet(context);
+              showGuessSheet(context, day: day);
             },
           ),
         const Divider(),

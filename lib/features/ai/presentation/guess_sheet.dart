@@ -13,7 +13,10 @@ import 'package:peckish/features/ai/on_device/plate_scan.dart';
 import 'package:peckish/features/ai/on_device/plate_scanner.dart';
 import 'package:peckish/features/ai/stove/stove_brain.dart';
 import 'package:peckish/features/ai/stove/stove_brain_factory.dart';
+import 'package:peckish/features/diary/domain/day_stamp.dart';
 import 'package:peckish/features/diary/domain/diary_entry.dart';
+import 'package:peckish/features/diary/presentation/day_format.dart';
+import 'package:peckish/shared/theme/app_colors.dart';
 import 'package:peckish/shared/theme/app_spacing.dart';
 import 'package:uuid/uuid.dart';
 
@@ -47,15 +50,23 @@ final stoveBrainFactoryProvider =
 /// The guesstimate box: describe what you ate, the model drafts lines, you
 /// prune and confirm. Nothing is logged until the confirm tap, and every
 /// logged line carries `ai` provenance.
-Future<void> showGuessSheet(BuildContext context) => showModalBottomSheet(
+///
+/// [day] is the past day being fed (null = today). Prose about a meal is
+/// no less reliable three days late than three minutes late — the model
+/// was always estimating from words, never from the clock.
+Future<void> showGuessSheet(BuildContext context, {String? day}) =>
+    showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      builder: (_) => const _GuessSheet(),
+      builder: (_) => _GuessSheet(day: day),
     );
 
 class _GuessSheet extends ConsumerStatefulWidget {
-  const _GuessSheet();
+  const _GuessSheet({this.day});
+
+  /// Null = today; otherwise the past day these lines will land on.
+  final String? day;
 
   @override
   ConsumerState<_GuessSheet> createState() => _GuessSheetState();
@@ -96,6 +107,13 @@ class _GuessSheetState extends ConsumerState<_GuessSheet> {
                 : 'AI guesses — prune what it got wrong, then log.',
             style: theme.textTheme.bodySmall,
           ),
+          if (widget.day != null)
+            Padding(
+              padding: const EdgeInsets.only(top: AppSpacing.sm),
+              child: Text('Adding to ${prettyDay(widget.day!)}',
+                  style: theme.textTheme.titleMedium
+                      ?.copyWith(color: AppColors.paprika)),
+            ),
           const SizedBox(height: AppSpacing.md),
           if (_draft == null) ...[
             Row(
@@ -271,12 +289,15 @@ class _GuessSheetState extends ConsumerState<_GuessSheet> {
 
   Future<void> _logAll() async {
     final now = DateTime.now();
+    // One stamp for the whole draft: a plate's lines belong to one moment,
+    // even if the loop below straddles a midnight.
+    final stamp = dayStamp(widget.day, now: now);
     final diary = ref.read(diaryRepositoryProvider);
     for (final food in _draft!) {
       await diary.log(DiaryEntry(
         id: const Uuid().v4(),
-        day: DiaryEntry.dayOf(now),
-        at: now,
+        day: stamp.day,
+        at: stamp.at,
         food: const FoodRef.quick(),
         label: food.name,
         qty: food.grams ?? 1,
