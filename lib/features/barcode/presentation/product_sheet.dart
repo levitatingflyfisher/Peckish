@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:peckish/core/providers/core_providers.dart';
 import 'package:peckish/features/barcode/domain/off_product.dart';
+import 'package:peckish/features/diary/domain/day_stamp.dart';
 import 'package:peckish/features/diary/domain/diary_entry.dart';
+import 'package:peckish/features/diary/presentation/day_format.dart';
 import 'package:peckish/features/food/domain/custom_food.dart';
+import 'package:peckish/shared/theme/app_colors.dart';
 import 'package:peckish/shared/theme/app_spacing.dart';
 import 'package:uuid/uuid.dart';
 
@@ -15,20 +18,28 @@ import 'package:uuid/uuid.dart';
 /// [sourceNote] names where the answer came from ("From your phone — USDA
 /// database" / "From openfoodfacts.org") — the per-answer face of
 /// ADR-0010's per-source crediting.
+///
+/// [day] is the past day this scan feeds (null = today). A tin still in the
+/// recycling is the most reliable evidence there is about a day you forgot
+/// to log, so a scan belongs on any day — the sheet just says which one.
 Future<bool?> showProductSheet(BuildContext context, OffProduct product,
-        {String? sourceNote}) =>
+        {String? sourceNote, String? day}) =>
     showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      builder: (_) => _ProductSheet(product: product, sourceNote: sourceNote),
+      builder: (_) =>
+          _ProductSheet(product: product, sourceNote: sourceNote, day: day),
     );
 
 class _ProductSheet extends ConsumerStatefulWidget {
-  const _ProductSheet({required this.product, this.sourceNote});
+  const _ProductSheet({required this.product, this.sourceNote, this.day});
 
   final OffProduct product;
   final String? sourceNote;
+
+  /// Null = today; otherwise the past day this scan feeds.
+  final String? day;
 
   @override
   ConsumerState<_ProductSheet> createState() => _ProductSheetState();
@@ -72,6 +83,13 @@ class _ProductSheetState extends ConsumerState<_ProductSheet> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(product.displayName, style: theme.textTheme.titleLarge),
+          if (widget.day != null)
+            Padding(
+              padding: const EdgeInsets.only(top: AppSpacing.xs),
+              child: Text('Adding to ${prettyDay(widget.day!)}',
+                  style: theme.textTheme.titleMedium
+                      ?.copyWith(color: AppColors.paprika)),
+            ),
           if (widget.sourceNote != null)
             Padding(
               padding: const EdgeInsets.only(top: AppSpacing.xs),
@@ -145,11 +163,13 @@ class _ProductSheetState extends ConsumerState<_ProductSheet> {
       food = FoodRef.custom(id);
     }
 
-    final now = DateTime.now();
+    // The CustomFood above was created NOW (that's when you saved it); only
+    // the diary line moves to the day being fed.
+    final stamp = dayStamp(widget.day);
     await ref.read(diaryRepositoryProvider).log(DiaryEntry(
           id: const Uuid().v4(),
-          day: DiaryEntry.dayOf(now),
-          at: now,
+          day: stamp.day,
+          at: stamp.at,
           food: food,
           label: product.displayName,
           qty: grams,
@@ -157,7 +177,7 @@ class _ProductSheetState extends ConsumerState<_ProductSheet> {
           grams: grams,
           macros: macros,
           source: EntrySource.scan,
-          createdAt: now,
+          createdAt: DateTime.now(),
         ));
 
     if (context.mounted) Navigator.of(context).pop(true);

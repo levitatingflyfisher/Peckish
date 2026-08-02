@@ -73,8 +73,11 @@ GoRouter appRouter(Ref ref) {
       ),
       GoRoute(
         path: '/scan',
-        pageBuilder: (c, s) =>
-            _fade(key: s.pageKey, child: const ScanScreen()),
+        // ?day=YYYY-MM-DD when the scan was opened from a past day's +
+        // sheet; absent means today, which is every other entry point.
+        pageBuilder: (c, s) => _fade(
+            key: s.pageKey,
+            child: ScanScreen(day: s.uri.queryParameters['day'])),
       ),
       GoRoute(
         path: '/barcode-db',

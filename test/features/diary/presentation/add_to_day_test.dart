@@ -14,9 +14,9 @@ import 'package:peckish/shared/theme/app_theme.dart';
 // test/features/groceries/presentation/groceries_screen_test.dart.
 //
 // A missed day is fixable: any history day carries a + that adds TO THAT
-// DAY. The sheet says which day it's feeding, network flows that only
-// make sense in the moment (barcode, AI guess) stay off past days, and
-// today's sheet is exactly what it always was.
+// DAY, by every route in — search, quick add, saved meals, barcode, AI.
+// The sheet says which day it's feeding; today's sheet is exactly what it
+// always was.
 void main() {
   late AppDatabase db;
 
@@ -51,9 +51,8 @@ void main() {
 
     expect(find.textContaining('Adding to'), findsOneWidget,
         reason: 'the sheet says which day it feeds');
-    expect(find.text('Scan a barcode'), findsNothing,
-        reason: 'a barcode is a now-flow, not a yesterday-flow');
-    expect(find.text('Guess it for me'), findsNothing);
+    expect(find.text('Scan a barcode'), findsOneWidget,
+        reason: 'a tin in the recycling is exactly how you fix a missed day');
 
     await tester.tap(find.text('Quick add'));
     await tester.pumpAndSettle();

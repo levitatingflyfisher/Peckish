@@ -6,6 +6,9 @@ import 'package:peckish/core/providers/core_providers.dart';
 import 'package:peckish/core/storage/app_database.dart';
 import 'package:peckish/features/barcode/domain/off_product.dart';
 import 'package:peckish/features/barcode/presentation/product_sheet.dart';
+import 'package:peckish/features/diary/domain/diary_entry.dart';
+import 'package:peckish/features/diary/presentation/entry_tile.dart';
+import 'package:peckish/features/diary/presentation/history_screen.dart';
 import 'package:peckish/features/diary/presentation/today_screen.dart';
 import 'package:peckish/features/food/domain/macro_set.dart';
 import 'package:peckish/shared/theme/app_theme.dart';
@@ -76,6 +79,46 @@ void main() {
     expect(find.text('Log it'), findsNothing);
     expect(find.text('Nutella (Ferrero)'), findsNWidgets(2));
     expect(find.textContaining('81 kcal'), findsOneWidget);
+    await unmount(tester);
+  });
+
+  testWidgets('a sheet opened for a past day logs onto THAT day',
+      (tester) async {
+    final now = DateTime.now();
+    final day = DiaryEntry.dayOf(DateTime(now.year, now.month, now.day - 1));
+
+    await tester.pumpWidget(host());
+    await tester.pumpAndSettle();
+    final context = tester.element(find.byType(TodayScreen));
+    showProductSheet(context, nutella, day: day);
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Adding to'), findsOneWidget,
+        reason: 'the sheet says which day it feeds, exactly like the + sheet');
+
+    await tester.tap(find.text('Log it'));
+    await tester.pumpAndSettle();
+
+    // Today must stay clean — the scan went to yesterday. (The recents
+    // chip may still show it: logging to any day records the habit.)
+    expect(
+        find.descendant(
+            of: find.byType(EntryTile), matching: find.text('Nutella (Ferrero)')),
+        findsNothing,
+        reason: "a past day's scan must not appear as one of today's lines");
+    await unmount(tester);
+
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        appDatabaseProvider.overrideWithValue(db),
+        spineReadyProvider.overrideWith((ref) async {}),
+      ],
+      child: MaterialApp(
+          theme: AppTheme.light, home: HistoryDayScreen(day: day)),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('Nutella (Ferrero)'), findsOneWidget,
+        reason: 'the line lands on the day the sheet was opened for');
     await unmount(tester);
   });
 

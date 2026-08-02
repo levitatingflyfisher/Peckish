@@ -430,6 +430,30 @@ void main() {
     await unmount(tester);
   });
 
+  testWidgets('a scan opened for a past day carries that day to the sheet',
+      (tester) async {
+    final usda = buildSlice('usda.db', products: [nutellaRow()]);
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        appDatabaseProvider.overrideWithValue(db),
+        offClientProvider.overrideWithValue(client()),
+        barcodeResolverProvider
+            .overrideWithValue(resolverWith(usdaPath: usda)),
+      ],
+      child: MaterialApp(
+          theme: AppTheme.light,
+          home: const ScanScreen(day: '2026-07-30')),
+    ));
+    await tester.pumpAndSettle();
+
+    await submit(tester, '3017620422003');
+    // The scan resolves the same way it always did — the only difference is
+    // where the confirmed line will land, and the sheet says so out loud.
+    expect(find.text('Nutella (Ferrero)'), findsOneWidget);
+    expect(find.textContaining('Adding to'), findsOneWidget);
+    await unmount(tester);
+  });
+
   testWidgets('a resolver failure resets the scanner calmly — never a '
       'stuck spinner', (tester) async {
     await tester.pumpWidget(

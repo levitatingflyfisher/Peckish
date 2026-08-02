@@ -21,8 +21,10 @@ import 'package:peckish/shared/widgets/num_field.dart';
 
 /// The + sheet: offline search over the bundled spine + custom foods, the
 /// staples list, and a quick-add line. Two taps end to end. Pass [day] to
-/// feed a PAST day (the history + button): the sheet says so, and the
-/// now-flows (barcode, AI guess) stay off days that already happened.
+/// feed a PAST day (the history + button): every way in is offered there
+/// too, and each one says which day it's feeding. (v0.6 kept barcode off
+/// past days as a "now-flow". Wrong: the tin in the recycling is the best
+/// evidence you have about the day you forgot to log.)
 Future<void> showAddSheet(BuildContext context, {String? day}) =>
     showModalBottomSheet(
       context: context,
@@ -143,16 +145,18 @@ class _IdleSheet extends ConsumerWidget {
           subtitle: const Text('Just a name and numbers you know'),
           onTap: () => _showQuickAdd(context, ref, day: day),
         ),
-        if (day == null)
-          ListTile(
-            leading: const Icon(Icons.qr_code_scanner, color: AppColors.sage),
-            title: const Text('Scan a barcode'),
-            subtitle: const Text('Packaged food — one scan, one lookup'),
-            onTap: () {
-              Navigator.of(context).pop();
-              context.push('/scan');
-            },
-          ),
+        ListTile(
+          leading: const Icon(Icons.qr_code_scanner, color: AppColors.sage),
+          title: const Text('Scan a barcode'),
+          subtitle: const Text('Packaged food — one scan, one lookup'),
+          onTap: () {
+            Navigator.of(context).pop();
+            // The scanned day rides in the URL, so the scanner and its
+            // confirm sheet survive a rebuild still pointed at the right
+            // day.
+            context.push(day == null ? '/scan' : '/scan?day=$day');
+          },
+        ),
         if (aiReady && day == null)
           ListTile(
             leading: const Icon(Icons.auto_awesome, color: AppColors.paprika),

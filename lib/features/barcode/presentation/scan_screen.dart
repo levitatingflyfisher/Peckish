@@ -28,12 +28,16 @@ final offClientProvider = Provider<OffClient>((ref) => OffClient());
 /// button — no code path in this screen reaches the network without that
 /// tap. Failures are states with next steps, not errors.
 class ScanScreen extends ConsumerStatefulWidget {
-  const ScanScreen({super.key, this.debugCameraOverride});
+  const ScanScreen({super.key, this.debugCameraOverride, this.day});
 
   /// Tests force the camera layout on the camera-less VM; real builds
   /// leave this null and follow [ScannerView.available].
   @visibleForTesting
   final bool? debugCameraOverride;
+
+  /// The past day this scan feeds (null = today) — carried straight through
+  /// to the confirm sheet, which is the only thing that writes.
+  final String? day;
 
   @override
   ConsumerState<ScanScreen> createState() => _ScanScreenState();
@@ -338,8 +342,8 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
       _missCode = null;
       _message = null;
     });
-    final logged =
-        await showProductSheet(context, product, sourceNote: sourceNote);
+    final logged = await showProductSheet(context, product,
+        sourceNote: sourceNote, day: widget.day);
     if (!mounted) return;
     setState(() => _sheetOpen = false);
     // A log finishes the errand — back to where the user came from.
