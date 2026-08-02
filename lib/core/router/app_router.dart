@@ -59,6 +59,14 @@ GoRouter appRouter(Ref ref) {
             pageBuilder: (c, s) =>
                 _fade(key: s.pageKey, child: const GroceriesScreen()),
           ),
+          // A tab, not an app-bar icon: the month you just lived is
+          // something you reach for, and the corner beside Settings is
+          // where things go to be forgotten.
+          GoRoute(
+            path: '/history',
+            pageBuilder: (c, s) =>
+                _fade(key: s.pageKey, child: const HistoryScreen()),
+          ),
         ],
       ),
       GoRoute(
@@ -99,11 +107,8 @@ GoRouter appRouter(Ref ref) {
         pageBuilder: (c, s) =>
             _fade(key: s.pageKey, child: const PrivacyScreen()),
       ),
-      GoRoute(
-        path: '/history',
-        pageBuilder: (c, s) =>
-            _fade(key: s.pageKey, child: const HistoryScreen()),
-      ),
+      // One day stays OUTSIDE the shell: a drill-down wears a back arrow,
+      // not a nav bar.
       GoRoute(
         path: '/history/:day',
         pageBuilder: (c, s) => _fade(
@@ -122,11 +127,13 @@ class _TabShell extends StatelessWidget {
   final String location;
   final Widget child;
 
-  static const _tabs = ['/', '/plan', '/recipes', '/groceries'];
+  static const _tabs = ['/', '/plan', '/recipes', '/groceries', '/history'];
 
   @override
   Widget build(BuildContext context) {
-    final index = _tabs.indexOf(location).clamp(0, 3);
+    // Bounded by the list itself — a hardcoded ceiling silently lights up
+    // the wrong destination the day a tab is added.
+    final index = _tabs.indexOf(location).clamp(0, _tabs.length - 1);
     return Scaffold(
       body: child,
       bottomNavigationBar: NavigationBar(
@@ -149,6 +156,10 @@ class _TabShell extends StatelessWidget {
               icon: Icon(Icons.shopping_basket_outlined),
               selectedIcon: Icon(Icons.shopping_basket),
               label: 'Groceries'),
+          NavigationDestination(
+              icon: Icon(Icons.insights_outlined),
+              selectedIcon: Icon(Icons.insights),
+              label: 'History'),
         ],
       ),
     );

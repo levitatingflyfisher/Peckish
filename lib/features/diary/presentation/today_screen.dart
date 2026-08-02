@@ -32,11 +32,8 @@ class TodayScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Today'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.insights_outlined),
-            tooltip: 'History',
-            onPressed: () => context.push('/history'),
-          ),
+          // History lives on the nav bar now — the corner is for Settings
+          // alone.
           IconButton(
             icon: const Icon(Icons.settings_outlined),
             tooltip: 'Settings',
