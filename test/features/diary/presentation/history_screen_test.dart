@@ -17,18 +17,18 @@ import 'package:peckish/shared/theme/app_theme.dart';
 // test/features/groceries/presentation/groceries_screen_test.dart.
 //
 // History is the answer to "what happens tomorrow?": nothing disappears.
-// Week bars + honest averages over the days you actually logged, a day
-// list where a blank day stays visibly blank, and every past day opens
-// to its own plate.
+// A month at a time — the trend line for the axis you picked, honest
+// averages over the days you actually logged, and a calendar whose every
+// past cell opens that day's plate. The calendar IS the edit surface, and
+// it says so.
 void main() {
   late AppDatabase db;
 
   setUp(() => db = AppDatabase(NativeDatabase.memory()));
 
-  String dayAgo(int n) {
-    final now = DateTime.now();
-    return DiaryEntry.dayOf(DateTime(now.year, now.month, now.day - n));
-  }
+  // A pinned mid-month "today" — the screen is calendar-month shaped, so a
+  // floating now would put the seeded days in a different month on the 1st.
+  const today = '2026-08-14';
 
   DiaryEntry entry(String id, String day, MacroSet macros, {String? label}) {
     final at = DateTime.parse('${day}T12:00:00');
@@ -47,10 +47,10 @@ void main() {
     );
   }
 
-  Widget host({String location = '/history'}) => ProviderScope(
+  Widget host() => ProviderScope(
         overrides: [appDatabaseProvider.overrideWithValue(db)],
         child: MaterialApp(
-            theme: AppTheme.light, home: HistoryScreen(anchorDay: dayAgo(0))),
+            theme: AppTheme.light, home: const HistoryScreen(today: today)),
       );
 
   Future<void> unmount(WidgetTester tester) async {
@@ -58,35 +58,46 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
   }
 
-  testWidgets('bars, honest averages, and day rows from the ledger',
+  testWidgets('the month reads from the ledger: cells, honest averages',
       (tester) async {
     await tester.runAsync(() async {
       final repo = DiaryRepository(db);
-      await repo.log(entry('e-1', dayAgo(0),
-          const MacroSet(kcal: 500, proteinG: 30)));
-      await repo.log(entry('e-2', dayAgo(1),
-          const MacroSet(kcal: 700, proteinG: 50)));
+      await repo.log(
+          entry('e-1', today, const MacroSet(kcal: 500, proteinG: 30)));
+      await repo.log(entry(
+          'e-2', '2026-08-13', const MacroSet(kcal: 700, proteinG: 50)));
     });
 
     await tester.pumpWidget(host());
     await tester.pumpAndSettle();
 
-    // Averages over LOGGED days only — two days, not seven.
+    expect(find.text('August 2026'), findsOneWidget);
+    // Averages over LOGGED days only — two days, not thirty-one.
     expect(find.textContaining('avg 600 kcal'), findsOneWidget);
     expect(find.textContaining('40g protein'), findsOneWidget);
-    // Day rows carry their totals; a blank day shows a dash, not a zero.
-    expect(find.text('500 kcal'), findsOneWidget);
-    expect(find.text('700 kcal'), findsOneWidget);
-    expect(find.text('—'), findsWidgets);
+    // Each logged day's cell carries its own number; blank days carry none.
+    expect(find.text('500'), findsOneWidget);
+    expect(find.text('700'), findsOneWidget);
     await unmount(tester);
   });
 
-  testWidgets('an empty history invites instead of showing empty math',
+  testWidgets('an empty month still offers every day to tap', (tester) async {
+    await tester.pumpWidget(host());
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('fills in as you log'), findsOneWidget);
+    expect(find.textContaining('avg'), findsNothing);
+    // The calendar is the point — an empty month is exactly when you need
+    // to reach back into a day and fix it.
+    expect(find.byKey(const ValueKey('day-2026-08-05')), findsOneWidget);
+    await unmount(tester);
+  });
+
+  testWidgets('the calendar says out loud that a day can be fixed',
       (tester) async {
     await tester.pumpWidget(host());
     await tester.pumpAndSettle();
-    expect(find.textContaining('fills in as you log'), findsOneWidget);
-    expect(find.textContaining('avg'), findsNothing);
+    expect(find.textContaining('Tap any day'), findsOneWidget);
     await unmount(tester);
   });
 
@@ -95,10 +106,8 @@ void main() {
     await tester.runAsync(() async {
       await TargetsRepository(db).set(const DailyTargets(
           values: MacroSet(kcal: 2000), kcalRole: TargetRole.under));
-      // The chart only exists once something is logged — an empty week
-      // shows the invitation, not bare axes.
       await DiaryRepository(db)
-          .log(entry('e-1', dayAgo(0), const MacroSet(kcal: 500)));
+          .log(entry('e-1', today, const MacroSet(kcal: 500)));
     });
     await tester.pumpWidget(host());
     await tester.pumpAndSettle();
@@ -110,24 +119,22 @@ void main() {
     await tester.runAsync(() async {
       await TargetsRepository(db).set(const DailyTargets(
           values: MacroSet(proteinG: 150))); // floor by default
-      await DiaryRepository(db).log(entry('e-1', dayAgo(0),
-          const MacroSet(kcal: 1820, proteinG: 82)));
+      await DiaryRepository(db).log(
+          entry('e-1', today, const MacroSet(kcal: 1820, proteinG: 82)));
     });
     await tester.pumpWidget(host());
     await tester.pumpAndSettle();
 
-    // kcal view first: compact value label on the bar, no kcal target set.
-    expect(find.text('1.8k'), findsOneWidget,
-        reason: 'kcal value labels ride their bars, compacted');
+    // kcal view first: the cell compacts four digits, no kcal target set.
+    expect(find.text('1.8k'), findsOneWidget);
     expect(find.textContaining('protein target'), findsNothing);
 
     await tester.tap(find.text('Protein'));
     await tester.pumpAndSettle();
 
     expect(find.text('82'), findsOneWidget,
-        reason: 'the protein view labels bars in grams');
-    expect(find.text('1.8k'), findsNothing,
-        reason: 'one axis at a time');
+        reason: 'the protein view speaks grams');
+    expect(find.text('1.8k'), findsNothing, reason: 'one axis at a time');
     expect(find.text('≥150g protein target'), findsOneWidget,
         reason: 'the target line wears its role mark, per axis');
     await unmount(tester);
@@ -139,27 +146,27 @@ void main() {
       await TargetsRepository(db)
           .set(const DailyTargets(values: MacroSet(kcal: 2000)));
       final repo = DiaryRepository(db);
-      await repo.log(entry('e-1', dayAgo(0), const MacroSet(kcal: 2000)));
-      await repo.log(entry('e-2', dayAgo(1), const MacroSet(kcal: 1000)));
+      await repo.log(entry('e-1', today, const MacroSet(kcal: 2000)));
+      await repo.log(
+          entry('e-2', '2026-08-13', const MacroSet(kcal: 1000)));
     });
     await tester.pumpWidget(host());
     await tester.pumpAndSettle();
 
-    // The bar is the only Container inside its keyed InkWell.
-    Rect barRect(String day) => tester.getRect(find.descendant(
-        of: find.byKey(ValueKey('bar-$day')),
-        matching: find.byType(Container)));
     final line = tester.getRect(find.byKey(const ValueKey('target-line')));
+    final atTarget =
+        tester.getRect(find.byKey(const ValueKey('point-2026-08-14')));
+    final half = tester.getRect(find.byKey(const ValueKey('point-2026-08-13')));
+    final floor = tester.getRect(find.byKey(const ValueKey('chart-floor')));
 
-    // Bars and the line must share one coordinate frame: a day logged at
-    // exactly the target touches the line, not a band below it.
-    final atTarget = barRect(dayAgo(0));
-    expect((atTarget.top - line.center.dy).abs(), lessThanOrEqualTo(2.0),
-        reason: 'a bar at exactly the target must sit on the target line');
-
-    // And the frame is linear: half the value draws half the bar.
-    final half = barRect(dayAgo(1));
-    expect(half.height, closeTo(atTarget.height / 2, 2.0),
+    // Points and the line share ONE coordinate frame: a day logged at
+    // exactly the target sits on the line, not a band above or below it.
+    expect((atTarget.center.dy - line.center.dy).abs(), lessThanOrEqualTo(2.0),
+        reason: 'a point at exactly the target must sit on the target line');
+    // And the frame is linear: half the value is halfway up from the floor.
+    expect(
+        (floor.center.dy - half.center.dy),
+        closeTo((floor.center.dy - atTarget.center.dy) / 2, 2.0),
         reason: 'a mid-fraction day scales within the same frame');
     await unmount(tester);
   });
@@ -167,12 +174,13 @@ void main() {
   testWidgets('the axis picker survives 320dp at 2.5 text scale',
       (tester) async {
     // The fleet's recurring accessibility bug: rigid rows overflow at
-    // large text scale on narrow phones. Four segments is a rigid row.
+    // large text scale on narrow phones. Four segments is a rigid row, and
+    // a seven-column calendar is another.
     tester.view.physicalSize = const Size(320, 640);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
     await tester.runAsync(() => DiaryRepository(db)
-        .log(entry('e-1', dayAgo(0), const MacroSet(kcal: 500))));
+        .log(entry('e-1', today, const MacroSet(kcal: 500))));
 
     await tester.pumpWidget(ProviderScope(
       overrides: [appDatabaseProvider.overrideWithValue(db)],
@@ -183,66 +191,88 @@ void main() {
             size: Size(320, 640),
             textScaler: TextScaler.linear(2.5),
           ),
-          child: HistoryScreen(anchorDay: dayAgo(0)),
+          child: const HistoryScreen(today: today),
         ),
       ),
     ));
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull,
         reason: 'no layout exception at 320dp / 2.5x text');
-    // getRect (not getSize): the fix may scale the picker down, so assert
-    // the on-screen pixels after any transform, not the local box size.
-    expect(
-        tester.getRect(find.byType(SegmentedButton<String>)).width,
+    expect(tester.getRect(find.byType(SegmentedButton<String>)).width,
         lessThanOrEqualTo(320),
         reason: 'the picker fits the narrow screen');
-    // Big text must scale the picker down, not fold labels mid-word into
-    // tall broken columns: every label stays on a single line (one line at
-    // 2.5x is at most ~50px tall).
     for (final label in const ['kcal', 'Protein', 'Carbs', 'Fat']) {
       expect(tester.getRect(find.text(label)).height, lessThanOrEqualTo(60),
           reason: '"$label" must stay a one-line label');
     }
 
-    // …and stays live: switching to Fat re-labels the bars (no fat was
-    // logged, so the kcal value label goes away).
+    // …and stays live: switching to Fat re-labels the cells (no fat was
+    // logged, so the kcal value goes away). At this text size the calendar
+    // sits below the fold, so scroll to it like a person would.
+    final list = find.byType(Scrollable).first;
+    Future<void> toCalendar() => tester.scrollUntilVisible(
+        find.byKey(const ValueKey('day-$today')), 200,
+        scrollable: list);
+    Future<void> toPicker() => tester.scrollUntilVisible(
+        find.text('Fat'), -200,
+        scrollable: list);
+
+    await toCalendar();
     expect(find.text('500'), findsOneWidget);
+    await toPicker();
     await tester.tap(find.text('Fat'));
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
+    await toCalendar();
     expect(find.text('500'), findsNothing);
     await unmount(tester);
   });
 
-  testWidgets('tapping a bar opens that day', (tester) async {
-    final day = dayAgo(1);
-    await tester.runAsync(() => DiaryRepository(db).log(entry(
-        'e-1', day, const MacroSet(kcal: 700),
-        label: 'Bar-tap stew')));
-
-    await tester.pumpWidget(ProviderScope(
-      overrides: [appDatabaseProvider.overrideWithValue(db)],
-      child: Consumer(
-        builder: (context, ref, _) => MaterialApp.router(
-          theme: AppTheme.light,
-          routerConfig: ref.watch(appRouterProvider),
-        ),
-      ),
-    ));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('History'));
+  testWidgets('the arrows walk back through months and stop at this one',
+      (tester) async {
+    await tester.pumpWidget(host());
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(ValueKey('bar-$day')));
+    expect(tester.widget<IconButton>(find.byKey(const ValueKey('month-next')))
+        .onPressed, isNull,
+        reason: 'there is no forward from the month you are living in');
+
+    await tester.tap(find.byKey(const ValueKey('month-prev')));
     await tester.pumpAndSettle();
-    expect(find.text('Bar-tap stew'), findsOneWidget);
+    expect(find.text('July 2026'), findsOneWidget);
+    expect(tester.widget<IconButton>(find.byKey(const ValueKey('month-next')))
+        .onPressed, isNotNull);
+
+    await tester.tap(find.byKey(const ValueKey('month-next')));
+    await tester.pumpAndSettle();
+    expect(find.text('August 2026'), findsOneWidget);
     await unmount(tester);
   });
 
-  testWidgets('a past day opens to its own plate', (tester) async {
+  testWidgets('days that have not happened yet are shown but not tappable',
+      (tester) async {
+    await tester.pumpWidget(host());
+    await tester.pumpAndSettle();
+
+    // The 20th is in the pinned month but after the pinned today.
+    final future = tester.widget<InkWell>(find.descendant(
+        of: find.byKey(const ValueKey('day-2026-08-20')),
+        matching: find.byType(InkWell)));
+    expect(future.onTap, isNull,
+        reason: 'tomorrow is the Plan tab; History never writes ahead');
+    final past = tester.widget<InkWell>(find.descendant(
+        of: find.byKey(const ValueKey('day-2026-08-13')),
+        matching: find.byType(InkWell)));
+    expect(past.onTap, isNotNull);
+    await unmount(tester);
+  });
+
+  testWidgets('tapping a day cell opens that day', (tester) async {
+    final day = DiaryEntry.dayOf(
+        DateTime.now().subtract(const Duration(days: 1)));
     await tester.runAsync(() => DiaryRepository(db).log(entry(
-        'e-1', dayAgo(1), const MacroSet(kcal: 700),
-        label: 'Taco night')));
+        'e-1', day, const MacroSet(kcal: 700),
+        label: 'Calendar stew')));
 
     await tester.pumpWidget(ProviderScope(
       overrides: [appDatabaseProvider.overrideWithValue(db)],
@@ -254,15 +284,18 @@ void main() {
       ),
     ));
     await tester.pumpAndSettle();
-
-    // Today → History → yesterday's row → the plate.
     await tester.tap(find.byTooltip('History'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('700 kcal'));
+
+    // The real screen runs on the real clock — yesterday is in the month it
+    // opens on unless today is the 1st, in which case step back one month.
+    if (find.byKey(ValueKey('day-$day')).evaluate().isEmpty) {
+      await tester.tap(find.byKey(const ValueKey('month-prev')));
+      await tester.pumpAndSettle();
+    }
+    await tester.tap(find.byKey(ValueKey('day-$day')));
     await tester.pumpAndSettle();
-    expect(find.text('Taco night'), findsOneWidget);
-    expect(find.text('700 kcal'), findsOneWidget,
-        reason: 'the entry line carries its kcal');
+    expect(find.text('Calendar stew'), findsOneWidget);
     await unmount(tester);
   });
 }

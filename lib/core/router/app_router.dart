@@ -101,7 +101,8 @@ GoRouter appRouter(Ref ref) {
       ),
       GoRoute(
         path: '/history',
-        pageBuilder: (c, s) => _fade(key: s.pageKey, child: HistoryScreen()),
+        pageBuilder: (c, s) =>
+            _fade(key: s.pageKey, child: const HistoryScreen()),
       ),
       GoRoute(
         path: '/history/:day',

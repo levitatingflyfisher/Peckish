@@ -8,6 +8,13 @@ const monthNames = [
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
 ];
 
+/// Spelled out for the calendar's own header, where there is room and a
+/// month deserves its name.
+const monthFullNames = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
 String prettyDay(String day) {
   final d = DateTime.parse(day);
   return '${weekdayNames[d.weekday - 1]} · ${monthNames[d.month - 1]} '
