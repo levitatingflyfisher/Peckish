@@ -2,6 +2,10 @@ import 'package:oh_fleet_conformance/oh_fleet_conformance.dart';
 
 void main() => runFleetConformance(const FleetAppConfig(
       appId: 'peckish',
+      // Bundles its own type, so nothing falls back to a web font — a
+      // character the bundled families cannot draw is a box on a
+      // real phone. C7 sweeps lib/ for any.
+      checks: FleetAppConfig.withBundledFonts,
       // Tier-T (zero visual change): only the Material TextTheme ladder comes
       // from openhearth_design; the jam/oat/butter identity stays app-local.
       // None of those hex values coincide with canonical tokens, so no
