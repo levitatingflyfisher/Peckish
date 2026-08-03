@@ -49,6 +49,12 @@ Future<void> logRegular(
     ));
 }
 
+/// Where "See all" goes, carrying the day so the Foods screen logs onto
+/// the same day the rail does.
+@visibleForTesting
+String foodsPathForDay(String? day) =>
+    day == null ? '/foods' : '/foods?day=$day';
+
 /// The horizontal chip rail — Today's signature, and every past day's.
 class RegularsRail extends ConsumerWidget {
   const RegularsRail({super.key, this.day});
@@ -70,7 +76,7 @@ class RegularsRail extends ConsumerWidget {
                   style: Theme.of(context).textTheme.titleMedium),
             ),
             TextButton(
-              onPressed: () => context.push('/foods'),
+              onPressed: () => context.push(foodsPathForDay(day)),
               child: const Text('See all'),
             ),
           ],
@@ -133,7 +139,7 @@ class RegularsList extends ConsumerWidget {
               TextButton(
                 onPressed: () {
                   onLogged?.call();
-                  context.push('/foods');
+                  context.push(foodsPathForDay(day));
                 },
                 child: const Text('See all'),
               ),

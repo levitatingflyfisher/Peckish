@@ -8,8 +8,10 @@ import 'package:peckish/features/diary/data/diary_repository.dart';
 import 'package:peckish/features/diary/domain/diary_entry.dart';
 import 'package:peckish/features/diary/presentation/entry_tile.dart';
 import 'package:peckish/features/diary/presentation/history_screen.dart';
+import 'package:peckish/features/diary/presentation/regulars_rail.dart';
 import 'package:peckish/features/diary/presentation/today_screen.dart';
 import 'package:peckish/features/food/domain/macro_set.dart';
+import 'package:peckish/features/food/presentation/foods_screen.dart';
 import 'package:peckish/shared/theme/app_theme.dart';
 
 // Drift widget-test rules apply — see the canonical comment in
@@ -62,8 +64,8 @@ void main() {
   }
 
   Future<void> settle(WidgetTester tester) async {
-    await tester.runAsync(() => Future<void>.delayed(
-        const Duration(milliseconds: 80)));
+    await tester
+        .runAsync(() => Future<void>.delayed(const Duration(milliseconds: 80)));
     await tester.pumpAndSettle();
   }
 
@@ -107,6 +109,42 @@ void main() {
           of: find.byType(EntryTile), matching: find.text('Porridge')),
       findsOneWidget,
     );
+    await unmount(tester);
+  });
+
+  test('See all from a past day carries that day in the route', () {
+    // The screen honours ?day=; this pins the other half — that a past
+    // day's rail actually puts one there. Both halves have to hold or the
+    // fix only works in the test that constructs the screen directly.
+    expect(foodsPathForDay(null), '/foods');
+    expect(foodsPathForDay('2026-07-30'), '/foods?day=2026-07-30');
+  });
+
+  testWidgets('the Foods screen logs to the day it was opened from',
+      (tester) async {
+    // The v0.9 phone test: the rail landed on the right day, but 'See all'
+    // opened /foods with no day at all, so every tap there fell on today.
+    // Assert on the PERSISTED row, not on what the screen shows — the rail
+    // already passes a day, so a test of the rule would go green for free.
+    await seedRegular(tester);
+    final day = dayBefore(5);
+    await tester.pumpWidget(host(FoodsScreen(day: day)));
+    await settle(tester);
+
+    await tester.tap(find.widgetWithText(ListTile, 'Porridge').first);
+    await settle(tester);
+
+    final logged =
+        await tester.runAsync(() => DiaryRepository(db).entriesForDay(day))
+            as List<DiaryEntry>;
+    expect(logged.map((e) => e.label), contains('Porridge'),
+        reason: 'a tap on the Foods screen reached from a past day belongs '
+            'to THAT day');
+
+    final today = await tester.runAsync(() =>
+            DiaryRepository(db).entriesForDay(DiaryEntry.dayOf(DateTime.now())))
+        as List<DiaryEntry>;
+    expect(today, isEmpty, reason: 'and today must be left alone');
     await unmount(tester);
   });
 

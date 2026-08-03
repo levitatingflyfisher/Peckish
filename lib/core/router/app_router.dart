@@ -95,8 +95,14 @@ GoRouter appRouter(Ref ref) {
       ),
       GoRoute(
         path: '/foods',
-        pageBuilder: (c, s) =>
-            _fade(key: s.pageKey, child: const FoodsScreen()),
+        // ?day= carries the day the user opened this from. Without it the
+        // screen logs to today, which is what a past day's "See all" used
+        // to do — the rail landed on the right day and the screen behind
+        // it did not.
+        pageBuilder: (c, s) => _fade(
+          key: s.pageKey,
+          child: FoodsScreen(day: s.uri.queryParameters['day']),
+        ),
       ),
       GoRoute(
         path: '/sync',

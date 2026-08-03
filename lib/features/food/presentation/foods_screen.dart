@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:uuid/uuid.dart';
 
 import 'package:peckish/core/providers/core_providers.dart';
 import 'package:peckish/features/diary/domain/diary_entry.dart';
+import 'package:peckish/features/diary/presentation/regulars_rail.dart';
 import 'package:peckish/features/food/domain/custom_food.dart';
 import 'package:peckish/features/food/domain/food_usage.dart';
 import 'package:peckish/features/food/domain/macro_set.dart';
@@ -20,7 +20,14 @@ import 'package:peckish/shared/widgets/input_modal.dart';
 /// edit, archive, delete. Forgiveness over prevention — nothing here is a
 /// dead end.
 class FoodsScreen extends ConsumerWidget {
-  const FoodsScreen({super.key});
+  const FoodsScreen({super.key, this.day});
+
+  /// The day every "log again" here lands on — null means today.
+  ///
+  /// Reached from a past day's rail, this screen used to open with no day
+  /// at all and quietly log to today: the exact thing the rail was built
+  /// to stop, one screen further along.
+  final String? day;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -55,13 +62,14 @@ class FoodsScreen extends ConsumerWidget {
           'never clears this.',
           style: text.bodySmall?.copyWith(color: AppColors.stone),
         ),
-        for (final u in live) _RegularTile(usage: u),
+        for (final u in live) _RegularTile(usage: u, day: day),
         if (hidden.isNotEmpty)
           ExpansionTile(
             tilePadding: EdgeInsets.zero,
             title: Text('Hidden regulars', style: text.titleSmall),
             children: [
-              for (final u in hidden) _RegularTile(usage: u, isHidden: true),
+              for (final u in hidden)
+                _RegularTile(usage: u, isHidden: true, day: day),
             ],
           ),
         const SizedBox(height: AppSpacing.lg),
@@ -73,14 +81,14 @@ class FoodsScreen extends ConsumerWidget {
           'Household-defined foods — per serving, yours to edit.',
           style: text.bodySmall?.copyWith(color: AppColors.stone),
         ),
-        for (final c in activeCustoms) _CustomTile(food: c),
+        for (final c in activeCustoms) _CustomTile(food: c, day: day),
         if (archivedCustoms.isNotEmpty)
           ExpansionTile(
             tilePadding: EdgeInsets.zero,
             title: Text('Resting', style: text.titleSmall),
             children: [
               for (final c in archivedCustoms)
-                _CustomTile(food: c, isArchived: true),
+                _CustomTile(food: c, isArchived: true, day: day),
             ],
           ),
       ],
@@ -115,28 +123,12 @@ final _regularsProvider = StreamProvider.autoDispose(
 final _customsProvider = FutureProvider.autoDispose((ref) =>
     ref.watch(customFoodRepositoryProvider).getAll(includeArchived: true));
 
-Future<void> _relog(WidgetRef ref, DiaryEntry template) async {
-  final now = DateTime.now();
-  await ref.read(diaryRepositoryProvider).log(DiaryEntry(
-        id: const Uuid().v4(),
-        day: DiaryEntry.dayOf(now),
-        at: now,
-        food: template.food,
-        label: template.label,
-        qty: template.qty,
-        unitLabel: template.unitLabel,
-        grams: template.grams,
-        macros: template.macros,
-        source: EntrySource.tap,
-        createdAt: now,
-      ));
-}
-
 class _RegularTile extends ConsumerWidget {
-  const _RegularTile({required this.usage, this.isHidden = false});
+  const _RegularTile({required this.usage, this.isHidden = false, this.day});
 
   final FoodUsage usage;
   final bool isHidden;
+  final String? day;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -146,18 +138,18 @@ class _RegularTile extends ConsumerWidget {
       title: Text(usage.label),
       subtitle: Text('${usage.useCount}× · ${usage.unitLabel}'
           '${kcal == null ? '' : ' · ${kcal.round()} kcal'}'),
+      // Logging again is what this list is FOR — it should not cost a trip
+      // through the overflow menu. The menu keeps the same action for
+      // anyone who went looking there.
+      onTap: isHidden
+          ? null
+          : () => logRegular(context, ref, usage.asTemplateEntry(), day: day),
       trailing: PopupMenuButton<String>(
         icon: const Icon(Icons.more_vert),
         onSelected: (choice) async {
           switch (choice) {
             case 'log':
-              await _relog(ref, usage.asTemplateEntry());
-              if (context.mounted) {
-                ScaffoldMessenger.of(context)
-                  ..clearSnackBars()
-                  ..showSnackBar(
-                      SnackBar(content: Text('Logged ${usage.label}')));
-              }
+              await logRegular(context, ref, usage.asTemplateEntry(), day: day);
             case 'hide':
               await ref
                   .read(foodUsageRepositoryProvider)
@@ -181,10 +173,28 @@ class _RegularTile extends ConsumerWidget {
 }
 
 class _CustomTile extends ConsumerWidget {
-  const _CustomTile({required this.food, this.isArchived = false});
+  const _CustomTile({required this.food, this.isArchived = false, this.day});
 
   final CustomFood food;
   final bool isArchived;
+  final String? day;
+
+  /// One serving of this custom food, as the entry a relog is built from.
+  /// The id/day/at placeholders are the template's — relogEntry stamps the
+  /// real ones.
+  DiaryEntry _asTemplate() => DiaryEntry(
+        id: '',
+        day: '',
+        at: DateTime.now(),
+        food: FoodRef.custom(food.id),
+        label: food.name,
+        qty: 1,
+        unitLabel: food.servingLabel,
+        grams: null,
+        macros: food.perServing,
+        source: EntrySource.tap,
+        createdAt: DateTime.now(),
+      );
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -195,33 +205,16 @@ class _CustomTile extends ConsumerWidget {
       title: Text(food.name),
       subtitle: Text(
           '${food.servingLabel}${kcal == null ? '' : ' · ${kcal.round()} kcal'}'),
+      onTap: isArchived
+          ? null
+          : () => logRegular(context, ref, _asTemplate(), day: day),
       trailing: PopupMenuButton<String>(
         icon: const Icon(Icons.more_vert),
         onSelected: (choice) async {
           final repo = ref.read(customFoodRepositoryProvider);
           switch (choice) {
             case 'log':
-              await _relog(
-                  ref,
-                  DiaryEntry(
-                    id: '',
-                    day: '',
-                    at: DateTime.now(),
-                    food: FoodRef.custom(food.id),
-                    label: food.name,
-                    qty: 1,
-                    unitLabel: food.servingLabel,
-                    grams: null,
-                    macros: food.perServing,
-                    source: EntrySource.tap,
-                    createdAt: DateTime.now(),
-                  ));
-              if (context.mounted) {
-                ScaffoldMessenger.of(context)
-                  ..clearSnackBars()
-                  ..showSnackBar(
-                      SnackBar(content: Text('Logged ${food.name}')));
-              }
+              await logRegular(context, ref, _asTemplate(), day: day);
             case 'edit':
               await showInputDialog<void>(
                 context,
