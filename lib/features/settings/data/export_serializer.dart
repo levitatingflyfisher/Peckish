@@ -122,8 +122,9 @@ class PeckishExport {
       Map<String, dynamic> raw, String key) {
     final v = raw[key];
     if (v == null) return const [];
-    if (v is! List)
+    if (v is! List) {
       throw FormatException("export section '$key' is not a list");
+    }
     return v.cast<Map<String, dynamic>>();
   }
 
