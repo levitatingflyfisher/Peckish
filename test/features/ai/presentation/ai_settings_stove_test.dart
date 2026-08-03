@@ -22,8 +22,7 @@ class _MemoryKeys implements KeyStore {
 }
 
 void main() {
-  const phrase =
-      'abandon abandon abandon abandon abandon abandon '
+  const phrase = 'abandon abandon abandon abandon abandon abandon '
       'abandon abandon abandon abandon abandon about';
 
   late AiConfigRepository repo;
@@ -85,15 +84,14 @@ void main() {
 
     expect(find.widgetWithText(TextField, 'Stove address'), findsOneWidget);
     expect(find.widgetWithText(TextField, 'Port'), findsOneWidget);
-    expect(
-        find.widgetWithText(TextField, 'Household phrase'), findsOneWidget);
-    expect(
-        find.textContaining('the stove only ever learns its own key'),
+    expect(find.widgetWithText(TextField, 'Household phrase'), findsOneWidget);
+    expect(find.textContaining('the stove only ever learns its own key'),
         findsOneWidget,
         reason: 'the calm promise is the privacy contract');
   });
 
-  testWidgets('a valid save lands host + phrase; the port default is not '
+  testWidgets(
+      'a valid save lands host + phrase; the port default is not '
       'stored', (tester) async {
     await open(tester);
     await pickStove(tester);

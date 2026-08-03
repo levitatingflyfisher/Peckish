@@ -63,4 +63,39 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
     });
   }
+
+  testWidgets('the + sheet survives 320dp at 2.0 text scale', (tester) async {
+    // The sheet is not a screen, so the loop above never reached it — and
+    // v0.9's route row is exactly the shape that bites here: several
+    // labelled buttons across the narrowest phone. A Wrap is why this
+    // passes; a Row would not.
+    final db = AppDatabase(NativeDatabase.memory());
+    tester.view.physicalSize = const Size(320, 640);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(ProviderScope(
+      overrides: [appDatabaseProvider.overrideWithValue(db)],
+      child: MaterialApp(
+        theme: AppTheme.light,
+        home: const MediaQuery(
+          data: MediaQueryData(
+            size: Size(320, 640),
+            textScaler: TextScaler.linear(2.0),
+          ),
+          child: TodayScreen(),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(FloatingActionButton));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Quick add'), findsOneWidget,
+        reason: 'every way in is still reachable at 2× text');
+    expect(tester.takeException(), isNull);
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 1));
+  });
 }

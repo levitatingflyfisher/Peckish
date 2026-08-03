@@ -61,8 +61,7 @@ void main() {
       expect(emits, 101);
     });
 
-    test('an unknown total emits on the first chunk, then every ~512 KB',
-        () {
+    test('an unknown total emits on the first chunk, then every ~512 KB', () {
       final throttle = DownloadProgressThrottle();
       var emits = 0;
       var received = 0;

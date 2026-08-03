@@ -79,8 +79,7 @@ void main() {
     await unmount(tester);
   });
 
-  testWidgets('dismiss hides the card for the rest of the day',
-      (tester) async {
+  testWidgets('dismiss hides the card for the rest of the day', (tester) async {
     await seedProteinFloorAndEggs(tester);
     await tester.pumpWidget(todayHost());
     await tester.pumpAndSettle();
@@ -150,8 +149,8 @@ void main() {
     await tester.tap(find.byTooltip('Settings'));
     await tester.pumpAndSettle();
     await tester.runAsync(() async {
-      await tester.tap(find.widgetWithText(
-          SwitchListTile, 'Round out your day'));
+      await tester
+          .tap(find.widgetWithText(SwitchListTile, 'Round out your day'));
       await Future<void>.delayed(const Duration(milliseconds: 50));
     });
     await tester.pumpAndSettle();

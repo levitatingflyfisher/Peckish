@@ -28,8 +28,7 @@ void main() {
   });
 
   group('NumField', () {
-    testWidgets('shows a decimal keyboard and the given label',
-        (tester) async {
+    testWidgets('shows a decimal keyboard and the given label', (tester) async {
       final controller = TextEditingController();
       addTearDown(controller.dispose);
       await tester.pumpWidget(MaterialApp(
@@ -52,8 +51,7 @@ void main() {
       addTearDown(controller.dispose);
       await tester.pumpWidget(MaterialApp(
         home: Scaffold(
-          body: NumField(
-              controller: controller, label: 'Qty', outlined: true),
+          body: NumField(controller: controller, label: 'Qty', outlined: true),
         ),
       ));
 

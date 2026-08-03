@@ -12,8 +12,7 @@ import 'package:sanctuary_auth_core/sanctuary_auth_core.dart';
 // loosened.
 void main() {
   // A valid 12-word phrase (the standard BIP39 all-'abandon' vector).
-  const phrase =
-      'abandon abandon abandon abandon abandon abandon '
+  const phrase = 'abandon abandon abandon abandon abandon abandon '
       'abandon abandon abandon abandon abandon about';
 
   test(

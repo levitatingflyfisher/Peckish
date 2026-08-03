@@ -61,8 +61,7 @@ void main() {
     expect(salad.customFoodId, 'cf-1');
   });
 
-  test('re-entry heals a mid-backfill crash instead of freezing it',
-      () async {
+  test('re-entry heals a mid-backfill crash instead of freezing it', () async {
     final raw = seedV2();
     // Simulate a half-run: the table exists but the backfill died partway
     // (one row, and with a stale count at that) and the version stamp never

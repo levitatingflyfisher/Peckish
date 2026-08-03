@@ -51,15 +51,14 @@ void main() {
 
     expect(find.textContaining('Adding to'), findsOneWidget,
         reason: 'the sheet says which day it feeds');
-    expect(find.text('Scan a barcode'), findsOneWidget,
+    expect(find.text('Scan'), findsOneWidget,
         reason: 'a tin in the recycling is exactly how you fix a missed day');
 
     await tester.tap(find.text('Quick add'));
     await tester.pumpAndSettle();
     await tester.enterText(
         find.widgetWithText(TextField, 'What was it?').last, 'Forgotten stew');
-    await tester.enterText(
-        find.widgetWithText(TextField, 'kcal').last, '450');
+    await tester.enterText(find.widgetWithText(TextField, 'kcal').last, '450');
     await tester.runAsync(() async {
       await tester.tap(find.text('Log it'));
       await Future<void>.delayed(const Duration(milliseconds: 50));
@@ -85,9 +84,9 @@ void main() {
     await tester.pumpAndSettle();
     // The regulars RAIL may (rightly) show the food — logging to any day
     // records the habit. What must NOT exist is a diary LINE for today.
-    expect(find.descendant(
-            of: find.byType(EntryTile),
-            matching: find.text('Forgotten stew')),
+    expect(
+        find.descendant(
+            of: find.byType(EntryTile), matching: find.text('Forgotten stew')),
         findsNothing,
         reason: "yesterday's fix must not appear as one of today's lines");
     await unmount(tester);
@@ -106,7 +105,7 @@ void main() {
     await tester.tap(find.byType(FloatingActionButton));
     await tester.pumpAndSettle();
 
-    expect(find.text('Scan a barcode'), findsOneWidget);
+    expect(find.text('Scan'), findsOneWidget);
     expect(find.textContaining('Adding to'), findsNothing);
     await unmount(tester);
   });

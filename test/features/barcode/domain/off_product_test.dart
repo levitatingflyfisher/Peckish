@@ -5,7 +5,11 @@ import 'package:peckish/features/barcode/domain/off_product.dart';
 // null-is-unknown law: a product page missing protein must report protein as
 // unknown, never 0 g.
 void main() {
-  Map<String, dynamic> product({Map<String, dynamic>? nutriments, String? servingSize, Object? servingQuantity}) => {
+  Map<String, dynamic> product(
+          {Map<String, dynamic>? nutriments,
+          String? servingSize,
+          Object? servingQuantity}) =>
+      {
         'code': '3017620422003',
         'product': {
           'product_name': 'Nutella',
@@ -24,7 +28,8 @@ void main() {
 
   group('OffProduct.fromApiJson', () {
     test('parses name, brand, and per-100g macros', () {
-      final p = OffProduct.fromApiJson(product(servingSize: '15 g', servingQuantity: 15));
+      final p = OffProduct.fromApiJson(
+          product(servingSize: '15 g', servingQuantity: 15));
       expect(p.barcode, '3017620422003');
       expect(p.name, 'Nutella');
       expect(p.brand, 'Ferrero');
@@ -37,7 +42,8 @@ void main() {
     });
 
     test('missing nutriment slots stay null — unknown is never zero', () {
-      final p = OffProduct.fromApiJson(product(nutriments: {'energy-kcal_100g': 250}));
+      final p = OffProduct.fromApiJson(
+          product(nutriments: {'energy-kcal_100g': 250}));
       expect(p.per100g.kcal, 250);
       expect(p.per100g.proteinG, isNull);
       expect(p.per100g.carbG, isNull);
@@ -45,13 +51,15 @@ void main() {
     });
 
     test('EU kJ-only labels convert energy_100g to kcal', () {
-      final p = OffProduct.fromApiJson(product(nutriments: {'energy_100g': 2255}));
+      final p =
+          OffProduct.fromApiJson(product(nutriments: {'energy_100g': 2255}));
       expect(p.per100g.kcal, closeTo(539, 1));
     });
 
     test('serving_quantity tolerates the string shape OFF sometimes returns',
         () {
-      final p = OffProduct.fromApiJson(product(servingSize: '2 rolls (56 g)', servingQuantity: '56'));
+      final p = OffProduct.fromApiJson(
+          product(servingSize: '2 rolls (56 g)', servingQuantity: '56'));
       expect(p.servingGrams, 56);
     });
 

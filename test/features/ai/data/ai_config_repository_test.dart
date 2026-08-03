@@ -28,8 +28,8 @@ void main() {
   test('saving and reloading round-trips both backends', () async {
     SharedPreferences.setMockInitialValues({});
     final keys = _InMemoryKeyStore();
-    final repo = AiConfigRepository(await SharedPreferences.getInstance(),
-        keys, InMemoryStoveSecretStore());
+    final repo = AiConfigRepository(await SharedPreferences.getInstance(), keys,
+        InMemoryStoveSecretStore());
 
     await repo.save(const AiConfig(
       backend: AiBackend.anthropic,
@@ -57,10 +57,10 @@ void main() {
   test('turning it off clears the stored key', () async {
     SharedPreferences.setMockInitialValues({});
     final keys = _InMemoryKeyStore();
-    final repo = AiConfigRepository(await SharedPreferences.getInstance(),
-        keys, InMemoryStoveSecretStore());
-    await repo.save(const AiConfig(
-        backend: AiBackend.anthropic, anthropicKey: 'sk-ant-x'));
+    final repo = AiConfigRepository(await SharedPreferences.getInstance(), keys,
+        InMemoryStoveSecretStore());
+    await repo.save(
+        const AiConfig(backend: AiBackend.anthropic, anthropicKey: 'sk-ant-x'));
     await repo.save(const AiConfig(backend: AiBackend.none));
     expect((await repo.load()).configured, isFalse);
     expect(await keys.read(), isNull,
@@ -68,8 +68,7 @@ void main() {
   });
 
   group('the stove backend', () {
-    const phrase =
-        'abandon abandon abandon abandon abandon abandon '
+    const phrase = 'abandon abandon abandon abandon abandon abandon '
         'abandon abandon abandon abandon abandon about';
 
     test('round-trips host + port in prefs, the phrase in secure storage',
@@ -108,8 +107,8 @@ void main() {
       final repo = AiConfigRepository(await SharedPreferences.getInstance(),
           _InMemoryKeyStore(), InMemoryStoveSecretStore());
 
-      await repo.save(const AiConfig(
-          backend: AiBackend.stove, stoveHost: 'stove.local'));
+      await repo.save(
+          const AiConfig(backend: AiBackend.stove, stoveHost: 'stove.local'));
       final loaded = await repo.load();
       expect(loaded.stovePort, isNull,
           reason: 'the default port is applied at ask time, not stored');

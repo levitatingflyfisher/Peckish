@@ -24,8 +24,7 @@ void main() {
 
   setUp(() => db = AppDatabase(NativeDatabase.memory()));
 
-  Future<void> seed(WidgetTester tester, {String? day}) =>
-      tester.runAsync(() {
+  Future<void> seed(WidgetTester tester, {String? day}) => tester.runAsync(() {
         final now = DateTime.now();
         final d = day ?? DiaryEntry.dayOf(now);
         final at = DateTime.parse('${d}T08:30:00');
@@ -56,8 +55,7 @@ void main() {
 
   Future<void> enterByLabel(
       WidgetTester tester, String label, String value) async {
-    await tester.enterText(
-        find.widgetWithText(TextField, label).last, value);
+    await tester.enterText(find.widgetWithText(TextField, label).last, value);
     await tester.pump();
   }
 
@@ -69,15 +67,13 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('tapping a line opens the sheet on its numbers',
-      (tester) async {
+  testWidgets('tapping a line opens the sheet on its numbers', (tester) async {
     await seed(tester);
     await tester.pumpWidget(todayHost());
     await tester.pumpAndSettle();
 
     await tester.tap(find.descendant(
-        of: find.byType(EntryTile),
-        matching: find.text('Egg burrito')));
+        of: find.byType(EntryTile), matching: find.text('Egg burrito')));
     await tester.pumpAndSettle();
 
     expect(find.text('Fix this line'), findsOneWidget);
@@ -93,8 +89,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(find.descendant(
-        of: find.byType(EntryTile),
-        matching: find.text('Egg burrito')));
+        of: find.byType(EntryTile), matching: find.text('Egg burrito')));
     await tester.pumpAndSettle();
     await enterByLabel(tester, 'Qty', '2');
 
@@ -114,8 +109,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(find.descendant(
-        of: find.byType(EntryTile),
-        matching: find.text('Egg burrito')));
+        of: find.byType(EntryTile), matching: find.text('Egg burrito')));
     await tester.pumpAndSettle();
     await enterByLabel(tester, 'kcal', '300');
     await save(tester);
@@ -124,15 +118,13 @@ void main() {
     await unmount(tester);
   });
 
-  testWidgets('Cancel walks away without touching the ledger',
-      (tester) async {
+  testWidgets('Cancel walks away without touching the ledger', (tester) async {
     await seed(tester);
     await tester.pumpWidget(todayHost());
     await tester.pumpAndSettle();
 
     await tester.tap(find.descendant(
-        of: find.byType(EntryTile),
-        matching: find.text('Egg burrito')));
+        of: find.byType(EntryTile), matching: find.text('Egg burrito')));
     await tester.pumpAndSettle();
     await enterByLabel(tester, 'kcal', '999');
     await tester.tap(find.text('Cancel'));
@@ -157,8 +149,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(find.descendant(
-        of: find.byType(EntryTile),
-        matching: find.text('Egg burrito')));
+        of: find.byType(EntryTile), matching: find.text('Egg burrito')));
     await tester.pumpAndSettle();
     expect(find.text('Fix this line'), findsOneWidget);
     await unmount(tester);

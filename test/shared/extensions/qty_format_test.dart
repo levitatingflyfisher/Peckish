@@ -18,7 +18,8 @@ void main() {
       expect(formatQty(0.75), '0.75');
     });
 
-    test('float noise from computed rescales is rounded away, eighth '
+    test(
+        'float noise from computed rescales is rounded away, eighth '
         'portions survive', () {
       // 249 × 1.1 lands on 273.90000000000003 in doubles — a rescaled
       // quantity must never render the noise. Three decimals keeps every

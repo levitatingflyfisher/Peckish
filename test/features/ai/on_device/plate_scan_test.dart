@@ -11,8 +11,8 @@ void main() {
         'pizza' => (
             name: 'Pizza, cheese',
             grams: 107.0,
-            macros: const MacroSet(
-                kcal: 285, proteinG: 12, carbG: 36, fatG: 10),
+            macros:
+                const MacroSet(kcal: 285, proteinG: 12, carbG: 36, fatG: 10),
           ),
         'salad' => (
             name: 'Salad, garden',
@@ -22,8 +22,7 @@ void main() {
         _ => null,
       };
 
-  test('a mapped label becomes a draft line with real spine macros',
-      () async {
+  test('a mapped label becomes a draft line with real spine macros', () async {
     final guess = await PlateScan.fromLabels(
       [(label: 'Pizza', confidence: 0.92)],
       lookup,
@@ -37,8 +36,7 @@ void main() {
         reason: "the classifier's REAL confidence — never invented");
   });
 
-  test('scene noise and generic labels are skipped, never guessed',
-      () async {
+  test('scene noise and generic labels are skipped, never guessed', () async {
     final guess = await PlateScan.fromLabels(
       [
         (label: 'Tableware', confidence: 0.98),
@@ -51,8 +49,7 @@ void main() {
     expect(guess.foods, isEmpty);
   });
 
-  test('a label below the noise floor is dropped even when mapped',
-      () async {
+  test('a label below the noise floor is dropped even when mapped', () async {
     final guess = await PlateScan.fromLabels(
       [(label: 'Pizza', confidence: 0.2)],
       lookup,

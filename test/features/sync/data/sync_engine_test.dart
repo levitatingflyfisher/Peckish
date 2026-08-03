@@ -58,22 +58,18 @@ void main() {
     await CustomFoodRepository(a).create(food('cf-1', 'Original'));
     // B learns about it, then A renames (strictly later stamp).
     await SyncEngine(b).apply(await SyncEngine(a).buildChangeset());
-    await CustomFoodRepository(a)
-        .update(food('cf-1', 'Renamed on A'));
+    await CustomFoodRepository(a).update(food('cf-1', 'Renamed on A'));
 
     // Stale B → A: must not clobber A's newer name.
     await SyncEngine(a).apply(await SyncEngine(b).buildChangeset());
-    expect((await CustomFoodRepository(a).byId('cf-1'))!.name,
-        'Renamed on A');
+    expect((await CustomFoodRepository(a).byId('cf-1'))!.name, 'Renamed on A');
 
     // Newer A → B: must apply.
     await SyncEngine(b).apply(await SyncEngine(a).buildChangeset());
-    expect((await CustomFoodRepository(b).byId('cf-1'))!.name,
-        'Renamed on A');
+    expect((await CustomFoodRepository(b).byId('cf-1'))!.name, 'Renamed on A');
   });
 
-  test('a tombstone travels, and a stale peer cannot resurrect it',
-      () async {
+  test('a tombstone travels, and a stale peer cannot resurrect it', () async {
     await CustomFoodRepository(a).create(food('cf-1', 'Doomed'));
     await SyncEngine(b).apply(await SyncEngine(a).buildChangeset());
     expect(await CustomFoodRepository(b).byId('cf-1'), isNotNull);
@@ -104,8 +100,7 @@ void main() {
 
     final onB = await RecipeRepository(b).byId('r-1');
     expect(onB, isNotNull);
-    expect(onB!.ingredients.map((i) => i.text),
-        ['1 onion', '500 g beef']);
+    expect(onB!.ingredients.map((i) => i.text), ['1 onion', '500 g beef']);
 
     // An edit that changes the ingredient list replaces it wholesale on
     // the peer too.
@@ -117,7 +112,8 @@ void main() {
       createdAt: DateTime(2026),
     ));
     await SyncEngine(b).apply(await SyncEngine(a).buildChangeset());
-    expect((await RecipeRepository(b).byId('r-1'))!.ingredients.map((i) => i.text),
+    expect(
+        (await RecipeRepository(b).byId('r-1'))!.ingredients.map((i) => i.text),
         ['2 onions']);
   });
 

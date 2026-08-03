@@ -87,7 +87,12 @@ class _AddSheetState extends ConsumerState<_AddSheet> {
               children: [
                 Expanded(
                   child: TextField(
-                    autofocus: true,
+                    // Deliberately NOT autofocused. The sheet's first
+                    // screenful is taps — your regulars, quick add, the
+                    // scanner — and a keyboard that arrives uninvited
+                    // covers exactly that. Search is for the food you do
+                    // NOT already have a row for; reaching it costs one
+                    // tap, which is the rarer case paying the cost.
                     decoration: const InputDecoration(
                       prefixIcon: Icon(Icons.search),
                       hintText: 'Search foods — works offline',
@@ -113,6 +118,107 @@ class _AddSheetState extends ConsumerState<_AddSheet> {
 
 /// What the sheet shows before any search: staples first (the point of the
 /// app), then quick add.
+/// Where the barcode screen lives, and which posture it opens in.
+///
+/// One screen, two doors. v0.9 merged the remembered Scan/Type toggle into
+/// a single screen — right, because a remembered mode can only ever be
+/// wrong half the time — but it left one door, so a typist paid a tap to
+/// put the camera down. The doors are the fix: neither is remembered,
+/// neither is a mode, and both land in the same place.
+String _scanPath(String? day, {bool typing = false}) {
+  final q = <String>[
+    if (day != null) 'day=$day',
+    if (typing) 'type=1',
+  ];
+  return q.isEmpty ? '/scan' : '/scan?${q.join('&')}';
+}
+
+/// The ways into a new entry, as one thumb-height row.
+///
+/// Each is a tap target of its own, sized so four fit across a 320dp
+/// screen and labelled so none of them is a guess. They wrap rather than
+/// overflow when the text scale is turned up — a rigid Row here is the
+/// fleet's recurring accessibility bug.
+class _RouteRow extends ConsumerWidget {
+  const _RouteRow({this.day, required this.aiReady});
+
+  final String? day;
+  final bool aiReady;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    void go(void Function() action) {
+      Navigator.of(context).pop();
+      action();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+      child: Wrap(
+        spacing: AppSpacing.sm,
+        runSpacing: AppSpacing.sm,
+        children: [
+          _RouteButton(
+            icon: Icons.bolt_outlined,
+            color: AppColors.butter,
+            label: 'Quick add',
+            // Quick add opens a dialog over this sheet; it is the one
+            // route that does not leave.
+            onTap: () => _showQuickAdd(context, ref, day: day),
+          ),
+          _RouteButton(
+            icon: Icons.qr_code_scanner,
+            color: AppColors.sage,
+            label: 'Scan',
+            onTap: () => go(() => context.push(_scanPath(day))),
+          ),
+          _RouteButton(
+            icon: Icons.keyboard_outlined,
+            color: AppColors.sage,
+            label: 'Type a barcode',
+            onTap: () => go(() => context.push(_scanPath(day, typing: true))),
+          ),
+          if (aiReady)
+            _RouteButton(
+              icon: Icons.auto_awesome,
+              color: AppColors.paprika,
+              label: 'Guess it for me',
+              onTap: () => go(() => showGuessSheet(context, day: day)),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RouteButton extends StatelessWidget {
+  const _RouteButton({
+    required this.icon,
+    required this.color,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final Color color;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ConstrainedBox(
+      // 48dp is the floor for a thumb; the max keeps a long label from
+      // claiming the whole row and stranding the others below it.
+      constraints: const BoxConstraints(minHeight: 48, maxWidth: 260),
+      child: OutlinedButton.icon(
+        icon: Icon(icon, size: 20, color: color),
+        label: Text(label, overflow: TextOverflow.ellipsis),
+        onPressed: onTap,
+      ),
+    );
+  }
+}
+
 class _IdleSheet extends ConsumerWidget {
   const _IdleSheet({required this.scroll, this.day});
 
@@ -143,38 +249,14 @@ class _IdleSheet extends ConsumerWidget {
                     .titleMedium
                     ?.copyWith(color: AppColors.paprika)),
           ),
-        // First, above every other route in: the food you have logged
-        // before is the one you are most likely adding now.
-        RegularsList(day: day, onLogged: () => Navigator.of(context).pop()),
-        ListTile(
-          leading: const Icon(Icons.bolt_outlined, color: AppColors.butter),
-          title: const Text('Quick add'),
-          subtitle: const Text('Just a name and numbers you know'),
-          onTap: () => _showQuickAdd(context, ref, day: day),
-        ),
-        ListTile(
-          leading: const Icon(Icons.qr_code_scanner, color: AppColors.sage),
-          title: const Text('Scan a barcode'),
-          subtitle: const Text('Packaged food — one scan, one lookup'),
-          onTap: () {
-            Navigator.of(context).pop();
-            // The scanned day rides in the URL, so the scanner and its
-            // confirm sheet survive a rebuild still pointed at the right
-            // day.
-            context.push(day == null ? '/scan' : '/scan?day=$day');
-          },
-        ),
-        if (aiReady)
-          ListTile(
-            leading: const Icon(Icons.auto_awesome, color: AppColors.paprika),
-            title: const Text('Guess it for me'),
-            subtitle: const Text('Describe the meal — AI drafts, you confirm'),
-            onTap: () {
-              Navigator.of(context).pop();
-              showGuessSheet(context, day: day);
-            },
-          ),
+        // The ways IN come first and stay put, as one compact row rather
+        // than a stack of full-width tiles. Three tiles pushed the regulars
+        // clean off the first screenful — and the regulars are what most
+        // taps are for, so "options above" has to mean "above AND both
+        // still visible", not "above and the list is now a scroll away".
+        _RouteRow(day: day, aiReady: aiReady),
         const Divider(),
+        RegularsList(day: day, onLogged: () => Navigator.of(context).pop()),
         if ((meals.value ?? const []).isNotEmpty) ...[
           Padding(
             padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),

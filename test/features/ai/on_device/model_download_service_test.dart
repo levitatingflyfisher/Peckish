@@ -82,8 +82,7 @@ void main() {
 
   test(
       'a present final file counts as downloaded regardless of the declared '
-      'approximate size (the Reckon scar: never delete real models)',
-      () async {
+      'approximate size (the Reckon scar: never delete real models)', () async {
     await writeBytes(finalFile(), 2 * 1024 * 1024);
     expect(await service.isDownloaded(spec), isTrue);
     expect(finalFile().existsSync(), isTrue);

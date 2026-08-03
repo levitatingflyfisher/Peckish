@@ -21,8 +21,7 @@ void main() {
     final db = AppDatabase(NativeDatabase.memory());
     await tester.pumpWidget(ProviderScope(
       overrides: [appDatabaseProvider.overrideWithValue(db)],
-      child:
-          MaterialApp(theme: AppTheme.light, home: const PrivacyScreen()),
+      child: MaterialApp(theme: AppTheme.light, home: const PrivacyScreen()),
     ));
     await tester.pumpAndSettle();
 
@@ -45,8 +44,8 @@ void main() {
     // The stove tier: a home server, named with its encryption and its
     // trigger like every other row.
     expect(find.textContaining('home stove'), findsOneWidget);
-    expect(find.textContaining('encrypted to your own machine'),
-        findsOneWidget);
+    expect(
+        find.textContaining('encrypted to your own machine'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(seconds: 1));

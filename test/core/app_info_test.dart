@@ -11,10 +11,8 @@ import 'package:peckish/core/app_info.dart';
 void main() {
   test('AppInfo.appVersion matches pubspec.yaml', () {
     final pubspec = File('pubspec.yaml').readAsLinesSync();
-    final versionLine =
-        pubspec.firstWhere((l) => l.startsWith('version:'));
-    final pubspecVersion =
-        versionLine.split(':')[1].trim().split('+').first;
+    final versionLine = pubspec.firstWhere((l) => l.startsWith('version:'));
+    final pubspecVersion = versionLine.split(':')[1].trim().split('+').first;
 
     expect(AppInfo.appVersion, pubspecVersion,
         reason: 'About would show the wrong version — bump '

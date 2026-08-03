@@ -89,16 +89,17 @@ void main() {
         );
       }));
 
-  Widget host({BarcodeResolver? resolver}) => ProviderScope(
+  Widget host({BarcodeResolver? resolver, bool startTyping = false}) =>
+      ProviderScope(
         overrides: [
           appDatabaseProvider.overrideWithValue(db),
           offClientProvider.overrideWithValue(client()),
-          barcodeResolverProvider
-              .overrideWithValue(resolver ?? resolverWith()),
+          barcodeResolverProvider.overrideWithValue(resolver ?? resolverWith()),
         ],
         child: MaterialApp(
             theme: AppTheme.light,
-            home: const ScanScreen(debugCameraOverride: true)),
+            home: ScanScreen(
+                debugCameraOverride: true, startTyping: startTyping)),
       );
 
   Future<void> unmount(WidgetTester tester) async {
@@ -132,6 +133,47 @@ void main() {
     await unmount(tester);
   });
 
+  group('the Type door', () {
+    // v0.9 collapsed the remembered Scan/Type toggle into one screen, which
+    // was right — but it left one way in, and it was the camera's. Someone
+    // who came to type paid a tap to put a preview down they never wanted.
+    // Two doors, no memory: whichever you pick is right every time, because
+    // you just picked it.
+    testWidgets('opens with the camera already parked', (tester) async {
+      await tester.pumpWidget(host(startTyping: true));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ScannerView), findsNothing,
+          reason: 'you came to type — nothing should be filming');
+      expect(find.byType(TextField), findsOneWidget);
+      await unmount(tester);
+    });
+
+    testWidgets('the cursor is already in the field', (tester) async {
+      await tester.pumpWidget(host(startTyping: true));
+      await tester.pumpAndSettle();
+
+      expect(tester.testTextInput.isVisible, isTrue,
+          reason: 'here the keyboard IS the request — unlike the + sheet, '
+              'where it arrived uninvited');
+      await unmount(tester);
+    });
+
+    testWidgets('is a posture, not a mode — the next visit films again',
+        (tester) async {
+      await tester.pumpWidget(host(startTyping: true));
+      await tester.pumpAndSettle();
+      expect(find.byType(ScannerView), findsNothing);
+      await unmount(tester);
+
+      await tester.pumpWidget(host());
+      await tester.pumpAndSettle();
+      expect(find.byType(ScannerView), findsOneWidget,
+          reason: 'nothing was remembered, which is the whole point');
+      await unmount(tester);
+    });
+  });
+
   testWidgets('typing costs no toggle at all, camera up', (tester) async {
     await tester.pumpWidget(host());
     await tester.pumpAndSettle();
@@ -144,7 +186,8 @@ void main() {
 
   testWidgets('the camera stands down while a miss question is up',
       (tester) async {
-    await tester.pumpWidget(host(resolver: resolverWith(usdaPath: buildSlice('usda.db'))));
+    await tester.pumpWidget(
+        host(resolver: resolverWith(usdaPath: buildSlice('usda.db'))));
     await tester.pumpAndSettle();
     expect(find.byType(ScannerView), findsOneWidget);
 
@@ -161,7 +204,8 @@ void main() {
   });
 
   testWidgets('Scan again puts the camera back', (tester) async {
-    await tester.pumpWidget(host(resolver: resolverWith(usdaPath: buildSlice('usda.db'))));
+    await tester.pumpWidget(
+        host(resolver: resolverWith(usdaPath: buildSlice('usda.db'))));
     await tester.pumpAndSettle();
     await submit(tester, '3017620422003');
     expect(find.byType(ScannerView), findsNothing);
@@ -192,7 +236,8 @@ void main() {
 
   testWidgets('a camera turned off by hand stays off through a scan',
       (tester) async {
-    await tester.pumpWidget(host(resolver: resolverWith(usdaPath: buildSlice('usda.db'))));
+    await tester.pumpWidget(
+        host(resolver: resolverWith(usdaPath: buildSlice('usda.db'))));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Turn the camera off'));
     await tester.pumpAndSettle();

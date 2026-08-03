@@ -45,8 +45,8 @@ void main() {
           kcal: const Value(266),
           proteinG: const Value(11.4),
         ));
-    await db.into(db.usdaPortions).insert(UsdaPortionsCompanion.insert(
-        fdcId: 1, label: '1 slice', grams: 107));
+    await db.into(db.usdaPortions).insert(
+        UsdaPortionsCompanion.insert(fdcId: 1, label: '1 slice', grams: 107));
   });
 
   Widget host(List<DetectedLabel> labels) => ProviderScope(
@@ -132,7 +132,8 @@ void main() {
     await unmount(tester);
   });
 
-  testWidgets('no Play services: the button explains and points at the '
+  testWidgets(
+      'no Play services: the button explains and points at the '
       'paths that still work', (tester) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
     await tester.pumpWidget(ProviderScope(

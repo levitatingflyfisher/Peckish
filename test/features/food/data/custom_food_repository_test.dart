@@ -20,7 +20,8 @@ void main() {
         id: 'cf-1',
         name: 'Cafe Rio grilled chicken salad (small)',
         servingLabel: '1 salad',
-        perServing: const MacroSet(kcal: 640, proteinG: 42, carbG: 51, fatG: 29),
+        perServing:
+            const MacroSet(kcal: 640, proteinG: 42, carbG: 51, fatG: 29),
         createdAt: DateTime(2026, 7, 25),
       );
 

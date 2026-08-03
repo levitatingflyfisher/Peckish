@@ -8,7 +8,8 @@ void main() {
     });
 
     test('toHhMm formats over 1 hour', () {
-      expect(const Duration(hours: 2, minutes: 5, seconds: 9).toHhMm(), '2:05:09');
+      expect(
+          const Duration(hours: 2, minutes: 5, seconds: 9).toHhMm(), '2:05:09');
     });
 
     test('toHoursLabel returns singular', () {

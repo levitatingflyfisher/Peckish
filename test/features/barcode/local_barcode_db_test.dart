@@ -101,7 +101,17 @@ void main() {
 
     test('the same product answers its zero-padded GTIN-14 form', () {
       db = LocalBarcodeDb(buildSlice('usda.db', products: [
-        ['27000612323', 'Chocolate Chips', null, 480.0, null, null, null, null, null],
+        [
+          '27000612323',
+          'Chocolate Chips',
+          null,
+          480.0,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
       ]));
 
       expect(db.lookup(gtin14)?.name, 'Chocolate Chips');
@@ -109,7 +119,17 @@ void main() {
 
     test('unknown macros stay null — never zero', () {
       db = LocalBarcodeDb(buildSlice('usda.db', products: [
-        ['27000612323', 'Mystery Snack', null, null, null, null, null, null, null],
+        [
+          '27000612323',
+          'Mystery Snack',
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
       ]));
 
       final product = db.lookup(upcA)!;
@@ -139,7 +159,17 @@ void main() {
 
     test('a barcode not in the slice is a null miss', () {
       db = LocalBarcodeDb(buildSlice('usda.db', products: [
-        ['27000612323', 'Chocolate Chips', null, null, null, null, null, null, null],
+        [
+          '27000612323',
+          'Chocolate Chips',
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
       ]));
 
       expect(db.lookup(absent), isNull);
@@ -167,14 +197,34 @@ void main() {
       // the unlinked old inode on POSIX — the handle must notice the file
       // changed underneath it and reopen.
       final path = buildSlice('usda.db', products: [
-        ['27000612323', 'Old Vintage Granola', null, 480.0, null, null, null, null, null],
+        [
+          '27000612323',
+          'Old Vintage Granola',
+          null,
+          480.0,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
       ]);
       db = LocalBarcodeDb(path);
       expect(db.lookup(upcA)!.name, 'Old Vintage Granola');
 
       File(path).deleteSync();
       buildSlice('usda.db', products: [
-        ['27000612323', 'New Granola', null, 500.0, null, null, null, null, null],
+        [
+          '27000612323',
+          'New Granola',
+          null,
+          500.0,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
       ]);
 
       expect(db.lookup(upcA)!.name, 'New Granola');

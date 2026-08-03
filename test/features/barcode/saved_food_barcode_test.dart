@@ -69,7 +69,8 @@ void main() {
       expect(await repo.byBarcode('027000612323'), isNull);
     });
 
-    test('a resting food still answers — archiving hides it from pickers, '
+    test(
+        'a resting food still answers — archiving hides it from pickers, '
         'and a scan is not a picker', () async {
       await repo.create(spam(barcode: '027000612323', archived: true));
 

@@ -109,8 +109,7 @@ void main() {
   // backfill). The serializer now routes through PlanRepository /
   // GroceryRepository, inheriting their isDeleted filter and HLC stamping.
   group('tombstones and stamping:', () {
-    test('a deleted grocery item does not ride along in the export',
-        () async {
+    test('a deleted grocery item does not ride along in the export', () async {
       final db = AppDatabase(NativeDatabase.memory());
       addTearDown(db.close);
       final groceries = GroceryRepository(db);
@@ -121,8 +120,7 @@ void main() {
       await groceries.remove(doomed.id);
 
       final json = utf8.decode(await PeckishBackupSerializer(db).dumpAll());
-      expect(json, contains('Bananas'),
-          reason: 'live rows still export');
+      expect(json, contains('Bananas'), reason: 'live rows still export');
       expect(json, isNot(contains('Regretted kombucha')),
           reason: 'a tombstone is a deletion, not a grocery');
     });
@@ -152,8 +150,7 @@ void main() {
       expect(json, isNot(contains('p-doomed')));
     });
 
-    test('restored plan and grocery rows come back stamped for sync',
-        () async {
+    test('restored plan and grocery rows come back stamped for sync', () async {
       final db = AppDatabase(NativeDatabase.memory());
       addTearDown(db.close);
       final serializer = PeckishBackupSerializer(db);
@@ -185,16 +182,14 @@ void main() {
     final db = AppDatabase(NativeDatabase.memory());
     addTearDown(db.close);
     final serializer = PeckishBackupSerializer(db);
-    final foreign =
-        '{"app":"lullaby","schemaVersion":1}'.codeUnits;
+    final foreign = '{"app":"lullaby","schemaVersion":1}'.codeUnits;
     expect(
       () => serializer.restoreAll(Uint8List.fromList(foreign)),
       throwsA(anything),
     );
   });
 
-  test('the restore-consequence copy names everything eraseUserData wipes',
-      () {
+  test('the restore-consequence copy names everything eraseUserData wipes', () {
     final copy = peckishBackupConfig.restoreReplaceConsequence;
     // AppDatabase.eraseUserData deletes: diary entries, saved meals (+items),
     // recipes (+ingredients), custom foods, targets. The sentence must own

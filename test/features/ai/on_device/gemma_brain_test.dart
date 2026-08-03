@@ -117,8 +117,7 @@ void main() {
 
     final answer = await brain.complete('prompt about toast');
     expect(answer, contains('Toast'));
-    expect(fake.lastTemperature, 0.3,
-        reason: 'a parser, not a storyteller');
+    expect(fake.lastTemperature, 0.3, reason: 'a parser, not a storyteller');
     expect(
         _FakeSession.queries.any((m) => m.text.contains('prompt about toast')),
         isTrue,
@@ -143,8 +142,8 @@ void main() {
 
     await expectLater(
         brain.complete('anything'),
-        throwsA(isA<GuessException>().having(
-            (e) => e.message, 'message', contains('download'))));
+        throwsA(isA<GuessException>()
+            .having((e) => e.message, 'message', contains('download'))));
     expect(loaderCalled, isFalse,
         reason: 'the gate runs before any native loading');
   });
@@ -157,8 +156,7 @@ void main() {
     final brain = GemmaLocalBrain(
       downloads: downloads,
       modelId: () => current,
-      modelLoader: (spec) async =>
-          loaded[spec.id] = _FakeModel('{"foods":[]}'),
+      modelLoader: (spec) async => loaded[spec.id] = _FakeModel('{"foods":[]}'),
     );
 
     await brain.complete('one');

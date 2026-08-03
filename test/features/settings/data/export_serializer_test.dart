@@ -190,8 +190,7 @@ void main() {
 
   test('a pre-roles targets object decodes with null roles (defaults apply)',
       () {
-    final decoded = PeckishExport.fromJson(
-        '{"app":"peckish","schemaVersion":1,'
+    final decoded = PeckishExport.fromJson('{"app":"peckish","schemaVersion":1,'
         '"targets":{"kcal":2000,"proteinG":150}}');
     expect(decoded.targets.values.kcal, 2000);
     expect(decoded.targets.kcalRole, isNull);
@@ -200,8 +199,8 @@ void main() {
 
   test('an export with absent sections decodes to empties (old files restore)',
       () {
-    final decoded = PeckishExport.fromJson(
-        '{"app":"peckish","schemaVersion":1}');
+    final decoded =
+        PeckishExport.fromJson('{"app":"peckish","schemaVersion":1}');
     expect(decoded.customFoods, isEmpty);
     expect(decoded.diaryEntries, isEmpty);
     expect(decoded.savedMeals, isEmpty);
@@ -225,7 +224,8 @@ void main() {
         'peckish-export-2026-07-25.json');
   });
 
-  test('a scan-sourced entry round-trips, and unknown sources degrade to '
+  test(
+      'a scan-sourced entry round-trips, and unknown sources degrade to '
       'manual (older app reading a newer file)', () {
     final export = PeckishExport(
       createdAt: DateTime.utc(2026, 7, 26),

@@ -141,7 +141,8 @@ void main() {
     await f.writeAsBytes(bytes);
   }
 
-  test('native builds support local slices (the capability seam answers, '
+  test(
+      'native builds support local slices (the capability seam answers, '
       'screens never ask kIsWeb)', () {
     expect(localSlicesSupported, isTrue);
   });
@@ -187,8 +188,7 @@ void main() {
     // route there in production; tests place them directly).
     await seed(installed(usda.fileName), dbBytes);
 
-    expect(await h.svc.installedDbPath('usda'),
-        installed(usda.fileName).path);
+    expect(await h.svc.installedDbPath('usda'), installed(usda.fileName).path);
     expect(await h.svc.installedDbPath('off_us'), isNull);
     expect(await h.svc.installedDbPath('no_such_slice'), isNull);
   });
@@ -259,8 +259,7 @@ void main() {
     expect(await h.svc.hasPartial(spec), isTrue);
   });
 
-  test('a complete orphaned .gz installs with zero network requests',
-      () async {
+  test('a complete orphaned .gz installs with zero network requests', () async {
     await seed(gzOf(), gzBytes);
     // A stale .gz.part alongside must not survive to poison a later resume.
     await seed(gzPartOf(), gzBytes.sublist(0, 64));
@@ -277,7 +276,8 @@ void main() {
     expect(events, [(gzBytes.length, gzBytes.length)]);
   });
 
-  test('a sha-failing orphaned .gz is deleted and the normal transfer '
+  test(
+      'a sha-failing orphaned .gz is deleted and the normal transfer '
       'proceeds', () async {
     await seed(gzOf(), List<int>.from(gzBytes)..[0] ^= 0xFF);
     final h = build();
@@ -327,10 +327,8 @@ void main() {
 
     final db = sq.sqlite3.open((await h.svc.installedDbPath('test_slice'))!);
     addTearDown(db.dispose);
-    final row = db
-        .select('SELECT name, kcal FROM products WHERE barcode = ?',
-            ['12345678905'])
-        .single;
+    final row = db.select('SELECT name, kcal FROM products WHERE barcode = ?',
+        ['12345678905']).single;
     expect(row['name'], 'Test Bar');
     expect(row['kcal'], 390);
   });

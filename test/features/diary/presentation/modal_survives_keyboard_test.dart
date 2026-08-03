@@ -68,7 +68,8 @@ void main() {
         up ? const FakeViewPadding(bottom: 600) : FakeViewPadding.zero;
   }
 
-  testWidgets('the trigger: lowering the keyboard moves the sheet out from '
+  testWidgets(
+      'the trigger: lowering the keyboard moves the sheet out from '
       'under where you were about to tap', (tester) async {
     addTearDown(tester.view.reset);
     keyboard(tester, up: true);
@@ -97,7 +98,8 @@ void main() {
     await unmount(tester);
   });
 
-  testWidgets('a tap that misses the product sheet does not throw the '
+  testWidgets(
+      'a tap that misses the product sheet does not throw the '
       'work away', (tester) async {
     addTearDown(tester.view.reset);
     keyboard(tester, up: true);
@@ -188,7 +190,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('sheet-close')));
     await tester.pumpAndSettle();
 
-    expect(find.text('Scan a barcode'), findsNothing);
+    expect(find.text('Scan'), findsNothing);
     await unmount(tester);
   });
 
@@ -229,7 +231,7 @@ void main() {
 
     expect(find.text('Log it'), findsNothing,
         reason: 'refusing a stray tap must never mean refusing to close');
-    expect(find.text('Scan a barcode'), findsOneWidget,
+    expect(find.text('Scan'), findsOneWidget,
         reason: 'Cancel returns to the + sheet, where you would try again');
     await unmount(tester);
   });

@@ -13,7 +13,9 @@ void main() {
       expect(sum.fatG, 2.5);
     });
 
-    test('a null slot is treated as zero in sums but stays null when both are null', () {
+    test(
+        'a null slot is treated as zero in sums but stays null when both are null',
+        () {
       const a = MacroSet(kcal: 100);
       const b = MacroSet(kcal: 50, proteinG: 3);
       final sum = a + b;
@@ -33,7 +35,8 @@ void main() {
     });
 
     test('per100g resolves grams into an absolute set', () {
-      const per100 = MacroSet(kcal: 52, proteinG: 0.26, carbG: 13.81, fatG: 0.17);
+      const per100 =
+          MacroSet(kcal: 52, proteinG: 0.26, carbG: 13.81, fatG: 0.17);
       final apple = per100.forGrams(182); // 1 medium apple
       expect(apple.kcal, closeTo(94.6, 0.1));
       expect(apple.carbG, closeTo(25.1, 0.1));
@@ -50,7 +53,8 @@ void main() {
       expect(total.carbG, 7);
     });
 
-    test('negative slot values clamp to zero on construction via clamped()', () {
+    test('negative slot values clamp to zero on construction via clamped()',
+        () {
       // Carb-by-difference lab artifacts in USDA foundation data can be
       // slightly negative; the importer clamps them.
       final clamped = const MacroSet(kcal: 127, carbG: -0.43).clamped();

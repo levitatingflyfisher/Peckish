@@ -61,10 +61,12 @@ void main() {
       (tester) async {
     await tester.runAsync(() async {
       final repo = DiaryRepository(db);
-      await repo.log(entry('e-1',
+      await repo.log(entry(
+          'e-1',
           const MacroSet(kcal: 500, proteinG: 30, carbG: 40, fatG: 12),
           'Porridge'));
-      await repo.log(entry('e-2',
+      await repo.log(entry(
+          'e-2',
           const MacroSet(kcal: 700, proteinG: 45, carbG: 55, fatG: 20),
           'Chilli'));
     });

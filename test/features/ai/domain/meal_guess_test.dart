@@ -32,8 +32,8 @@ void main() {
     });
 
     test('missing numbers stay unknown, never zero', () {
-      final g =
-          MealGuess.parse('{"foods":[{"name":"Mystery soup","confidence":0.2}]}');
+      final g = MealGuess.parse(
+          '{"foods":[{"name":"Mystery soup","confidence":0.2}]}');
       final f = g.foods.single;
       expect(f.macros.kcal, isNull);
       expect(f.macros.proteinG, isNull);
@@ -46,7 +46,8 @@ void main() {
       expect(MealGuess.parse('{"foods": "nope"}').foods, isEmpty);
     });
 
-    test('entries without a name are dropped; negatives become unknown; '
+    test(
+        'entries without a name are dropped; negatives become unknown; '
         'confidence clamps to 0..1 and defaults low', () {
       final g = MealGuess.parse('''
 {"foods":[
@@ -71,8 +72,7 @@ void main() {
     });
   });
 
-  test('the canonical prompt demands JSON-only and offers the exact shape',
-      () {
+  test('the canonical prompt demands JSON-only and offers the exact shape', () {
     final p = MealGuess.promptFor('two eggs and toast');
     expect(p, contains('ONLY a JSON object'));
     expect(p, contains('"foods"'));

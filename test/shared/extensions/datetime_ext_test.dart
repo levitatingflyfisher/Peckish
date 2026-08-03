@@ -48,7 +48,8 @@ void main() {
     });
 
     test('same calendar day (any times) is zero', () {
-      expect(daysBetweenDates(DateTime(2026, 3, 8, 1), DateTime(2026, 3, 8, 23)),
+      expect(
+          daysBetweenDates(DateTime(2026, 3, 8, 1), DateTime(2026, 3, 8, 23)),
           0);
     });
   });

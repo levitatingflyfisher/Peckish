@@ -95,9 +95,9 @@ void main() {
     expect(regulars.single.label, 'Oatmeal');
   });
 
-  test('recents() serves from the persistent regulars, newest first',
-      () async {
-    await diary.log(entry(id: 'e-1', label: 'Oatmeal', at: DateTime(2026, 7, 1)));
+  test('recents() serves from the persistent regulars, newest first', () async {
+    await diary
+        .log(entry(id: 'e-1', label: 'Oatmeal', at: DateTime(2026, 7, 1)));
     await diary.log(entry(id: 'e-2', label: 'Eggs', at: DateTime(2026, 7, 2)));
     await diary.delete('e-2'); // deletion must not reorder or remove
     final recents = await diary.recents();

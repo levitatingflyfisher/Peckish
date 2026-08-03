@@ -52,8 +52,7 @@ void main() {
 
   Future<void> enterByLabel(
       WidgetTester tester, String label, String value) async {
-    await tester.enterText(
-        find.widgetWithText(TextField, label).last, value);
+    await tester.enterText(find.widgetWithText(TextField, label).last, value);
   }
 
   Future<void> save(WidgetTester tester) async {
@@ -64,7 +63,8 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('the dialog offers four numbers, each with a role', (tester) async {
+  testWidgets('the dialog offers four numbers, each with a role',
+      (tester) async {
     await tester.pumpWidget(buttonHost());
     await tester.pumpAndSettle();
     await tester.tap(find.text('open targets'));
@@ -121,8 +121,8 @@ void main() {
 
   testWidgets('reopening shows the saved numbers; clearing them clears the day',
       (tester) async {
-    await tester.runAsync(() => TargetsRepository(db).set(const DailyTargets(
-        values: MacroSet(kcal: 2000, proteinG: 150))));
+    await tester.runAsync(() => TargetsRepository(db)
+        .set(const DailyTargets(values: MacroSet(kcal: 2000, proteinG: 150))));
 
     await tester.pumpWidget(buttonHost());
     await tester.pumpAndSettle();

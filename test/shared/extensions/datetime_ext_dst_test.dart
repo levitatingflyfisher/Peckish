@@ -24,8 +24,8 @@ void main() {
     );
     expect(result.exitCode, 0,
         reason: 'probe failed to run:\n${result.stdout}\n${result.stderr}');
-    final match = RegExp('startOfWeek=(.*)')
-        .firstMatch(result.stdout as String);
+    final match =
+        RegExp('startOfWeek=(.*)').firstMatch(result.stdout as String);
     expect(match, isNotNull,
         reason: 'probe printed no result:\n${result.stdout}');
     expect(match!.group(1), '2026-03-30T00:00:00.000',
@@ -33,7 +33,8 @@ void main() {
             'startOfWeek must be that Monday at exactly local midnight');
   }, timeout: const Timeout(Duration(minutes: 2)));
 
-  test('startOfWeek is always a midnight and agrees with calendar '
+  test(
+      'startOfWeek is always a midnight and agrees with calendar '
       'construction (whole-year sweep, host TZ)', () {
     for (var d = DateTime(2026, 1, 1);
         d.year == 2026;

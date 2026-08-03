@@ -15,8 +15,7 @@ void main() {
     await db.customSelect('SELECT 1').get();
 
     final indexes = (await db
-            .customSelect(
-                "SELECT name FROM sqlite_master WHERE type = 'index'")
+            .customSelect("SELECT name FROM sqlite_master WHERE type = 'index'")
             .get())
         .map((row) => row.read<String>('name'))
         .toSet();

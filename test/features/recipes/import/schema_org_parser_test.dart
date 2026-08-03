@@ -82,15 +82,15 @@ void main() {
   });
 
   test('missing nutrition stays null — never fake zeros', () {
-    final r = parser.parse(page(
-        '{"@type":"Recipe","name":"Bare","recipeIngredient":["x"]}'))!;
+    final r = parser.parse(
+        page('{"@type":"Recipe","name":"Bare","recipeIngredient":["x"]}'))!;
     expect(r.perServing, isNull);
     expect(r.servings, isNull);
   });
 
   test('a page with no Recipe entity returns null', () {
-    expect(parser.parse(page('{"@type":"NewsArticle","headline":"n"}')),
-        isNull);
+    expect(
+        parser.parse(page('{"@type":"NewsArticle","headline":"n"}')), isNull);
     expect(parser.parse('<html><body>no json-ld here</body></html>'), isNull);
   });
 

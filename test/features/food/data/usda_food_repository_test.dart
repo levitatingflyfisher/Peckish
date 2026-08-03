@@ -11,11 +11,66 @@ final _fixture = jsonEncode({
   'v': 1,
   'foods': [
     // [fdcId, src, name, kcal, p, c, f, fiber, sugar, sodiumMg]
-    [171688, 'sr', 'Apples, raw, with skin', 52.0, 0.26, 13.81, 0.17, 2.4, 10.39, 1.0],
-    [171077, 'sr', 'Chicken, broiler or fryers, breast, skinless, boneless, meat only, raw', 120.0, 22.5, 0.0, 2.62, 0.0, 0.0, 45.0],
-    [2707343, 'survey', 'Egg burrito', 249.0, 10.91, 20.06, 13.71, 1.4, 1.75, 470.0],
-    [2727569, 'foundation', 'Chicken, breast, meat and skin, raw', 126.9, 21.41, -0.43, 4.78, null, null, 48.07],
-    [173410, 'sr', 'Cheese, cheddar', 403.0, 24.9, 1.28, 33.14, 0.0, 0.52, 621.0],
+    [
+      171688,
+      'sr',
+      'Apples, raw, with skin',
+      52.0,
+      0.26,
+      13.81,
+      0.17,
+      2.4,
+      10.39,
+      1.0
+    ],
+    [
+      171077,
+      'sr',
+      'Chicken, broiler or fryers, breast, skinless, boneless, meat only, raw',
+      120.0,
+      22.5,
+      0.0,
+      2.62,
+      0.0,
+      0.0,
+      45.0
+    ],
+    [
+      2707343,
+      'survey',
+      'Egg burrito',
+      249.0,
+      10.91,
+      20.06,
+      13.71,
+      1.4,
+      1.75,
+      470.0
+    ],
+    [
+      2727569,
+      'foundation',
+      'Chicken, breast, meat and skin, raw',
+      126.9,
+      21.41,
+      -0.43,
+      4.78,
+      null,
+      null,
+      48.07
+    ],
+    [
+      173410,
+      'sr',
+      'Cheese, cheddar',
+      403.0,
+      24.9,
+      1.28,
+      33.14,
+      0.0,
+      0.52,
+      621.0
+    ],
   ],
   'portions': [
     [171688, '1 medium (3" dia)', 182.0],
@@ -76,9 +131,9 @@ void main() {
       // The fast-path const and the asset must never drift: the tool that
       // regenerates the asset bumps `v`, and this test forces the const
       // to follow.
-      final raw = jsonDecode(
-              File('assets/food/usda_foods.json').readAsStringSync())
-          as Map<String, dynamic>;
+      final raw =
+          jsonDecode(File('assets/food/usda_foods.json').readAsStringSync())
+              as Map<String, dynamic>;
       expect(raw['v'], UsdaFoodRepository.shippedSpineVersion);
     });
   });
@@ -110,7 +165,8 @@ void main() {
       expect(medium.grams, 182.0);
     });
 
-    test('a food without recorded portions returns empty, not an error', () async {
+    test('a food without recorded portions returns empty, not an error',
+        () async {
       expect(await repo.portionsOf(2707343), isEmpty);
     });
   });

@@ -103,7 +103,8 @@ void main() {
     // chip may still show it: logging to any day records the habit.)
     expect(
         find.descendant(
-            of: find.byType(EntryTile), matching: find.text('Nutella (Ferrero)')),
+            of: find.byType(EntryTile),
+            matching: find.text('Nutella (Ferrero)')),
         findsNothing,
         reason: "a past day's scan must not appear as one of today's lines");
     await unmount(tester);
@@ -113,8 +114,8 @@ void main() {
         appDatabaseProvider.overrideWithValue(db),
         spineReadyProvider.overrideWith((ref) async {}),
       ],
-      child: MaterialApp(
-          theme: AppTheme.light, home: HistoryDayScreen(day: day)),
+      child:
+          MaterialApp(theme: AppTheme.light, home: HistoryDayScreen(day: day)),
     ));
     await tester.pumpAndSettle();
     expect(

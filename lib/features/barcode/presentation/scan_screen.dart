@@ -37,7 +37,12 @@ final offClientProvider = Provider<OffClient>((ref) => OffClient());
 /// button — no code path in this screen reaches the network without that
 /// tap. Failures are states with next steps, not errors.
 class ScanScreen extends ConsumerStatefulWidget {
-  const ScanScreen({super.key, this.debugCameraOverride, this.day});
+  const ScanScreen({
+    super.key,
+    this.debugCameraOverride,
+    this.day,
+    this.startTyping = false,
+  });
 
   /// Tests force the camera layout on the camera-less VM; real builds
   /// leave this null and follow [ScannerView.available].
@@ -47,6 +52,15 @@ class ScanScreen extends ConsumerStatefulWidget {
   /// The past day this scan feeds (null = today) — carried straight through
   /// to the confirm sheet, which is the only thing that writes.
   final String? day;
+
+  /// Opened through the "Type a barcode" door: the camera starts parked and
+  /// the digits field has the cursor.
+  ///
+  /// This is a starting posture, not a mode — nothing is remembered, and
+  /// the camera is one tap away exactly as it is on any other visit. It
+  /// exists because the merged screen gave the typist one door and it was
+  /// the camera's.
+  final bool startTyping;
 
   @override
   ConsumerState<ScanScreen> createState() => _ScanScreenState();
@@ -71,9 +85,10 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
   /// otherwise nothing on screen saying what was decoded.
   BarcodeCode? _read;
 
-  /// Parked by hand for this visit, or by a camera that couldn't start.
-  /// Deliberately not persisted: see the class comment.
-  bool _cameraOff = false;
+  /// Parked by hand for this visit, by the "Type a barcode" door, or by a
+  /// camera that couldn't start. Deliberately not persisted: see the class
+  /// comment.
+  late bool _cameraOff = widget.startTyping;
 
   bool get _hasCamera => widget.debugCameraOverride ?? ScannerView.available;
 
@@ -171,6 +186,10 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
                   ],
                   TextField(
                     controller: _controller,
+                    // Only through the Type door. Everywhere else the
+                    // camera is the point, and a keyboard over the preview
+                    // is the thing being fixed, not the fix.
+                    autofocus: widget.startTyping,
                     enabled: !_busy && !_sheetOpen,
                     keyboardType: TextInputType.number,
                     decoration: InputDecoration(

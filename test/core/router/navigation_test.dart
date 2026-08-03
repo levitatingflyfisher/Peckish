@@ -77,12 +77,14 @@ void main() {
     await tester.pumpWidget(host());
     await tester.pumpAndSettle();
 
-    for (final (i, label) in ['Today', 'Plan', 'Recipes', 'Groceries',
-      'History'].indexed) {
+    for (final (i, label)
+        in ['Today', 'Plan', 'Recipes', 'Groceries', 'History'].indexed) {
       await tester.tap(find.widgetWithText(NavigationDestination, label));
       await tester.pumpAndSettle();
       expect(
-          tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex,
+          tester
+              .widget<NavigationBar>(find.byType(NavigationBar))
+              .selectedIndex,
           i,
           reason: '$label must light up its own destination');
     }

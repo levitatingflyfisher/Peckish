@@ -27,8 +27,7 @@ void main() {
     expect(ScannerTuning.scanDelaySuccess, const Duration(milliseconds: 2000));
   });
 
-  test('most of the frame is decoded, not just an invisible center square',
-      () {
+  test('most of the frame is decoded, not just an invisible center square', () {
     expect(ScannerTuning.cropPercent, 0.75,
         reason: 'users cannot aim at a crop box they cannot see');
   });

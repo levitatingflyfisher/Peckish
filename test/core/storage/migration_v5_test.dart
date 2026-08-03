@@ -30,8 +30,7 @@ void main() {
   }
 
   Future<Set<String>> columnsOf(AppDatabase db) async {
-    final info =
-        await db.customSelect('PRAGMA table_info(custom_foods)').get();
+    final info = await db.customSelect('PRAGMA table_info(custom_foods)').get();
     return {for (final row in info) row.read<String>('name')};
   }
 

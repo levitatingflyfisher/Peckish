@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:peckish/core/providers/core_providers.dart';
 import 'package:peckish/core/storage/app_database.dart';
+import 'package:peckish/features/diary/data/diary_repository.dart';
+import 'package:peckish/features/diary/domain/diary_entry.dart';
 import 'package:peckish/features/diary/presentation/today_screen.dart';
 import 'package:peckish/features/food/data/custom_food_repository.dart';
 import 'package:peckish/features/food/data/usda_food_repository.dart';
@@ -73,14 +75,73 @@ Future<void> openQuickAdd(WidgetTester tester) async {
 
 Future<void> enterByLabel(
     WidgetTester tester, String label, String value) async {
-  await tester.enterText(
-      find.widgetWithText(TextField, label).last, value);
+  await tester.enterText(find.widgetWithText(TextField, label).last, value);
 }
 
 void main() {
   late AppDatabase db;
 
   setUp(() => db = AppDatabase(NativeDatabase.memory()));
+
+  group('the sheet opens ready to tap, not ready to type', () {
+    // Two v0.9 phone findings, one shape: the sheet assumed you came to
+    // search. You mostly came to tap something you already eat.
+    testWidgets('opening the + sheet does not raise the keyboard',
+        (tester) async {
+      await tester.pumpWidget(host(db));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(FloatingActionButton));
+      await tester.pumpAndSettle();
+
+      expect(tester.testTextInput.isVisible, isFalse,
+          reason: 'a keyboard nobody asked for covers the very list of '
+              'foods the sheet exists to offer');
+      await unmount(tester);
+    });
+
+    testWidgets('the ways in sit above the list of regulars', (tester) async {
+      await tester.runAsync(() async {
+        final at = DateTime.now().subtract(const Duration(days: 2));
+        await DiaryRepository(db).log(DiaryEntry(
+          id: 'seed',
+          day: DiaryEntry.dayOf(at),
+          at: at,
+          food: const FoodRef.custom('porridge'),
+          label: 'Porridge',
+          qty: 1,
+          unitLabel: 'bowl',
+          grams: null,
+          macros: const MacroSet(kcal: 320),
+          source: EntrySource.tap,
+          createdAt: at,
+        ));
+      });
+      await tester.pumpWidget(host(db));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(FloatingActionButton));
+      await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 100)));
+      await tester.pumpAndSettle();
+
+      double top(Finder f) => tester.getTopLeft(f).dy;
+      for (final route in ['Quick add', 'Scan', 'Type a barcode']) {
+        expect(find.text(route), findsOneWidget,
+            reason: 'every way in is its own target, not a mode');
+      }
+      // Below the routes, and still on the first screenful — "above" has
+      // to mean both, or the reorder just hid the commonest action.
+      // Today's own rail sits behind the sheet with the same heading —
+      // .last is the sheet's copy.
+      final regularsInSheet = find.text('Your regulars').last;
+      expect(top(find.text('Quick add')), lessThan(top(regularsInSheet)));
+      expect(
+          top(regularsInSheet),
+          lessThan(
+              tester.view.physicalSize.height / tester.view.devicePixelRatio),
+          reason: 'the regulars must not need a scroll to reach');
+      await unmount(tester);
+    });
+  });
 
   testWidgets('Quick add offers all four macros, not just protein',
       (tester) async {
@@ -122,8 +183,7 @@ void main() {
     await unmount(tester);
   });
 
-  testWidgets('a double-tapped Log it lands exactly one line',
-      (tester) async {
+  testWidgets('a double-tapped Log it lands exactly one line', (tester) async {
     await tester.pumpWidget(host(db));
     await tester.pumpAndSettle();
     await openQuickAdd(tester);

@@ -10,8 +10,7 @@ import 'package:peckish/features/food/domain/macro_set.dart';
 // scorer honors roles asymmetrically — a floor only hurts when short, a
 // cap only when over — which is what "prioritize protein" really means.
 // The engine is pure and deterministic: same plate, same advice.
-FoodUsage food(String label, MacroSet macros, {int useCount = 1}) =>
-    FoodUsage(
+FoodUsage food(String label, MacroSet macros, {int useCount = 1}) => FoodUsage(
       identityKey: 'q:${label.toLowerCase()}',
       food: const FoodRef.quick(),
       label: label,
@@ -39,8 +38,7 @@ void main() {
 
   test('a finished day is called finished, not padded further', () {
     final r = engine.suggest(
-      targets: const DailyTargets(
-          values: MacroSet(kcal: 2000, proteinG: 150)),
+      targets: const DailyTargets(values: MacroSet(kcal: 2000, proteinG: 150)),
       eaten: const MacroSet(kcal: 1980, proteinG: 155),
       regulars: [food('Egg', const MacroSet(kcal: 90, proteinG: 13))],
     );
@@ -103,8 +101,7 @@ void main() {
     // 500 kcal about-gap AND a 40g protein floor: rice alone leaves protein
     // short, chicken alone leaves kcal short. Together they land the day.
     final r = engine.suggest(
-      targets: const DailyTargets(
-          values: MacroSet(kcal: 2000, proteinG: 150)),
+      targets: const DailyTargets(values: MacroSet(kcal: 2000, proteinG: 150)),
       eaten: const MacroSet(kcal: 1500, proteinG: 110),
       regulars: [
         food('Rice bowl', const MacroSet(kcal: 250, proteinG: 5)),
@@ -156,8 +153,7 @@ void main() {
       targets: const DailyTargets(values: MacroSet(proteinG: 40)),
       eaten: const MacroSet(proteinG: 20),
       regulars: [
-        food('New bar', const MacroSet(kcal: 200, proteinG: 20),
-            useCount: 1),
+        food('New bar', const MacroSet(kcal: 200, proteinG: 20), useCount: 1),
         food('Old faithful', const MacroSet(kcal: 200, proteinG: 20),
             useCount: 40),
       ],
@@ -168,12 +164,10 @@ void main() {
 
   test('ideas are diverse: not three variations on the same yogurt', () {
     final r = engine.suggest(
-      targets: const DailyTargets(
-          values: MacroSet(kcal: 2000, proteinG: 150)),
+      targets: const DailyTargets(values: MacroSet(kcal: 2000, proteinG: 150)),
       eaten: const MacroSet(kcal: 1400, proteinG: 100),
       regulars: [
-        food('Yogurt', const MacroSet(kcal: 120, proteinG: 20),
-            useCount: 9),
+        food('Yogurt', const MacroSet(kcal: 120, proteinG: 20), useCount: 9),
         food('Eggs on toast', const MacroSet(kcal: 300, proteinG: 22),
             useCount: 7),
         food('Cottage cheese', const MacroSet(kcal: 180, proteinG: 24),
@@ -189,8 +183,8 @@ void main() {
 
   test('same plate, same advice — deterministic output', () {
     DaySuggestions run() => engine.suggest(
-          targets: const DailyTargets(
-              values: MacroSet(kcal: 2000, proteinG: 150)),
+          targets:
+              const DailyTargets(values: MacroSet(kcal: 2000, proteinG: 150)),
           eaten: const MacroSet(kcal: 1200, proteinG: 80),
           regulars: [
             food('A', const MacroSet(kcal: 200, proteinG: 15), useCount: 3),
@@ -223,8 +217,8 @@ void main() {
       ],
     );
     for (final idea in r.ideas) {
-      expect(idea.items.map((i) => i.usage.label),
-          isNot(contains('Mystery meal')),
+      expect(
+          idea.items.map((i) => i.usage.label), isNot(contains('Mystery meal')),
           reason: 'no numbers, no basis to suggest it');
     }
   });

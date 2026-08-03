@@ -38,7 +38,8 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
   }
 
-  test('native builds support LAN sync (the capability seam answers, '
+  test(
+      'native builds support LAN sync (the capability seam answers, '
       'screens never ask kIsWeb)', () {
     expect(lanSyncSupported, isTrue);
   });
@@ -49,8 +50,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Create a household code'), findsOneWidget);
-    final syncNow =
-        tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Sync now'));
+    final syncNow = tester
+        .widget<FilledButton>(find.widgetWithText(FilledButton, 'Sync now'));
     expect(syncNow.onPressed, isNull,
         reason: 'no code means no pairing means nothing to sync with');
     await unmount(tester);
@@ -109,8 +110,7 @@ void main() {
             syncSecretStoreProvider.overrideWithValue(secrets),
             lanSyncServerProvider.overrideWithValue(server),
           ],
-          child:
-              MaterialApp(theme: AppTheme.light, home: const SyncScreen()),
+          child: MaterialApp(theme: AppTheme.light, home: const SyncScreen()),
         );
 
     await tester.pumpWidget(hostWithServer());

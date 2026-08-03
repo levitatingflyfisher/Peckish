@@ -46,7 +46,8 @@ void main() {
   });
 
   group('tombstones', () {
-    test('a deleted custom food disappears from reads but stays as a '
+    test(
+        'a deleted custom food disappears from reads but stays as a '
         'tombstone', () async {
       final repo = CustomFoodRepository(db);
       await repo.create(food('cf-1'));
@@ -65,8 +66,11 @@ void main() {
         () async {
       final repo = PlanRepository(db);
       await repo.upsert(const PlanEntry(
-          id: 'p-1', day: '2026-07-27', slot: PlanSlot.dinner,
-          kind: PlanKind.note, note: 'Tacos'));
+          id: 'p-1',
+          day: '2026-07-27',
+          slot: PlanSlot.dinner,
+          kind: PlanKind.note,
+          note: 'Tacos'));
       await repo.remove('p-1');
 
       expect(await repo.entriesForDays(['2026-07-27']), isEmpty);
@@ -74,8 +78,7 @@ void main() {
       expect(raw.isDeleted, isTrue);
     });
 
-    test('a deleted recipe hides, its plan cell resolves as deleted',
-        () async {
+    test('a deleted recipe hides, its plan cell resolves as deleted', () async {
       final recipes = RecipeRepository(db);
       await recipes.create(Recipe(
         id: 'r-1',
@@ -104,12 +107,14 @@ void main() {
         createdAt: DateTime(2026),
       ));
       await PlanRepository(target).upsert(const PlanEntry(
-          id: 'p-1', day: '2026-07-27', slot: PlanSlot.dinner,
-          kind: PlanKind.recipe, refId: 'r-1'));
+          id: 'p-1',
+          day: '2026-07-27',
+          slot: PlanSlot.dinner,
+          kind: PlanKind.recipe,
+          refId: 'r-1'));
     }
 
-    test('two devices regenerating the same plan mint the same ids',
-        () async {
+    test('two devices regenerating the same plan mint the same ids', () async {
       final other = AppDatabase(NativeDatabase.memory());
       addTearDown(other.close);
       await seedPlanWithTacos(db);
@@ -118,9 +123,8 @@ void main() {
       await GroceryRepository(db).regenerateFromPlan(['2026-07-27']);
       await GroceryRepository(other).regenerateFromPlan(['2026-07-27']);
 
-      final a = (await db.select(db.groceryItems).get())
-          .map((r) => r.id)
-          .toSet();
+      final a =
+          (await db.select(db.groceryItems).get()).map((r) => r.id).toSet();
       final b = (await other.select(other.groceryItems).get())
           .map((r) => r.id)
           .toSet();
@@ -130,7 +134,8 @@ void main() {
               'duplicating the onions');
     });
 
-    test('regenerating after a plan change tombstones the gone items and '
+    test(
+        'regenerating after a plan change tombstones the gone items and '
         'keeps checked ones', () async {
       await seedPlanWithTacos(db);
       final repo = GroceryRepository(db);
@@ -165,8 +170,7 @@ void main() {
       await repo.regenerateFromPlan(['2026-07-27']);
       final second = await db.select(db.groceryItems).get();
       expect(second.length, first.length);
-      expect(second.map((r) => r.id).toSet(),
-          first.map((r) => r.id).toSet());
+      expect(second.map((r) => r.id).toSet(), first.map((r) => r.id).toSet());
     });
   });
 }

@@ -63,10 +63,10 @@ void main() {
       (tester) async {
     await tester.runAsync(() async {
       final repo = DiaryRepository(db);
+      await repo
+          .log(entry('e-1', today, const MacroSet(kcal: 500, proteinG: 30)));
       await repo.log(
-          entry('e-1', today, const MacroSet(kcal: 500, proteinG: 30)));
-      await repo.log(entry(
-          'e-2', '2026-08-13', const MacroSet(kcal: 700, proteinG: 50)));
+          entry('e-2', '2026-08-13', const MacroSet(kcal: 700, proteinG: 50)));
     });
 
     await tester.pumpWidget(host());
@@ -120,8 +120,8 @@ void main() {
     await tester.runAsync(() async {
       await TargetsRepository(db).set(const DailyTargets(
           values: MacroSet(proteinG: 150))); // floor by default
-      await DiaryRepository(db).log(
-          entry('e-1', today, const MacroSet(kcal: 1820, proteinG: 82)));
+      await DiaryRepository(db)
+          .log(entry('e-1', today, const MacroSet(kcal: 1820, proteinG: 82)));
     });
     await tester.pumpWidget(host());
     await tester.pumpAndSettle();
@@ -148,8 +148,7 @@ void main() {
           .set(const DailyTargets(values: MacroSet(kcal: 2000)));
       final repo = DiaryRepository(db);
       await repo.log(entry('e-1', today, const MacroSet(kcal: 2000)));
-      await repo.log(
-          entry('e-2', '2026-08-13', const MacroSet(kcal: 1000)));
+      await repo.log(entry('e-2', '2026-08-13', const MacroSet(kcal: 1000)));
     });
     await tester.pumpWidget(host());
     await tester.pumpAndSettle();
@@ -165,8 +164,7 @@ void main() {
     expect((atTarget.center.dy - line.center.dy).abs(), lessThanOrEqualTo(2.0),
         reason: 'a point at exactly the target must sit on the target line');
     // And the frame is linear: half the value is halfway up from the floor.
-    expect(
-        (floor.center.dy - half.center.dy),
+    expect((floor.center.dy - half.center.dy),
         closeTo((floor.center.dy - atTarget.center.dy) / 2, 2.0),
         reason: 'a mid-fraction day scales within the same frame');
     await unmount(tester);
@@ -211,12 +209,11 @@ void main() {
     // logged, so the kcal value goes away). At this text size the calendar
     // sits below the fold, so scroll to it like a person would.
     final list = find.byType(Scrollable).first;
-    Future<void> toCalendar() => tester.scrollUntilVisible(
-        find.byKey(const ValueKey('day-$today')), 200,
-        scrollable: list);
-    Future<void> toPicker() => tester.scrollUntilVisible(
-        find.text('Fat'), -200,
-        scrollable: list);
+    Future<void> toCalendar() =>
+        tester.scrollUntilVisible(find.byKey(const ValueKey('day-$today')), 200,
+            scrollable: list);
+    Future<void> toPicker() =>
+        tester.scrollUntilVisible(find.text('Fat'), -200, scrollable: list);
 
     await toCalendar();
     expect(find.text('500'), findsOneWidget);
@@ -234,15 +231,21 @@ void main() {
     await tester.pumpWidget(host());
     await tester.pumpAndSettle();
 
-    expect(tester.widget<IconButton>(find.byKey(const ValueKey('month-next')))
-        .onPressed, isNull,
+    expect(
+        tester
+            .widget<IconButton>(find.byKey(const ValueKey('month-next')))
+            .onPressed,
+        isNull,
         reason: 'there is no forward from the month you are living in');
 
     await tester.tap(find.byKey(const ValueKey('month-prev')));
     await tester.pumpAndSettle();
     expect(find.text('July 2026'), findsOneWidget);
-    expect(tester.widget<IconButton>(find.byKey(const ValueKey('month-next')))
-        .onPressed, isNotNull);
+    expect(
+        tester
+            .widget<IconButton>(find.byKey(const ValueKey('month-next')))
+            .onPressed,
+        isNotNull);
 
     await tester.tap(find.byKey(const ValueKey('month-next')));
     await tester.pumpAndSettle();
@@ -269,11 +272,10 @@ void main() {
   });
 
   testWidgets('tapping a day cell opens that day', (tester) async {
-    final day = DiaryEntry.dayOf(
-        DateTime.now().subtract(const Duration(days: 1)));
-    await tester.runAsync(() => DiaryRepository(db).log(entry(
-        'e-1', day, const MacroSet(kcal: 700),
-        label: 'Calendar stew')));
+    final day =
+        DiaryEntry.dayOf(DateTime.now().subtract(const Duration(days: 1)));
+    await tester.runAsync(() => DiaryRepository(db).log(
+        entry('e-1', day, const MacroSet(kcal: 700), label: 'Calendar stew')));
 
     await tester.pumpWidget(ProviderScope(
       overrides: [appDatabaseProvider.overrideWithValue(db)],

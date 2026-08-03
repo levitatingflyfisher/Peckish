@@ -70,8 +70,7 @@ void main() {
   String buildSlice(String name, {List<List<Object?>> products = const []}) {
     final path = p.join(tempDir.path, name);
     final raw = sql.sqlite3.open(path);
-    raw.execute(
-        'CREATE TABLE meta(key TEXT PRIMARY KEY, value TEXT NOT NULL)');
+    raw.execute('CREATE TABLE meta(key TEXT PRIMARY KEY, value TEXT NOT NULL)');
     raw.execute('CREATE TABLE products('
         'barcode TEXT PRIMARY KEY, name TEXT NOT NULL, brand TEXT, '
         'kcal REAL, protein_g REAL, carb_g REAL, fat_g REAL, '
@@ -85,8 +84,17 @@ void main() {
   }
 
   // The scanned Nutella row, keyed as the normalizer stores it.
-  List<Object?> nutellaRow() =>
-      ['3017620422003', 'Nutella', 'Ferrero', 539.0, 6.3, 57.5, 30.9, 15.0, '15 g'];
+  List<Object?> nutellaRow() => [
+        '3017620422003',
+        'Nutella',
+        'Ferrero',
+        539.0,
+        6.3,
+        57.5,
+        30.9,
+        15.0,
+        '15 g'
+      ];
 
   BarcodeResolver resolverWith({String? usdaPath, String? offPath}) {
     final resolver = BarcodeResolver(
@@ -102,14 +110,12 @@ void main() {
   // camera:true forces the camera layout on this camera-less VM; the
   // ScannerView it mounts builds to nothing here, which is exactly what
   // lets the mode plumbing be tested without hardware.
-  Widget host(OffClient offClient,
-          {bool? camera, BarcodeResolver? resolver}) =>
+  Widget host(OffClient offClient, {bool? camera, BarcodeResolver? resolver}) =>
       ProviderScope(
         overrides: [
           appDatabaseProvider.overrideWithValue(db),
           offClientProvider.overrideWithValue(offClient),
-          barcodeResolverProvider.overrideWithValue(
-              resolver ?? resolverWith()),
+          barcodeResolverProvider.overrideWithValue(resolver ?? resolverWith()),
         ],
         child: MaterialApp(
             theme: AppTheme.light,
@@ -127,7 +133,8 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  final askButton = find.widgetWithText(OutlinedButton, 'Ask openfoodfacts.org');
+  final askButton =
+      find.widgetWithText(OutlinedButton, 'Ask openfoodfacts.org');
   final getDbButton =
       find.widgetWithText(TextButton, 'Get the offline database');
 
@@ -142,16 +149,16 @@ void main() {
     await unmount(tester);
   });
 
-  testWidgets('a local hit opens the sheet with its source named — zero '
+  testWidgets(
+      'a local hit opens the sheet with its source named — zero '
       'network', (tester) async {
     final usda = buildSlice('usda.db', products: [nutellaRow()]);
-    await tester.pumpWidget(
-        host(client(), resolver: resolverWith(usdaPath: usda)));
+    await tester
+        .pumpWidget(host(client(), resolver: resolverWith(usdaPath: usda)));
     await tester.pumpAndSettle();
 
     await submit(tester, '3017620422003');
-    expect(requests, 0,
-        reason: 'a local answer must never touch the network');
+    expect(requests, 0, reason: 'a local answer must never touch the network');
     expect(find.text('Nutella (Ferrero)'), findsOneWidget);
     expect(find.text('From your phone — USDA database'), findsOneWidget);
     expect(find.text('Log it'), findsOneWidget);
@@ -162,8 +169,8 @@ void main() {
       (tester) async {
     final usda = buildSlice('usda.db'); // installed but empty
     final off = buildSlice('off.db', products: [nutellaRow()]);
-    await tester.pumpWidget(host(client(),
-        resolver: resolverWith(usdaPath: usda, offPath: off)));
+    await tester.pumpWidget(
+        host(client(), resolver: resolverWith(usdaPath: usda, offPath: off)));
     await tester.pumpAndSettle();
 
     await submit(tester, '3017620422003');
@@ -175,8 +182,8 @@ void main() {
   testWidgets('a miss is a state with an explicit ask — still zero network',
       (tester) async {
     final usda = buildSlice('usda.db'); // installed but empty
-    await tester.pumpWidget(
-        host(client(), resolver: resolverWith(usdaPath: usda)));
+    await tester
+        .pumpWidget(host(client(), resolver: resolverWith(usdaPath: usda)));
     await tester.pumpAndSettle();
 
     await submit(tester, '3017620422003');
@@ -191,8 +198,8 @@ void main() {
   testWidgets('tapping Ask openfoodfacts.org spends exactly one request',
       (tester) async {
     final usda = buildSlice('usda.db');
-    await tester.pumpWidget(
-        host(client(), resolver: resolverWith(usdaPath: usda)));
+    await tester
+        .pumpWidget(host(client(), resolver: resolverWith(usdaPath: usda)));
     await tester.pumpAndSettle();
 
     await submit(tester, '3017620422003');
@@ -256,16 +263,16 @@ void main() {
   // must be swallowed, not stacked as a second sheet. Invoking the field's
   // onSubmitted directly is the camera's exact path.
   void fireLikeCamera(WidgetTester tester, String code) {
-    final field = tester.widget<TextField>(find.byWidgetPredicate((w) =>
-        w is TextField && w.decoration?.labelText == 'Barcode numbers'));
+    final field = tester.widget<TextField>(find.byWidgetPredicate(
+        (w) => w is TextField && w.decoration?.labelText == 'Barcode numbers'));
     field.onSubmitted!(code);
   }
 
   testWidgets('a second scan while the sheet is open is ignored',
       (tester) async {
     final usda = buildSlice('usda.db', products: [nutellaRow()]);
-    await tester.pumpWidget(
-        host(client(), resolver: resolverWith(usdaPath: usda)));
+    await tester
+        .pumpWidget(host(client(), resolver: resolverWith(usdaPath: usda)));
     await tester.pumpAndSettle();
 
     await submit(tester, '3017620422003');
@@ -279,11 +286,10 @@ void main() {
     await unmount(tester);
   });
 
-  testWidgets('the latch releases once the sheet is dismissed',
-      (tester) async {
+  testWidgets('the latch releases once the sheet is dismissed', (tester) async {
     final usda = buildSlice('usda.db', products: [nutellaRow()]);
-    await tester.pumpWidget(
-        host(client(), resolver: resolverWith(usdaPath: usda)));
+    await tester
+        .pumpWidget(host(client(), resolver: resolverWith(usdaPath: usda)));
     await tester.pumpAndSettle();
 
     await submit(tester, '3017620422003');
@@ -368,8 +374,7 @@ void main() {
       overrides: [
         appDatabaseProvider.overrideWithValue(db),
         offClientProvider.overrideWithValue(client()),
-        barcodeResolverProvider
-            .overrideWithValue(resolverWith(usdaPath: usda)),
+        barcodeResolverProvider.overrideWithValue(resolverWith(usdaPath: usda)),
       ],
       child: MaterialApp(
         theme: AppTheme.light,
@@ -377,8 +382,8 @@ void main() {
           body: Builder(
             builder: (c) => Center(
               child: TextButton(
-                onPressed: () => Navigator.of(c).push(MaterialPageRoute(
-                    builder: (_) => const ScanScreen())),
+                onPressed: () => Navigator.of(c).push(
+                    MaterialPageRoute(builder: (_) => const ScanScreen())),
                 child: const Text('open scanner'),
               ),
             ),
@@ -411,12 +416,10 @@ void main() {
       overrides: [
         appDatabaseProvider.overrideWithValue(db),
         offClientProvider.overrideWithValue(client()),
-        barcodeResolverProvider
-            .overrideWithValue(resolverWith(usdaPath: usda)),
+        barcodeResolverProvider.overrideWithValue(resolverWith(usdaPath: usda)),
       ],
       child: MaterialApp(
-          theme: AppTheme.light,
-          home: const ScanScreen(day: '2026-07-30')),
+          theme: AppTheme.light, home: const ScanScreen(day: '2026-07-30')),
     ));
     await tester.pumpAndSettle();
 
@@ -428,10 +431,10 @@ void main() {
     await unmount(tester);
   });
 
-  testWidgets('a resolver failure resets the scanner calmly — never a '
+  testWidgets(
+      'a resolver failure resets the scanner calmly — never a '
       'stuck spinner', (tester) async {
-    await tester.pumpWidget(
-        host(client(), resolver: _ExplodingResolver()));
+    await tester.pumpWidget(host(client(), resolver: _ExplodingResolver()));
     await tester.pumpAndSettle();
 
     await submit(tester, '3017620422003');
@@ -443,11 +446,12 @@ void main() {
     await unmount(tester);
   });
 
-  testWidgets('an invalid re-entry clears the pending Ask — the button can '
+  testWidgets(
+      'an invalid re-entry clears the pending Ask — the button can '
       'never target a stale code', (tester) async {
     final usda = buildSlice('usda.db'); // installed but empty → miss
-    await tester.pumpWidget(
-        host(client(), resolver: resolverWith(usdaPath: usda)));
+    await tester
+        .pumpWidget(host(client(), resolver: resolverWith(usdaPath: usda)));
     await tester.pumpAndSettle();
 
     await submit(tester, '3017620422003');
@@ -461,13 +465,14 @@ void main() {
     await unmount(tester);
   });
 
-  testWidgets('an Error escaping the online ask resets busy instead of '
+  testWidgets(
+      'an Error escaping the online ask resets busy instead of '
       'bricking the screen', (tester) async {
     final usda = buildSlice('usda.db');
     final exploding = OffClient(
         client: MockClient((_) async => throw StateError('transport bug')));
-    await tester.pumpWidget(
-        host(exploding, resolver: resolverWith(usdaPath: usda)));
+    await tester
+        .pumpWidget(host(exploding, resolver: resolverWith(usdaPath: usda)));
     await tester.pumpAndSettle();
 
     await submit(tester, '3017620422003');

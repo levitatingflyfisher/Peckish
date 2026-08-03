@@ -9,8 +9,7 @@ import 'package:openhearth_design/openhearth_design.dart';
 /// builders, whole — colors, ladder, buttons, inputs. These locks keep
 /// any hand-rolled ThemeData or raw hex from creeping back in.
 void main() {
-  test('the app themes are the shared OhTheme builders, field for field',
-      () {
+  test('the app themes are the shared OhTheme builders, field for field', () {
     // ThemeData has no value equality; the text ladder and color scheme
     // together are the fingerprint that catches a hand-rolled divergence.
     expect(AppTheme.light.textTheme, OhTheme.light().textTheme);
@@ -21,8 +20,7 @@ void main() {
     expect(AppTheme.dark.colorScheme, OhTheme.hearthDark().colorScheme);
   });
 
-  test('no hand-rolled theme and no raw hex anywhere in the theme layer',
-      () {
+  test('no hand-rolled theme and no raw hex anywhere in the theme layer', () {
     final theme = File('lib/shared/theme/app_theme.dart').readAsStringSync();
     expect(theme, contains('OhTheme.light()'));
     expect(theme, contains('OhTheme.hearthDark()'));
@@ -31,8 +29,7 @@ void main() {
     expect(theme.contains('TextTheme('), isFalse,
         reason: 'the ladder must come from openhearth_design');
 
-    final colors =
-        File('lib/shared/theme/app_colors.dart').readAsStringSync();
+    final colors = File('lib/shared/theme/app_colors.dart').readAsStringSync();
     expect(RegExp(r'Color\(0x').hasMatch(colors), isFalse,
         reason: 'app colors are semantic ALIASES onto OhColors — raw hex '
             'is how the boilerplate purple got in last time');

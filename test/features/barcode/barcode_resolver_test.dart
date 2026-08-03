@@ -23,8 +23,17 @@ void main() {
         'barcode TEXT PRIMARY KEY, name TEXT NOT NULL, brand TEXT, '
         'kcal REAL, protein_g REAL, carb_g REAL, fat_g REAL, '
         'serving_g REAL, serving_label TEXT)');
-    raw.execute('INSERT INTO products VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        ['27000612323', productName, null, 480.0, null, null, null, null, null]);
+    raw.execute('INSERT INTO products VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [
+      '27000612323',
+      productName,
+      null,
+      480.0,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]);
     raw.dispose();
     return path;
   }
@@ -91,8 +100,7 @@ void main() {
     resolver.close();
   });
 
-  test('installed slices without the code → miss that a lookup ran',
-      () async {
+  test('installed slices without the code → miss that a lookup ran', () async {
     final resolver = resolverWith({'usda': buildEmptySlice('usda.db')});
 
     final resolution = await resolver.resolveLocal(code);
@@ -143,8 +151,7 @@ void main() {
     resolver.close();
   });
 
-  test('a throwing installedDbPath seam is a calm miss, not a crash',
-      () async {
+  test('a throwing installedDbPath seam is a calm miss, not a crash', () async {
     // The seam does real file I/O (isInstalled: openRead, junk delete) and
     // can throw mid-scan — e.g. the management screen deleting the file in
     // the existsSync→openRead window. resolveLocal owns that risk; the
@@ -160,7 +167,8 @@ void main() {
     resolver.close();
   });
 
-  test('a slice replaced at the same path serves fresh data with no miss '
+  test(
+      'a slice replaced at the same path serves fresh data with no miss '
       'observed in between', () async {
     // Delete + re-download with no scan in the gap: the resolver never sees
     // a null path, so the staleness guard lives in LocalBarcodeDb (stat

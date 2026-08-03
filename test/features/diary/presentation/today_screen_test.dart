@@ -25,7 +25,9 @@ Future<void> unmount(WidgetTester tester) async {
 }
 
 DiaryEntry entry(
-        {required String id, required String day, String label = 'Egg burrito'}) =>
+        {required String id,
+        required String day,
+        String label = 'Egg burrito'}) =>
     DiaryEntry(
       id: id,
       day: day,

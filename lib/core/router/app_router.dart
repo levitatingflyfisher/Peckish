@@ -84,9 +84,14 @@ GoRouter appRouter(Ref ref) {
         path: '/scan',
         // ?day=YYYY-MM-DD when the scan was opened from a past day's +
         // sheet; absent means today, which is every other entry point.
+        // ?type=1 came through the "Type a barcode" door and opens with the
+        // camera parked — a starting posture, not a remembered mode.
         pageBuilder: (c, s) => _fade(
             key: s.pageKey,
-            child: ScanScreen(day: s.uri.queryParameters['day'])),
+            child: ScanScreen(
+              day: s.uri.queryParameters['day'],
+              startTyping: s.uri.queryParameters['type'] == '1',
+            )),
       ),
       GoRoute(
         path: '/barcode-db',

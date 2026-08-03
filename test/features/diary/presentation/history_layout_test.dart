@@ -137,8 +137,7 @@ void main() {
     await unmount(tester);
   });
 
-  testWidgets('macro chips keep their whole label at 2x text',
-      (tester) async {
+  testWidgets('macro chips keep their whole label at 2x text', (tester) async {
     narrowAndLarge(tester);
     await tester.runAsync(() async {
       await TargetsRepository(db).set(const DailyTargets(
@@ -169,8 +168,8 @@ void main() {
       // And having wrapped, the label must actually FIT its container —
       // otherwise the clipping simply moves from the right edge to the
       // bottom one.
-      final pill = tester.getRect(find.ancestor(
-          of: finder, matching: find.byType(Container)).first);
+      final pill = tester.getRect(
+          find.ancestor(of: finder, matching: find.byType(Container)).first);
       final textRect = tester.getRect(finder);
       expect(textRect.bottom, lessThanOrEqualTo(pill.bottom + 0.5),
           reason: '$label label is cut off at the bottom of its pill');

@@ -67,8 +67,7 @@ void main() {
   String buildSlice(String name, Map<String, String> meta) {
     final path = p.join(tempDir.path, name);
     final raw = sql.sqlite3.open(path);
-    raw.execute(
-        'CREATE TABLE meta(key TEXT PRIMARY KEY, value TEXT NOT NULL)');
+    raw.execute('CREATE TABLE meta(key TEXT PRIMARY KEY, value TEXT NOT NULL)');
     raw.execute('CREATE TABLE products('
         'barcode TEXT PRIMARY KEY, name TEXT NOT NULL, brand TEXT, '
         'kcal REAL, protein_g REAL, carb_g REAL, fat_g REAL, '
@@ -80,18 +79,17 @@ void main() {
     return path;
   }
 
-  Widget host(_FakeDbService service, {bool? slicesSupported}) =>
-      ProviderScope(
+  Widget host(_FakeDbService service, {bool? slicesSupported}) => ProviderScope(
         overrides: [
           barcodeDbDownloadServiceProvider.overrideWithValue(service),
         ],
         child: MaterialApp(
             theme: AppTheme.light,
-            home:
-                BarcodeDbScreen(slicesSupportedOverride: slicesSupported)),
+            home: BarcodeDbScreen(slicesSupportedOverride: slicesSupported)),
       );
 
-  testWidgets('the catalog renders one card per slice, plus the license '
+  testWidgets(
+      'the catalog renders one card per slice, plus the license '
       'truth in plain text', (tester) async {
     await tester.pumpWidget(host(_FakeDbService()));
     await tester.pumpAndSettle();
@@ -103,8 +101,8 @@ void main() {
     expect(find.textContaining('Open Food Facts (US slice)'), findsWidgets);
     expect(find.text('Download'), findsNWidgets(2));
     // Attribution travels with each database — shown where it is offered.
-    expect(find.textContaining('U.S. Department of Agriculture'),
-        findsOneWidget);
+    expect(
+        find.textContaining('U.S. Department of Agriculture'), findsOneWidget);
     expect(find.textContaining('Contains information from Open Food Facts'),
         findsOneWidget);
     expect(find.textContaining('CC0 1.0'), findsOneWidget);
@@ -121,8 +119,8 @@ void main() {
       'product_count': '1934204',
       'built_at': '2025-12-18',
     });
-    await tester.pumpWidget(
-        host(_FakeDbService(installedPaths: {'usda': path})));
+    await tester
+        .pumpWidget(host(_FakeDbService(installedPaths: {'usda': path})));
     await tester.pumpAndSettle();
 
     expect(find.textContaining('1934204 products'), findsOneWidget);
@@ -164,19 +162,23 @@ void main() {
         reason: 'a checksum failure must not read as a network drop');
   });
 
-  testWidgets('without local-slice support the screen says so calmly, '
+  testWidgets(
+      'without local-slice support the screen says so calmly, '
       'offering no dead buttons', (tester) async {
     await tester.pumpWidget(host(_FakeDbService(), slicesSupported: false));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('Offline barcode databases live on the '
-        'phone app'), findsOneWidget);
+    expect(
+        find.textContaining('Offline barcode databases live on the '
+            'phone app'),
+        findsOneWidget);
     expect(find.text('Download'), findsNothing,
         reason: 'a button whose tap can only ever fail is a broken promise');
     expect(find.text('Resume'), findsNothing);
   });
 
-  testWidgets('with local-slice support the download cards do render '
+  testWidgets(
+      'with local-slice support the download cards do render '
       '(the native path stays whole)', (tester) async {
     await tester.pumpWidget(host(_FakeDbService(), slicesSupported: true));
     await tester.pumpAndSettle();

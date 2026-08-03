@@ -12,11 +12,9 @@ import 'package:peckish/features/ai/stove/stove_brain_factory.dart';
 // upstream, all in-process on loopback. If the adapter mis-derives the
 // secret by a single byte, the server's fail-closed 403 catches it here.
 void main() {
-  const phrase =
-      'abandon abandon abandon abandon abandon abandon '
+  const phrase = 'abandon abandon abandon abandon abandon abandon '
       'abandon abandon abandon abandon abandon about';
-  const wrongPhrase =
-      'legal winner thank year wave sausage worth useful '
+  const wrongPhrase = 'legal winner thank year wave sausage worth useful '
       'legal winner thank yellow';
   const answerText = '{"foods":[{"name":"Stew","kcal":300,"confidence":0.5}]}';
 
@@ -85,13 +83,12 @@ void main() {
     final brain = createStoveBrain(config(phraseOverride: wrongPhrase))!;
     await expectLater(
       brain.complete('hi'),
-      throwsA(isA<GuessException>().having(
-          (e) => e.message, 'message', contains('household phrase'))),
+      throwsA(isA<GuessException>()
+          .having((e) => e.message, 'message', contains('household phrase'))),
     );
   });
 
-  test('an unreachable stove is a calm message, not a stack trace',
-      () async {
+  test('an unreachable stove is a calm message, not a stack trace', () async {
     final brain = createStoveBrain(config(port: 1))!;
     await expectLater(
       brain.complete('hi'),
@@ -101,22 +98,19 @@ void main() {
   });
 
   test('a missing host or phrase asks for Settings, not a crash', () async {
-    final noHost = createStoveBrain(const AiConfig(
-        backend: AiBackend.stove, stovePhrase: phrase))!;
-    await expectLater(noHost.complete('hi'),
-        throwsA(isA<GuessException>()));
+    final noHost = createStoveBrain(
+        const AiConfig(backend: AiBackend.stove, stovePhrase: phrase))!;
+    await expectLater(noHost.complete('hi'), throwsA(isA<GuessException>()));
 
     final noPhrase = createStoveBrain(
         const AiConfig(backend: AiBackend.stove, stoveHost: 'h'))!;
-    await expectLater(noPhrase.complete('hi'),
-        throwsA(isA<GuessException>()));
+    await expectLater(noPhrase.complete('hi'), throwsA(isA<GuessException>()));
   });
 
   test('an invalid BIP39 phrase at ask time fails calmly', () async {
     final brain =
         createStoveBrain(config(phraseOverride: 'not a real phrase'))!;
-    await expectLater(brain.complete('hi'),
-        throwsA(isA<GuessException>()));
+    await expectLater(brain.complete('hi'), throwsA(isA<GuessException>()));
   });
 
   group('stovePhraseProblem (the settings validator)', () {

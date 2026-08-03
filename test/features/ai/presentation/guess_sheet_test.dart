@@ -134,8 +134,8 @@ void main() {
         appDatabaseProvider.overrideWithValue(db),
         spineReadyProvider.overrideWith((ref) async {}),
       ],
-      child: MaterialApp(
-          theme: AppTheme.light, home: HistoryDayScreen(day: day)),
+      child:
+          MaterialApp(theme: AppTheme.light, home: HistoryDayScreen(day: day)),
     ));
     await tester.pumpAndSettle();
     expect(

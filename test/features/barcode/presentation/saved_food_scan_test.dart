@@ -63,8 +63,8 @@ void main() {
   }
 
   Future<void> settle(WidgetTester tester) async {
-    await tester.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 80)));
+    await tester
+        .runAsync(() => Future<void>.delayed(const Duration(milliseconds: 80)));
     await tester.pumpAndSettle();
   }
 
@@ -117,8 +117,8 @@ void main() {
     await tester.testTextInput.receiveAction(TextInputAction.done);
     // Pumped to the snackbar, not settled through it: pumpAndSettle would
     // run time past its own dismissal and find nothing.
-    await tester.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 80)));
+    await tester
+        .runAsync(() => Future<void>.delayed(const Duration(milliseconds: 80)));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
 
@@ -157,8 +157,8 @@ void main() {
     await settle(tester);
 
     expect(requests, 0);
-    final entries = (await tester.runAsync(
-        () => DiaryRepository(db).watchEntriesForDay(day).first))!;
+    final entries = (await tester
+        .runAsync(() => DiaryRepository(db).watchEntriesForDay(day).first))!;
     expect(entries.single.label, 'Nutella (Ferrero)');
     expect(DiaryEntry.dayOf(entries.single.at), day,
         reason: 'the backdated line resolves back to its own day');
