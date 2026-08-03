@@ -1,11 +1,11 @@
 import 'dart:io';
 
 import 'package:dio/dio.dart';
+import 'package:domovoi/domovoi.dart' as domovoi;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import 'package:peckish/features/ai/on_device/model_spec.dart';
-import 'package:peckish/shared/data/download_stream.dart';
 
 /// Downloads and manages the on-device model files (native builds only —
 /// web uses the inert `model_download_service_web.dart` variant).
@@ -67,9 +67,9 @@ class ModelDownloadService {
   /// Downloads [spec], yielding `(receivedBytes, totalBytes)` tuples
   /// (total is `-1` when the server omits Content-Length).
   ///
-  /// The `.part` resume / 416-restart / 200-ignores-Range discipline is
-  /// domovoi's `resumableDownload` engine's, spoken through the
-  /// [downloadStream] façade — see their docs for the story.
+  /// The `.part` resume / 416-restart / 200-ignores-Range discipline
+  /// belongs to domovoi's transfer engine — see its docs for the story.
+  /// The stream starts on subscribe and the listener leaving cancels it.
   Stream<(int, int)> download(PeckishModelSpec spec) async* {
     if (spec.requiresToken) {
       throw StateError(
@@ -77,7 +77,7 @@ class ModelDownloadService {
     }
     final file = await modelFile(spec);
     final part = await _partFile(spec);
-    yield* downloadStream(
+    yield* domovoi.resumableDownloadStream(
       dio: _dio,
       url: spec.downloadUrl,
       partFile: part,

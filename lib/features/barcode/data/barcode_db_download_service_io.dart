@@ -2,11 +2,11 @@ import 'dart:io';
 
 import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
+import 'package:domovoi/domovoi.dart' as domovoi;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import 'package:peckish/features/barcode/data/barcode_db_spec.dart';
-import 'package:peckish/shared/data/download_stream.dart';
 
 /// Native builds can hold slice files on disk. The seam owns the answer so
 /// screens gate on capability, never on `kIsWeb` (the house trio idiom).
@@ -109,8 +109,8 @@ class BarcodeDbDownloadService {
   /// for the sha check + gunzip, then closes on success.
   ///
   /// The `.gz.part` resume / 416-restart / 200-ignores-Range discipline
-  /// is domovoi's `resumableDownload` engine's, spoken through the
-  /// [downloadStream] façade — see their docs for the story.
+  /// belongs to domovoi's transfer engine — see its docs for the story.
+  /// The stream starts on subscribe and the listener leaving cancels it.
   ///
   /// Integrity: the finished .gz must hash to [BarcodeDbSpec.sha256Gz]
   /// before it is decompressed. A mismatch deletes the .gz and throws
@@ -143,7 +143,7 @@ class BarcodeDbDownloadService {
       }
     }
 
-    yield* downloadStream(
+    yield* domovoi.resumableDownloadStream(
       dio: _dio,
       url: spec.downloadUrl,
       partFile: gzPart,
