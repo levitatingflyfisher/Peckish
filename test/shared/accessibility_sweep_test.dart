@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:peckish/core/providers/core_providers.dart';
 import 'package:peckish/core/storage/app_database.dart';
+import 'package:peckish/features/diary/presentation/history_screen.dart';
 import 'package:peckish/features/diary/presentation/today_screen.dart';
 import 'package:peckish/features/groceries/presentation/groceries_screen.dart';
 import 'package:peckish/features/plan/presentation/plan_screen.dart';
@@ -13,12 +14,24 @@ import 'package:peckish/shared/theme/app_theme.dart';
 /// The fleet's recurring accessibility bug: rigid rows overflow at large
 /// text scale on narrow phones. Every top-level screen must survive 320dp
 /// at 2× text with zero layout exceptions.
+///
+/// Necessary, NOT sufficient — and v0.9 is the proof. This gate passed
+/// clean through a macro label sheared to 40% of itself and a day total
+/// split into "29" over "00", because both were widgets that CLIP rather
+/// than overflow: a `Chip` fixes its own height and forces one line, and
+/// wrapped text simply wraps. Nothing throws, so nothing here fires. When
+/// a screen carries numbers that must be read exactly, pin those in a
+/// layout test of its own (history_layout_test.dart) as well as here.
 void main() {
   final screens = <String, Widget>{
     'Today': const TodayScreen(),
     'Plan': const PlanScreen(),
     'Recipes': const RecipesScreen(),
     'Groceries': const GroceriesScreen(),
+    // History became a tab in v0.9, and a past day gained a totals card
+    // and a regulars rail — both new rigid rows on the narrowest screen.
+    'History': const HistoryScreen(today: '2026-08-14'),
+    'A past day': const HistoryDayScreen(day: '2026-08-13'),
   };
 
   for (final entry in screens.entries) {
