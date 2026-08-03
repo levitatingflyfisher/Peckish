@@ -1,5 +1,44 @@
 # Changelog
 
+## 0.9.0 — the second-tap release
+
+0.8 made every past day *reachable*. This one makes the things you do
+there cost what they should — usually one tap — and fixes what a phone
+test found once the screens were being used in earnest.
+
+- **The food you always eat is one tap on every day.** Your regulars sit
+  on Today, on any past day, and at the top of the **+** sheet, above
+  quick add and the scanner — each aimed at the day it was opened on.
+  Filling a gap in last week used to mean typing a search, the slowest
+  route in the app for the food you eat most.
+- **History is a tab.** The month you just lived is the second-most
+  looked-at screen in the app; it was an icon in the corner beside
+  Settings, which is where things go to be forgotten.
+- **A past day shows its own four numbers.** The same kcal figure and
+  per-macro breakdown Today shows, against the same targets — so you can
+  read exactly what you ate on the 19th instead of inferring it from a
+  dot on a chart.
+- **A food you saved answers its own barcode.** Ticking "Save to My
+  Foods" now brings the code home with the food, so scanning that tin
+  again logs it straight away — no confirm sheet, no lookup, and the
+  network is never asked a question the phone already answered.
+- **One scan screen, and the camera stands down.** The Scan/Type toggle
+  is gone: the digits field was always live in camera mode, so
+  remembering a preference could only ever cost you a click. The camera
+  now switches itself off the moment there is something to deal with — a
+  lookup running, a question to answer, the confirm sheet open — and
+  shows the digits it read instead, which a photo picked from the gallery
+  never had.
+- **The month arrows stay put** while the month scrolls under them, so
+  they are still there when you have reached the calendar.
+- **Targets stopped printing as boxes.** Peckish bundles its own type and
+  neither font has ≥ or ≤, so every target anyone ever set rendered a
+  tofu box: "of □2200 kcal". Caps read "max" and floors "min" now, in
+  letters the fonts actually have.
+- **Numbers stop being sheared** at large accessibility text sizes: the
+  day's total no longer splits across two lines, and a macro label no
+  longer loses its target off the right-hand edge.
+
 ## 0.8.0 — the missed-day release
 
 Every way of logging now works on a day you already lived, and history

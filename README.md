@@ -24,15 +24,17 @@ ads, no tracking, no subscriptions.
   saved meals, offline search over the bundled spine, quick add. Optional
   targets with roles (a floor, a budget, a land-near), and "round out your
   day" suggestions drawn from your own regulars.
-- **The month behind you** — a trend line for the macro you pick with your
-  target ruled across it, and a calendar whose every past day opens that
-  day's plate. Nothing disappears, blank days stay honestly blank, and
-  every way of logging — search, quick add, barcode, AI — works on a day
-  you already lived.
-- **Scan it** — barcode scan (camera or typed digits), answered from
-  downloadable offline databases on your phone; a code they don't know
-  shows one button, "Ask openfoodfacts.org", and only that tap sends the
-  digits.
+- **The month behind you** — its own tab: a trend line for the macro you
+  pick with your target ruled across it, and a calendar whose every past
+  day opens that day's plate, complete with its own kcal and per-macro
+  breakdown. Nothing disappears, blank days stay honestly blank, and
+  every way of logging — your regulars, search, quick add, barcode, AI —
+  works on a day you already lived, one tap where it should be one tap.
+- **Scan it** — barcode scan (camera or typed digits), answered from your
+  own saved foods first, then downloadable offline databases on your
+  phone; a code nobody knows shows one button, "Ask openfoodfacts.org",
+  and only that tap sends the digits. Save a scanned food and the next
+  scan of that tin just logs it.
 - **Guess it** — describe the meal, or snap the plate (Android), and AI
   drafts lines you prune and confirm. Pick where it thinks: a model
   downloaded to the phone, your household's own desktop over an

@@ -22,10 +22,16 @@ docs/README.md (Diátaxis hub). Decisions live in docs/adr/.
   meals (one-tap `logMeal`), targets with roles + the suggestion engine,
   Today + add sheet + history (month trend line, tappable calendar, day
   pages, edit sheet). `domain/day_stamp.dart` holds the ONE rule for which
-  day a log lands on — every add path calls it; don't re-derive it.
+  day a log lands on and `domain/relog.dart` the ONE rule for logging a
+  known food again — every add path calls them; don't re-derive either.
+  (Both were private to the + sheet once, which is exactly why the barcode
+  path could only ever write "now".) `presentation/regulars_rail.dart` and
+  `presentation/totals_card.dart` are shared by Today and any past day —
+  a past day is not a second-class day.
 - `lib/features/barcode/` — GTIN validation + scanner tuning, the
   downloadable slice DBs (spec / download service / local db) and the
-  resolver chain (usda → off_us → explicit ask), the OFF client. ADR-0010.
+  resolver chain (your own saved foods → usda → off_us → explicit ask),
+  the OFF client. ADR-0010.
 - `lib/features/ai/` — the guesstimate (BYOK, on-device model, or the
   household stove — domovoi's encrypted home-server tier, `stove/` trio),
   the plate labeler, the model manager (ADR-0009). The parser only drafts;
@@ -58,9 +64,16 @@ docs/README.md (Diátaxis hub). Decisions live in docs/adr/.
   a kcal-only day reports protein as unknown. Don't "fix" this.
 - **Ledger snapshots.** Diary entries carry their own macros; editing or
   deleting a food/recipe/meal never rewrites history.
-- **Two-tap law + thumb targets.** Regulars log in one tap; every top-level
-  screen must pass the 320dp / 2× textScale sweep
-  (test/shared/accessibility_sweep_test.dart).
+- **Two-tap law + thumb targets.** Regulars log in one tap — on EVERY day,
+  not just today; every top-level screen must pass the 320dp / 2× textScale
+  sweep (test/shared/accessibility_sweep_test.dart). Beware widgets that
+  shear rather than overflow: a `Chip` fixes its height and forces one
+  line, so a too-long label is silently cut instead of failing the sweep.
+- **Only print glyphs the bundled fonts have.** Peckish ships Lora +
+  Nunito precisely so it depends on nobody else's type — so ≥, ≤, ≈, →
+  and friends render as boxes. test/shared/theme/font_coverage_test.dart
+  walks every string literal in `lib/` against both cmaps; it is the
+  reason target roles read "min"/"max".
 - **Network only when the user acts** — the privacy screen (Settings →
   What leaves your device) is the contract, mirrored in
   docs/reference/permissions.md. Barcode scans resolve against the local

@@ -1,7 +1,7 @@
 name: peckish
 description: The family food app — recipe box, weekly dinner plan, self-writing grocery list, and a one-tap food diary. Local-first — OpenHearth.
 publish_to: 'none'
-version: 0.8.0+9
+version: 0.9.0+10
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
