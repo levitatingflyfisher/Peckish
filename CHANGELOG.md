@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.9.1 — nothing you typed gets thrown away
+
+- **A stray tap no longer discards a form.** Swipe over to another app to
+  read a number off a photo, swipe back, and Android does not bring the
+  keyboard with it — so the sheet shrinks and the field you had already
+  aimed at moves. The tap lands on the dimmed background and used to take
+  the whole entry with it. Every screen that holds something you typed now
+  ignores that tap and shows an **×** instead. Dragging the sheet down and
+  the back button still close it, and a confirmation — which holds nothing
+  you typed — still closes when you tap away, because that is the right
+  gesture for "never mind".
+
 ## 0.9.0 — the second-tap release
 
 0.8 made every past day *reachable*. This one makes the things you do

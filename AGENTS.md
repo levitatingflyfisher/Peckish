@@ -69,6 +69,13 @@ docs/README.md (Diátaxis hub). Decisions live in docs/adr/.
   sweep (test/shared/accessibility_sweep_test.dart). Beware widgets that
   shear rather than overflow: a `Chip` fixes its height and forces one
   line, so a too-long label is silently cut instead of failing the sweep.
+- **A modal holding typed input refuses the barrier.** `showInputSheet` /
+  `showInputDialog` in `shared/widgets/input_modal.dart` — never raw
+  `showModalBottomSheet`/`showDialog` for a form. Sheets carry a
+  `SheetCloseButton`; dialogs already have Cancel. Tapping away is still
+  right for a modal with nothing typed in it (a confirm, a portion
+  picker) — the rule is scoped to work that can be lost, not to modals in
+  general.
 - **Only print glyphs the bundled fonts have.** Peckish ships Lora +
   Nunito precisely so it depends on nobody else's type — so ≥, ≤, ≈, →
   and friends render as boxes. test/shared/theme/font_coverage_test.dart
