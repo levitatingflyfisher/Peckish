@@ -29,19 +29,17 @@ Stream<(int, int)> downloadStream({
   final cancelToken = CancelToken();
   // The listener's unsubscribe reaches the wire through this token; on a
   // transfer that already finished, cancel() is a harmless no-op.
-  final controller =
-      StreamController<(int, int)>(onCancel: cancelToken.cancel);
+  final controller = StreamController<(int, int)>(onCancel: cancelToken.cancel);
 
   unawaited(domovoi
       .resumableDownload(
-        dio: dio,
-        url: url,
-        partFile: partFile,
-        promote: promote,
-        cancelToken: cancelToken,
-        onProgress: (received, total) =>
-            controller.add((received, total ?? -1)),
-      )
+    dio: dio,
+    url: url,
+    partFile: partFile,
+    promote: promote,
+    cancelToken: cancelToken,
+    onProgress: (received, total) => controller.add((received, total ?? -1)),
+  )
       .then((_) => controller.close(), onError: (Object e) {
     controller.addError(e);
     controller.close();

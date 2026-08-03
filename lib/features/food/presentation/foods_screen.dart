@@ -12,6 +12,7 @@ import 'package:peckish/shared/theme/app_colors.dart';
 import 'package:peckish/shared/theme/app_spacing.dart';
 import 'package:peckish/shared/widgets/confirm_dialog.dart';
 import 'package:peckish/shared/widgets/num_field.dart';
+import 'package:peckish/shared/widgets/input_modal.dart';
 
 /// Foods — the full view behind the rail. Regulars (the persistent usage
 /// record) are manageable here: log again, hide from the rail, bring back.
@@ -60,8 +61,7 @@ class FoodsScreen extends ConsumerWidget {
             tilePadding: EdgeInsets.zero,
             title: Text('Hidden regulars', style: text.titleSmall),
             children: [
-              for (final u in hidden)
-                _RegularTile(usage: u, isHidden: true),
+              for (final u in hidden) _RegularTile(usage: u, isHidden: true),
             ],
           ),
         const SizedBox(height: AppSpacing.lg),
@@ -97,8 +97,7 @@ class FoodsScreen extends ConsumerWidget {
                   'for one-tap relogging, and My Foods for the household '
                   'staples you define.',
                   textAlign: TextAlign.center,
-                  style:
-                      text.bodyMedium?.copyWith(color: AppColors.stone),
+                  style: text.bodyMedium?.copyWith(color: AppColors.stone),
                 ),
               ),
             )
@@ -113,9 +112,8 @@ class FoodsScreen extends ConsumerWidget {
 
 final _regularsProvider = StreamProvider.autoDispose(
     (ref) => ref.watch(foodUsageRepositoryProvider).watchAll());
-final _customsProvider = FutureProvider.autoDispose((ref) => ref
-    .watch(customFoodRepositoryProvider)
-    .getAll(includeArchived: true));
+final _customsProvider = FutureProvider.autoDispose((ref) =>
+    ref.watch(customFoodRepositoryProvider).getAll(includeArchived: true));
 
 Future<void> _relog(WidgetRef ref, DiaryEntry template) async {
   final now = DateTime.now();
@@ -146,8 +144,7 @@ class _RegularTile extends ConsumerWidget {
     return ListTile(
       contentPadding: EdgeInsets.zero,
       title: Text(usage.label),
-      subtitle: Text(
-          '${usage.useCount}× · ${usage.unitLabel}'
+      subtitle: Text('${usage.useCount}× · ${usage.unitLabel}'
           '${kcal == null ? '' : ' · ${kcal.round()} kcal'}'),
       trailing: PopupMenuButton<String>(
         icon: const Icon(Icons.more_vert),
@@ -158,8 +155,8 @@ class _RegularTile extends ConsumerWidget {
               if (context.mounted) {
                 ScaffoldMessenger.of(context)
                   ..clearSnackBars()
-                  ..showSnackBar(SnackBar(
-                      content: Text('Logged ${usage.label}')));
+                  ..showSnackBar(
+                      SnackBar(content: Text('Logged ${usage.label}')));
               }
             case 'hide':
               await ref
@@ -176,8 +173,7 @@ class _RegularTile extends ConsumerWidget {
           if (isHidden)
             const PopupMenuItem(value: 'show', child: Text('Show again'))
           else
-            const PopupMenuItem(
-                value: 'hide', child: Text('Hide from rail')),
+            const PopupMenuItem(value: 'hide', child: Text('Hide from rail')),
         ],
       ),
     );
@@ -227,8 +223,8 @@ class _CustomTile extends ConsumerWidget {
                       SnackBar(content: Text('Logged ${food.name}')));
               }
             case 'edit':
-              await showDialog<void>(
-                context: context,
+              await showInputDialog<void>(
+                context,
                 builder: (_) => _EditFoodDialog(food: food),
               );
               ref.invalidate(_customsProvider);
@@ -255,11 +251,9 @@ class _CustomTile extends ConsumerWidget {
           const PopupMenuItem(value: 'log', child: Text('Log it again')),
           const PopupMenuItem(value: 'edit', child: Text('Edit')),
           if (isArchived)
-            const PopupMenuItem(
-                value: 'wake', child: Text('Back to My Foods'))
+            const PopupMenuItem(value: 'wake', child: Text('Back to My Foods'))
           else
-            const PopupMenuItem(
-                value: 'rest', child: Text('Rest this food')),
+            const PopupMenuItem(value: 'rest', child: Text('Rest this food')),
           const PopupMenuItem(value: 'delete', child: Text('Delete')),
         ],
       ),
@@ -308,8 +302,7 @@ class _EditFoodDialogState extends ConsumerState<_EditFoodDialog> {
 
   static String _fmt(double? v) => v == null ? '' : formatQty(v);
 
-  static double? _num(TextEditingController c) =>
-      parseFlexibleDouble(c.text);
+  static double? _num(TextEditingController c) => parseFlexibleDouble(c.text);
 
   Future<void> _save() async {
     final name = _name.text.trim();
@@ -345,8 +338,8 @@ class _EditFoodDialogState extends ConsumerState<_EditFoodDialog> {
                 decoration: const InputDecoration(labelText: 'Name')),
             TextField(
                 controller: _serving,
-                decoration: const InputDecoration(
-                    labelText: 'Serving (e.g. 1 bowl)')),
+                decoration:
+                    const InputDecoration(labelText: 'Serving (e.g. 1 bowl)')),
             _numField(_kcal, 'kcal'),
             _numField(_protein, 'Protein g'),
             _numField(_carbs, 'Carbs g'),

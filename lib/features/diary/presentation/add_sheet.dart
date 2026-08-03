@@ -18,6 +18,7 @@ import 'package:peckish/features/food/domain/macro_set.dart';
 import 'package:peckish/features/food/domain/usda_food.dart';
 import 'package:peckish/shared/theme/app_colors.dart';
 import 'package:peckish/shared/theme/app_spacing.dart';
+import 'package:peckish/shared/widgets/input_modal.dart';
 import 'package:peckish/shared/widgets/num_field.dart';
 
 /// The + sheet: offline search over the bundled spine + custom foods, the
@@ -27,12 +28,7 @@ import 'package:peckish/shared/widgets/num_field.dart';
 /// past days as a "now-flow". Wrong: the tin in the recycling is the best
 /// evidence you have about the day you forgot to log.)
 Future<void> showAddSheet(BuildContext context, {String? day}) =>
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (_) => _AddSheet(day: day),
-    );
+    showInputSheet<void>(context, builder: (_) => _AddSheet(day: day));
 
 class _AddSheet extends ConsumerStatefulWidget {
   const _AddSheet({this.day});
@@ -85,15 +81,23 @@ class _AddSheetState extends ConsumerState<_AddSheet> {
       builder: (context, scroll) => Column(
         children: [
           Padding(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            child: TextField(
-              autofocus: true,
-              decoration: const InputDecoration(
-                prefixIcon: Icon(Icons.search),
-                hintText: 'Search foods — works offline',
-                border: OutlineInputBorder(),
-              ),
-              onChanged: _onChanged,
+            padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg, AppSpacing.sm, AppSpacing.sm, AppSpacing.lg),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    autofocus: true,
+                    decoration: const InputDecoration(
+                      prefixIcon: Icon(Icons.search),
+                      hintText: 'Search foods — works offline',
+                      border: OutlineInputBorder(),
+                    ),
+                    onChanged: _onChanged,
+                  ),
+                ),
+                const SheetCloseButton(),
+              ],
             ),
           ),
           Expanded(
@@ -125,8 +129,7 @@ class _IdleSheet extends ConsumerWidget {
     // brain", never a crashed sheet (AsyncError.value rethrows).
     final aiReady =
         (ref.watch(aiConfigProvider).valueOrNull?.configured ?? false) ||
-            (plateScanSupported &&
-                ref.watch(plateScannerProvider) != null);
+            (plateScanSupported && ref.watch(plateScannerProvider) != null);
     return ListView(
       controller: scroll,
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
@@ -187,8 +190,9 @@ class _IdleSheet extends ConsumerWidget {
                   : '${meal.items.length} items · ${meal.totals.kcal!.round()} kcal'),
               onTap: () async {
                 final stamp = dayStamp(day);
-                await ref.read(savedMealRepositoryProvider).logMeal(meal.id,
-                    at: stamp.at, day: stamp.day);
+                await ref
+                    .read(savedMealRepositoryProvider)
+                    .logMeal(meal.id, at: stamp.at, day: stamp.day);
                 if (context.mounted) Navigator.of(context).pop();
               },
             ),
@@ -275,7 +279,8 @@ class _Results extends ConsumerWidget {
 
   Future<void> _pickPortion(
       BuildContext context, WidgetRef ref, UsdaFood food) async {
-    final portions = await ref.read(usdaFoodRepositoryProvider).portionsOf(food.fdcId);
+    final portions =
+        await ref.read(usdaFoodRepositoryProvider).portionsOf(food.fdcId);
     if (!context.mounted) return;
     await showModalBottomSheet(
       context: context,
@@ -312,8 +317,7 @@ final _searchProvider = FutureProvider.autoDispose((ref) async {
 });
 
 class _PortionSheet extends ConsumerWidget {
-  const _PortionSheet(
-      {required this.food, required this.portions, this.day});
+  const _PortionSheet({required this.food, required this.portions, this.day});
 
   final UsdaFood food;
   final List<UsdaPortion> portions;
@@ -372,8 +376,8 @@ Future<void> _showQuickAdd(BuildContext context, WidgetRef ref,
     {String? day}) async {
   // Pops with true only when a line was logged — Cancel returns to the +
   // sheet instead of closing it (the sheet is where you'd try again).
-  final logged = await showDialog<bool>(
-    context: context,
+  final logged = await showInputDialog<bool>(
+    context,
     builder: (_) => _QuickAddDialog(day: day),
   );
   if (logged == true && context.mounted) Navigator.of(context).pop();
@@ -413,8 +417,7 @@ class _QuickAddDialogState extends ConsumerState<_QuickAddDialog> {
     super.dispose();
   }
 
-  static double? _num(TextEditingController c) =>
-      parseFlexibleDouble(c.text);
+  static double? _num(TextEditingController c) => parseFlexibleDouble(c.text);
 
   Widget _numField(TextEditingController c, String label) =>
       NumField(controller: c, label: label);
@@ -471,8 +474,7 @@ class _QuickAddDialogState extends ConsumerState<_QuickAddDialog> {
           children: [
             TextField(
                 controller: _label,
-                decoration:
-                    const InputDecoration(labelText: 'What was it?')),
+                decoration: const InputDecoration(labelText: 'What was it?')),
             _numField(_kcal, 'kcal'),
             _numField(_protein, 'Protein g'),
             _numField(_carbs, 'Carbs g'),

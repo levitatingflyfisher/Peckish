@@ -200,8 +200,7 @@ mixin DownloadCardEngine<W extends StatefulWidget, S, D> on State<W> {
         if (!mounted) return;
         final percent = total <= 0 ? null : (received * 100 ~/ total);
         if (throttle.shouldEmit(received, total)) {
-          setState(
-              () => downloadStatuses[id] = DownloadInProgress<D>(percent));
+          setState(() => downloadStatuses[id] = DownloadInProgress<D>(percent));
         }
       }
       if (!mounted) return;
@@ -285,12 +284,11 @@ class DownloadCardTile<D> extends StatelessWidget {
         DownloadInstalled(:final detail) => installedSubtitle(theme, detail),
         // A failure that names itself outranks the generic line.
         DownloadFailed(:final message) => Text(message ?? failedSubtitle,
-            style:
-                theme.textTheme.bodySmall?.copyWith(color: AppColors.clay)),
+            style: theme.textTheme.bodySmall?.copyWith(color: AppColors.clay)),
       },
       trailing: switch (status) {
-        DownloadNotStarted() => TextButton(
-            onPressed: onDownload, child: const Text('Download')),
+        DownloadNotStarted() =>
+          TextButton(onPressed: onDownload, child: const Text('Download')),
         DownloadPaused() =>
           TextButton(onPressed: onDownload, child: const Text('Resume')),
         DownloadInProgress() => const SizedBox(

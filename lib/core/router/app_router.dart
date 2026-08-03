@@ -18,13 +18,14 @@ import 'package:peckish/features/sync/presentation/sync_screen.dart';
 
 part 'app_router.g.dart';
 
-CustomTransitionPage<T> _fade<T>({required LocalKey key, required Widget child}) =>
+CustomTransitionPage<T> _fade<T>(
+        {required LocalKey key, required Widget child}) =>
     CustomTransitionPage<T>(
       key: key,
       child: child,
       transitionDuration: const Duration(milliseconds: 250),
-      transitionsBuilder: (_, a, __, c) =>
-          FadeTransition(opacity: CurvedAnimation(parent: a, curve: Curves.easeOut), child: c),
+      transitionsBuilder: (_, a, __, c) => FadeTransition(
+          opacity: CurvedAnimation(parent: a, curve: Curves.easeOut), child: c),
     );
 
 /// Four-tab shell. Deliberately NO onboarding gate: Peckish opens straight
@@ -99,8 +100,7 @@ GoRouter appRouter(Ref ref) {
       ),
       GoRoute(
         path: '/sync',
-        pageBuilder: (c, s) =>
-            _fade(key: s.pageKey, child: const SyncScreen()),
+        pageBuilder: (c, s) => _fade(key: s.pageKey, child: const SyncScreen()),
       ),
       GoRoute(
         path: '/privacy',

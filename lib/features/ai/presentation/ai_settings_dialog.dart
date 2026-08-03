@@ -7,6 +7,7 @@ import 'package:peckish/features/ai/stove/stove_brain_factory.dart';
 import 'package:peckish/features/ai/presentation/guess_sheet.dart';
 import 'package:peckish/features/ai/presentation/local_models_section.dart';
 import 'package:peckish/shared/theme/app_spacing.dart';
+import 'package:peckish/shared/widgets/input_modal.dart';
 
 /// Configure (or turn off) the guesstimate brain. Saving a key or an
 /// endpoint IS the opt-in; Off deletes the stored key. The copy is the
@@ -15,8 +16,8 @@ import 'package:peckish/shared/theme/app_spacing.dart';
 Future<void> showAiSettingsDialog(BuildContext context, WidgetRef ref) async {
   final current = await ref.read(aiConfigProvider.future);
   if (!context.mounted) return;
-  await showDialog<void>(
-    context: context,
+  await showInputDialog<void>(
+    context,
     builder: (_) => _AiSettingsDialog(current: current),
   );
 }
@@ -35,8 +36,7 @@ class _AiSettingsDialogState extends ConsumerState<_AiSettingsDialog> {
   late final _key = TextEditingController(text: widget.current.anthropicKey);
   late final _url = TextEditingController(text: widget.current.baseUrl);
   late final _model = TextEditingController(text: widget.current.model);
-  late final _stoveHost =
-      TextEditingController(text: widget.current.stoveHost);
+  late final _stoveHost = TextEditingController(text: widget.current.stoveHost);
   late final _stovePort =
       TextEditingController(text: widget.current.stovePort?.toString());
   late final _stovePhrase =
@@ -118,9 +118,9 @@ class _AiSettingsDialogState extends ConsumerState<_AiSettingsDialog> {
                       value: AiBackend.stove,
                       contentPadding: EdgeInsets.zero,
                       title: Text('Household stove'),
-                      subtitle: Text(
-                          'A home server you own — asks travel encrypted '
-                          'on your own Wi-Fi'),
+                      subtitle:
+                          Text('A home server you own — asks travel encrypted '
+                              'on your own Wi-Fi'),
                     ),
                     if (_backend == AiBackend.stove) ...[
                       TextField(
@@ -164,15 +164,14 @@ class _AiSettingsDialogState extends ConsumerState<_AiSettingsDialog> {
                       value: AiBackend.onDevice,
                       contentPadding: EdgeInsets.zero,
                       title: Text('On this phone'),
-                      subtitle: Text(
-                          'A small model, downloaded once — nothing ever '
-                          'leaves the device'),
+                      subtitle:
+                          Text('A small model, downloaded once — nothing ever '
+                              'leaves the device'),
                     ),
                     if (_backend == AiBackend.onDevice)
                       LocalModelsSection(
                         selectedId: _localModelId,
-                        onSelect: (id) =>
-                            setState(() => _localModelId = id),
+                        onSelect: (id) => setState(() => _localModelId = id),
                       ),
                   ],
                   const RadioListTile<AiBackend>(
@@ -211,11 +210,8 @@ class _AiSettingsDialogState extends ConsumerState<_AiSettingsDialog> {
 
   Future<void> _save() async {
     // Words the way people type them; BIP39 is lowercase single-spaced.
-    final phrase = _stovePhrase.text
-        .trim()
-        .toLowerCase()
-        .split(RegExp(r'\s+'))
-        .join(' ');
+    final phrase =
+        _stovePhrase.text.trim().toLowerCase().split(RegExp(r'\s+')).join(' ');
     if (_backend == AiBackend.stove && phrase.isNotEmpty) {
       // The same derivation the ask path uses; a typo must be a calm line
       // here, never a mis-keyed save that the stove refuses forever.

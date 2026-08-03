@@ -98,9 +98,8 @@ class TodayScreen extends ConsumerWidget {
   }
 }
 
-final _entriesProvider = StreamProvider.autoDispose
-    .family((ref, String day) =>
-        ref.watch(diaryRepositoryProvider).watchEntriesForDay(day));
+final _entriesProvider = StreamProvider.autoDispose.family((ref, String day) =>
+    ref.watch(diaryRepositoryProvider).watchEntriesForDay(day));
 
 /// Totals fold out of the already-watched entries — one drift watch serves
 /// the totals card, the day list, and the suggestion engine. Seeded with

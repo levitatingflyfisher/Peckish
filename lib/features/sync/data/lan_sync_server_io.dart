@@ -81,8 +81,9 @@ class LanSyncServer {
       ..get('/sync/status', _handleStatus)
       ..get('/sync/export', _handleExport)
       ..post('/sync/import', _handleImport);
-    final handler =
-        const Pipeline().addMiddleware(_redactedLogger()).addHandler(router.call);
+    final handler = const Pipeline()
+        .addMiddleware(_redactedLogger())
+        .addHandler(router.call);
     _server = await shelf_io.serve(handler, InternetAddress.anyIPv4, _port);
   }
 

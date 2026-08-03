@@ -96,8 +96,7 @@ class CustomFoodRepository {
         createdAt: Value(f.createdAt),
         archived: Value(f.archived),
         // Normalized on the way IN, so every read is a plain equality.
-        barcode: Value(
-            f.barcode == null ? null : normalizeBarcode(f.barcode!)),
+        barcode: Value(f.barcode == null ? null : normalizeBarcode(f.barcode!)),
       );
 
   static CustomFood _toDomain(CustomFoodRow r) => CustomFood(

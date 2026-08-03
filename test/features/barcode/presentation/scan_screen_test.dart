@@ -289,8 +289,10 @@ void main() {
     await submit(tester, '3017620422003');
     expect(find.text('Log it'), findsOneWidget);
 
-    // Swipe-away (tap the barrier) without logging.
-    await tester.tapAt(const Offset(10, 10));
+    // Back out without logging. Via the X, not the barrier: a sheet
+    // holding a typed amount no longer dies to a stray tap (see
+    // shared/widgets/input_modal.dart).
+    await tester.tap(find.byKey(const ValueKey('sheet-close')));
     await tester.pumpAndSettle();
     expect(find.text('Log it'), findsNothing);
 

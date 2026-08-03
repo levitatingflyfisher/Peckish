@@ -8,6 +8,7 @@ import 'package:peckish/features/diary/presentation/day_format.dart';
 import 'package:peckish/features/food/domain/custom_food.dart';
 import 'package:peckish/shared/theme/app_colors.dart';
 import 'package:peckish/shared/theme/app_spacing.dart';
+import 'package:peckish/shared/widgets/input_modal.dart';
 import 'package:uuid/uuid.dart';
 
 /// Confirm-before-commit for a scanned product: nothing touches the ledger
@@ -24,10 +25,8 @@ import 'package:uuid/uuid.dart';
 /// to log, so a scan belongs on any day — the sheet just says which one.
 Future<bool?> showProductSheet(BuildContext context, OffProduct product,
         {String? sourceNote, String? day}) =>
-    showModalBottomSheet<bool>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
+    showInputSheet<bool>(
+      context,
       builder: (_) =>
           _ProductSheet(product: product, sourceNote: sourceNote, day: day),
     );
@@ -82,7 +81,15 @@ class _ProductSheetState extends ConsumerState<_ProductSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(product.displayName, style: theme.textTheme.titleLarge),
+          Row(
+            children: [
+              Expanded(
+                child: Text(product.displayName,
+                    style: theme.textTheme.titleLarge),
+              ),
+              const SheetCloseButton(),
+            ],
+          ),
           if (widget.day != null)
             Padding(
               padding: const EdgeInsets.only(top: AppSpacing.xs),
@@ -93,8 +100,7 @@ class _ProductSheetState extends ConsumerState<_ProductSheet> {
           if (widget.sourceNote != null)
             Padding(
               padding: const EdgeInsets.only(top: AppSpacing.xs),
-              child: Text(widget.sourceNote!,
-                  style: theme.textTheme.bodySmall),
+              child: Text(widget.sourceNote!, style: theme.textTheme.bodySmall),
             ),
           if (product.servingLabel != null)
             Padding(
@@ -106,8 +112,7 @@ class _ProductSheetState extends ConsumerState<_ProductSheet> {
           TextField(
             controller: _grams,
             autofocus: true,
-            keyboardType:
-                const TextInputType.numberWithOptions(decimal: true),
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
             decoration: const InputDecoration(
               labelText: 'Amount',
               suffixText: 'g',

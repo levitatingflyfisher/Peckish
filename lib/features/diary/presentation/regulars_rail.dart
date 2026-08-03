@@ -36,9 +36,7 @@ Future<void> logRegular(
   DiaryEntry template, {
   String? day,
 }) async {
-  await ref
-      .read(diaryRepositoryProvider)
-      .log(relogEntry(template, day: day));
+  await ref.read(diaryRepositoryProvider).log(relogEntry(template, day: day));
   if (!context.mounted) return;
   ScaffoldMessenger.of(context)
     ..clearSnackBars()

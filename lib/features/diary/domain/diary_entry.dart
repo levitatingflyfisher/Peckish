@@ -64,8 +64,7 @@ class DiaryEntry {
   });
 
   /// The local calendar-day key for a moment: 'YYYY-MM-DD'.
-  static String dayOf(DateTime at) =>
-      '${at.year.toString().padLeft(4, '0')}-'
+  static String dayOf(DateTime at) => '${at.year.toString().padLeft(4, '0')}-'
       '${at.month.toString().padLeft(2, '0')}-'
       '${at.day.toString().padLeft(2, '0')}';
 

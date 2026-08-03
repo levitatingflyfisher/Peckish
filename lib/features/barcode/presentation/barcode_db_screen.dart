@@ -138,8 +138,7 @@ class _BarcodeDbScreenState extends ConsumerState<BarcodeDbScreen>
             Card(
               margin: const EdgeInsets.only(bottom: AppSpacing.sm),
               child: DownloadCardTile<_SliceMeta>(
-                status:
-                    downloadStatuses[spec.id] ?? const DownloadNotStarted(),
+                status: downloadStatuses[spec.id] ?? const DownloadNotStarted(),
                 title: spec.approxBytes > 0
                     ? '${spec.displayName} · '
                         '${formatApproxBytes(spec.approxBytes)}'

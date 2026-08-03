@@ -111,9 +111,8 @@ class GroceryRepository {
     return rows.map(_toDomain).toList();
   }
 
-  Stream<List<GroceryItem>> watchAll() => (_db.select(_db.groceryItems))
-      .watch()
-      .asyncMap((_) => getAll());
+  Stream<List<GroceryItem>> watchAll() =>
+      (_db.select(_db.groceryItems)).watch().asyncMap((_) => getAll());
 
   /// Rebuild the generated portion of the list from the recipes planned on
   /// [days]. Identical ingredient lines across recipes aggregate into one
@@ -162,8 +161,7 @@ class GroceryRepository {
         final norm = entry.key;
         final id = derivedId(norm);
         wantedIds.add(id);
-        if (liveCheckedNorms.contains(norm) ||
-            liveManualNorms.contains(norm)) {
+        if (liveCheckedNorms.contains(norm) || liveManualNorms.contains(norm)) {
           continue;
         }
         final name = entry.value > 1

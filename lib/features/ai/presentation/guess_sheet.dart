@@ -18,6 +18,7 @@ import 'package:peckish/features/diary/domain/diary_entry.dart';
 import 'package:peckish/features/diary/presentation/day_format.dart';
 import 'package:peckish/shared/theme/app_colors.dart';
 import 'package:peckish/shared/theme/app_spacing.dart';
+import 'package:peckish/shared/widgets/input_modal.dart';
 import 'package:uuid/uuid.dart';
 
 /// The platform key store; a single override point for tests.
@@ -29,10 +30,8 @@ final stoveSecretStoreProvider =
     Provider<StoveSecretStore>((_) => const SecureStoveSecretStore());
 
 final aiConfigRepositoryProvider = Provider<AiConfigRepository>((ref) =>
-    AiConfigRepository(
-        ref.watch(sharedPreferencesProvider),
-        ref.watch(aiKeyStoreProvider),
-        ref.watch(stoveSecretStoreProvider)));
+    AiConfigRepository(ref.watch(sharedPreferencesProvider),
+        ref.watch(aiKeyStoreProvider), ref.watch(stoveSecretStoreProvider)));
 
 /// The current AI configuration. The add sheet gates its tile on
 /// `configured`; invalidate after saving settings.
@@ -55,12 +54,7 @@ final stoveBrainFactoryProvider =
 /// no less reliable three days late than three minutes late — the model
 /// was always estimating from words, never from the clock.
 Future<void> showGuessSheet(BuildContext context, {String? day}) =>
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (_) => _GuessSheet(day: day),
-    );
+    showInputSheet<void>(context, builder: (_) => _GuessSheet(day: day));
 
 class _GuessSheet extends ConsumerStatefulWidget {
   const _GuessSheet({this.day});
@@ -98,7 +92,15 @@ class _GuessSheetState extends ConsumerState<_GuessSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Guess it for me', style: theme.textTheme.titleLarge),
+          Row(
+            children: [
+              Expanded(
+                child:
+                    Text('Guess it for me', style: theme.textTheme.titleLarge),
+              ),
+              const SheetCloseButton(),
+            ],
+          ),
           const SizedBox(height: AppSpacing.xs),
           Text(
             _draft == null
@@ -174,8 +176,7 @@ class _GuessSheetState extends ConsumerState<_GuessSheet> {
                       trailing: IconButton(
                         icon: const Icon(Icons.close),
                         tooltip: 'Remove this line',
-                        onPressed: () =>
-                            setState(() => _draft!.removeAt(i)),
+                        onPressed: () => setState(() => _draft!.removeAt(i)),
                       ),
                     ),
                 ],

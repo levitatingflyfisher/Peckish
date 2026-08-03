@@ -121,9 +121,8 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
               icon: Icon(_cameraOff
                   ? Icons.videocam_off_outlined
                   : Icons.videocam_outlined),
-              tooltip: _cameraOff
-                  ? 'Turn the camera on'
-                  : 'Turn the camera off',
+              tooltip:
+                  _cameraOff ? 'Turn the camera on' : 'Turn the camera off',
               onPressed: () => setState(() => _cameraOff = !_cameraOff),
             ),
         ],
@@ -148,8 +147,7 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
                   if (_message != null)
                     Padding(
                       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                      child: Text(_message!,
-                          style: theme.textTheme.bodyMedium),
+                      child: Text(_message!, style: theme.textTheme.bodyMedium),
                     ),
                   // The miss state: the network is a question, asked out
                   // loud. Nothing fetches until this button is tapped.
@@ -185,14 +183,13 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
                               child: SizedBox(
                                 width: 20,
                                 height: 20,
-                                child: CircularProgressIndicator(
-                                    strokeWidth: 2),
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
                               ),
                             )
                           : IconButton(
                               icon: const Icon(Icons.search),
-                              onPressed: () =>
-                                  _handleRaw(_controller.text),
+                              onPressed: () => _handleRaw(_controller.text),
                             ),
                     ),
                     onSubmitted: _handleRaw,
@@ -298,8 +295,7 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
       // promises the next scan is one tap — this is that tap.
       case BarcodeSavedFood(:final food):
         setState(() => _busy = false);
-        await logRegular(context, ref, food.asTemplateEntry(),
-            day: widget.day);
+        await logRegular(context, ref, food.asTemplateEntry(), day: widget.day);
         if (mounted) Navigator.of(context).pop();
       case BarcodeHit(:final product, :final sourceId):
         await _openSheet(product, sourceNote: _sourceNote(sourceId));

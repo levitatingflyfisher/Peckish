@@ -47,12 +47,12 @@ class AiConfigRepository {
   static const _stovePortKey = 'ai_stove_port';
 
   Future<AiConfig> load() async {
-    final backend = AiBackend.values.asNameMap()[_prefs.getString(_backendKey)] ??
-        AiBackend.none;
+    final backend =
+        AiBackend.values.asNameMap()[_prefs.getString(_backendKey)] ??
+            AiBackend.none;
     return AiConfig(
       backend: backend,
-      anthropicKey:
-          backend == AiBackend.anthropic ? await _keys.read() : null,
+      anthropicKey: backend == AiBackend.anthropic ? await _keys.read() : null,
       baseUrl: _prefs.getString(_baseUrlKey),
       model: _prefs.getString(_modelKey),
       stoveHost: _prefs.getString(_stoveHostKey),

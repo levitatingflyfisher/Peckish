@@ -36,11 +36,13 @@ class SavedMealRepository {
       archived: Value(meal.archived),
     ));
     await _db.transaction(() async {
-        await _db.into(_db.savedMeals).insert(row);
-        for (final (index, item) in meal.items.indexed) {
-          await _db.into(_db.savedMealItems).insert(_itemRow(meal.id, index, item));
-        }
-      });
+      await _db.into(_db.savedMeals).insert(row);
+      for (final (index, item) in meal.items.indexed) {
+        await _db
+            .into(_db.savedMealItems)
+            .insert(_itemRow(meal.id, index, item));
+      }
+    });
   }
 
   Future<void> rename(String id, String name) async =>
@@ -53,8 +55,7 @@ class SavedMealRepository {
   Future<void> replaceItems(String id, List<SavedMealItem> items) async {
     final stamp = await _stamp(const SavedMealsCompanion());
     await _db.transaction(() async {
-      await (_db.delete(_db.savedMealItems)
-            ..where((i) => i.mealId.equals(id)))
+      await (_db.delete(_db.savedMealItems)..where((i) => i.mealId.equals(id)))
           .go();
       for (final (index, item) in items.indexed) {
         await _db.into(_db.savedMealItems).insert(_itemRow(id, index, item));
@@ -84,8 +85,7 @@ class SavedMealRepository {
           .write(await _stamp(SavedMealsCompanion(archived: Value(archived))));
 
   Future<void> delete(String id) async {
-    final row = await _stamp(
-        const SavedMealsCompanion(isDeleted: Value(true)));
+    final row = await _stamp(const SavedMealsCompanion(isDeleted: Value(true)));
     await _db.transaction(() async {
       await (_db.delete(_db.savedMealItems)..where((i) => i.mealId.equals(id)))
           .go();

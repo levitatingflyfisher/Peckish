@@ -16,9 +16,7 @@ class PlanRepository {
 
   Future<void> upsert(PlanEntry entry) async {
     final s = await _clock.stamp();
-    await _db
-        .into(_db.planEntries)
-        .insertOnConflictUpdate(PlanEntriesCompanion(
+    await _db.into(_db.planEntries).insertOnConflictUpdate(PlanEntriesCompanion(
           id: Value(entry.id),
           day: Value(entry.day),
           slot: Value(PlanSlotDb.values[entry.slot.index]),
@@ -121,8 +119,7 @@ class PlanRepository {
           refId: r.refId,
           note: r.note,
           title: switch (r.kind) {
-            PlanKindDb.recipe =>
-              recipeTitles[r.refId] ?? '(deleted recipe)',
+            PlanKindDb.recipe => recipeTitles[r.refId] ?? '(deleted recipe)',
             PlanKindDb.meal => mealNames[r.refId] ?? '(deleted meal)',
             PlanKindDb.note => r.note ?? '',
           },

@@ -349,11 +349,23 @@ class AppDatabase extends _$AppDatabase {
             // a mid-failure re-entry lands in half-migrated state), so each
             // ALTER is guarded by a column-existence check.
             final syncedTables = <(TableInfo, List<GeneratedColumn>)>[
-              (customFoods, [customFoods.hlc, customFoods.nodeId, customFoods.isDeleted]),
-              (savedMeals, [savedMeals.hlc, savedMeals.nodeId, savedMeals.isDeleted]),
+              (
+                customFoods,
+                [customFoods.hlc, customFoods.nodeId, customFoods.isDeleted]
+              ),
+              (
+                savedMeals,
+                [savedMeals.hlc, savedMeals.nodeId, savedMeals.isDeleted]
+              ),
               (recipes, [recipes.hlc, recipes.nodeId, recipes.isDeleted]),
-              (planEntries, [planEntries.hlc, planEntries.nodeId, planEntries.isDeleted]),
-              (groceryItems, [groceryItems.hlc, groceryItems.nodeId, groceryItems.isDeleted]),
+              (
+                planEntries,
+                [planEntries.hlc, planEntries.nodeId, planEntries.isDeleted]
+              ),
+              (
+                groceryItems,
+                [groceryItems.hlc, groceryItems.nodeId, groceryItems.isDeleted]
+              ),
             ];
             for (final (table, columns) in syncedTables) {
               for (final column in columns) {
@@ -403,12 +415,14 @@ class AppDatabase extends _$AppDatabase {
           // full scans that grew with the install's age. Table-guarded in
           // the _addColumnIfMissing spirit: migration fixtures open
           // partial schemas.
-          await _indexIfTableExists('diary_entries',
+          await _indexIfTableExists(
+              'diary_entries',
               'CREATE INDEX IF NOT EXISTS idx_diary_entries_day '
-              'ON diary_entries (day)');
-          await _indexIfTableExists('usda_portions',
+                  'ON diary_entries (day)');
+          await _indexIfTableExists(
+              'usda_portions',
               'CREATE INDEX IF NOT EXISTS idx_usda_portions_fdc_id '
-              'ON usda_portions (fdc_id)');
+                  'ON usda_portions (fdc_id)');
         },
       );
 
@@ -431,8 +445,7 @@ class AppDatabase extends _$AppDatabase {
     final info = await customSelect(
       'PRAGMA table_info(${table.actualTableName})',
     ).get();
-    final exists =
-        info.any((row) => row.read<String>('name') == column.name);
+    final exists = info.any((row) => row.read<String>('name') == column.name);
     if (!exists) await m.addColumn(table, column);
   }
 

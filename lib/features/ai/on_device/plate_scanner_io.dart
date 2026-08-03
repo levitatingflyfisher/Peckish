@@ -8,8 +8,7 @@ import 'package:peckish/features/ai/on_device/plate_scan.dart';
 /// Whether THIS build can label a plate photo: ML Kit's bundled classifier
 /// is Android-only here. `debugDefaultTargetPlatformOverride` makes the
 /// flag testable on the VM.
-bool get plateScanSupported =>
-    defaultTargetPlatform == TargetPlatform.android;
+bool get plateScanSupported => defaultTargetPlatform == TargetPlatform.android;
 
 /// The rung-1 gateway: one photo in, the classifier's sightings out.
 /// A fresh labeler per call, closed in `finally` — the base model lives in
@@ -17,15 +16,13 @@ bool get plateScanSupported =>
 class PlateScanner {
   Future<List<DetectedLabel>> labelsOf(String imagePath) async {
     final labeler = ImageLabeler(
-      options: ImageLabelerOptions(
-          confidenceThreshold: PlateScan.noiseFloor),
+      options: ImageLabelerOptions(confidenceThreshold: PlateScan.noiseFloor),
     );
     try {
       final labels =
           await labeler.processImage(InputImage.fromFilePath(imagePath));
       return [
-        for (final l in labels)
-          (label: l.label, confidence: l.confidence),
+        for (final l in labels) (label: l.label, confidence: l.confidence),
       ];
     } on PlatformException {
       // ML Kit rides Google Play services; on a de-Googled phone the

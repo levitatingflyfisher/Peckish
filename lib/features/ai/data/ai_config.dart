@@ -46,8 +46,7 @@ class AiConfig {
 
   bool get configured => switch (backend) {
         AiBackend.none => false,
-        AiBackend.anthropic =>
-          anthropicKey != null && anthropicKey!.isNotEmpty,
+        AiBackend.anthropic => anthropicKey != null && anthropicKey!.isNotEmpty,
         AiBackend.openaiCompat => baseUrl != null && baseUrl!.isNotEmpty,
         // Choosing it is the opt-in; whether the model file is actually on
         // disk is checked at guess time with a calm, actionable line.

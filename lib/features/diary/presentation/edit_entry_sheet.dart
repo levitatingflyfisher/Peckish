@@ -7,6 +7,7 @@ import 'package:peckish/features/food/domain/macro_set.dart';
 import 'package:peckish/shared/extensions/qty_format.dart';
 import 'package:peckish/shared/theme/app_spacing.dart';
 import 'package:peckish/shared/widgets/num_field.dart';
+import 'package:peckish/shared/widgets/input_modal.dart';
 
 /// Fix a logged line in place — the "logged one, actually ate two" errand.
 /// Changing the qty rescales the numbers from the line's own per-unit
@@ -14,8 +15,8 @@ import 'package:peckish/shared/widgets/num_field.dart';
 /// runs when the qty field itself changes). Saving goes through
 /// [DiaryRepository.update], so the regulars snapshot heals too.
 Future<void> showEditEntrySheet(BuildContext context, DiaryEntry entry) =>
-    showDialog<void>(
-      context: context,
+    showInputDialog<void>(
+      context,
       builder: (_) => _EditEntryDialog(entry: entry),
     );
 
@@ -84,8 +85,7 @@ class _EditEntryDialogState extends ConsumerState<_EditEntryDialog> {
     super.dispose();
   }
 
-  static double? _num(TextEditingController c) =>
-      parseFlexibleDouble(c.text);
+  static double? _num(TextEditingController c) => parseFlexibleDouble(c.text);
 
   Future<void> _save() async {
     if (_saving) return;
@@ -134,8 +134,7 @@ class _EditEntryDialogState extends ConsumerState<_EditEntryDialog> {
               child: TextField(
                 controller: _label,
                 decoration: const InputDecoration(
-                    labelText: 'What was it?',
-                    border: OutlineInputBorder()),
+                    labelText: 'What was it?', border: OutlineInputBorder()),
               ),
             ),
             _numField(_qty, 'Qty'),

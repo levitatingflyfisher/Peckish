@@ -46,8 +46,7 @@ class PeckishBackupSerializer
       diaryEntries: [
         for (final day in days) ...await diary.entriesForDay(day),
       ],
-      savedMeals:
-          await SavedMealRepository(_db).getAll(includeArchived: true),
+      savedMeals: await SavedMealRepository(_db).getAll(includeArchived: true),
       recipes: await RecipeRepository(_db).getAll(includeArchived: true),
       // Through the repositories, never raw selects: their getAll filters
       // tombstoned rows, which are sync deletions — not user data. (v0.6

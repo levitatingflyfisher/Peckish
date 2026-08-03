@@ -7,6 +7,7 @@ import 'package:peckish/features/food/domain/macro_set.dart';
 import 'package:peckish/shared/extensions/qty_format.dart';
 import 'package:peckish/shared/theme/app_spacing.dart';
 import 'package:peckish/shared/widgets/num_field.dart';
+import 'package:peckish/shared/widgets/input_modal.dart';
 
 /// The daily-targets editor. The minimal path is two typed numbers —
 /// calories and protein — because the role defaults already say what most
@@ -15,8 +16,8 @@ import 'package:peckish/shared/widgets/num_field.dart';
 Future<void> showTargetsDialog(BuildContext context, WidgetRef ref) async {
   final current = await ref.read(targetsRepositoryProvider).get();
   if (!context.mounted) return;
-  await showDialog<void>(
-    context: context,
+  await showInputDialog<void>(
+    context,
     builder: (_) => _TargetsDialog(initial: current),
   );
 }
@@ -65,8 +66,7 @@ class _TargetsDialogState extends ConsumerState<_TargetsDialog> {
     super.dispose();
   }
 
-  static double? _num(TextEditingController c) =>
-      parseFlexibleDouble(c.text);
+  static double? _num(TextEditingController c) => parseFlexibleDouble(c.text);
 
   Widget _row(TextEditingController c, String label, TargetRole role,
           ValueChanged<TargetRole> onRole) =>
@@ -82,12 +82,10 @@ class _TargetsDialogState extends ConsumerState<_TargetsDialog> {
               value: role,
               underline: const SizedBox.shrink(),
               items: const [
-                DropdownMenuItem(
-                    value: TargetRole.about, child: Text('About')),
+                DropdownMenuItem(value: TargetRole.about, child: Text('About')),
                 DropdownMenuItem(
                     value: TargetRole.atLeast, child: Text('At least')),
-                DropdownMenuItem(
-                    value: TargetRole.under, child: Text('Under')),
+                DropdownMenuItem(value: TargetRole.under, child: Text('Under')),
               ],
               onChanged: (r) => r == null ? null : onRole(r),
             ),
@@ -138,8 +136,7 @@ class _TargetsDialogState extends ConsumerState<_TargetsDialog> {
                 (r) => setState(() => _proteinRole = r)),
             _row(_carbs, 'Carbs g', _carbRole,
                 (r) => setState(() => _carbRole = r)),
-            _row(_fat, 'Fat g', _fatRole,
-                (r) => setState(() => _fatRole = r)),
+            _row(_fat, 'Fat g', _fatRole, (r) => setState(() => _fatRole = r)),
           ],
         ),
       ),

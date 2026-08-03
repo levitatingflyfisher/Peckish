@@ -45,6 +45,5 @@ class SavedMeal {
   final DateTime? lastUsedAt;
   final bool archived;
 
-  MacroSet get totals =>
-      items.fold(MacroSet.zero, (sum, i) => sum + i.macros);
+  MacroSet get totals => items.fold(MacroSet.zero, (sum, i) => sum + i.macros);
 }

@@ -149,8 +149,7 @@ class SyncEngine {
               'archived': r.archived,
               ..._meta(r.hlc, r.nodeId, r.isDeleted),
               'ingredients': [
-                for (final i
-                    in ingredients.where((i) => i.recipeId == r.id))
+                for (final i in ingredients.where((i) => i.recipeId == r.id))
                   {
                     'id': i.id,
                     'position': i.position,
@@ -294,11 +293,10 @@ class SyncEngine {
     for (final row in _rows(section)) {
       final id = row['id'] as String?;
       if (id == null) continue;
-      final local = await (_db.select(table)
-            ..where((_) => idColumn.equals(id)))
+      final local = await (_db.select(table)..where((_) => idColumn.equals(id)))
           .getSingleOrNull();
-      if (!_wins(row['hlc'] as String?,
-          local == null ? null : localHlc(local), local != null)) {
+      if (!_wins(row['hlc'] as String?, local == null ? null : localHlc(local),
+          local != null)) {
         continue;
       }
       await _db.into(table).insertOnConflictUpdate(toCompanion(id, row));
@@ -320,8 +318,7 @@ class SyncEngine {
     Insertable<R> Function(String childId, Map<String, dynamic> item)
         toCompanion,
   ) async {
-    await (_db.delete(table)..where((_) => parentColumn.equals(parentId)))
-        .go();
+    await (_db.delete(table)..where((_) => parentColumn.equals(parentId))).go();
     for (final item in _rows(items)) {
       await _db.into(table).insert(toCompanion(
           item['id'] as String? ?? '${parentId}_${applied}_i', item));
@@ -357,9 +354,8 @@ class SyncEngine {
           name: Value(row['name'] as String? ?? ''),
           position: Value(row['position'] as int? ?? 0),
           createdAt: Value(_date(row['createdAt'])),
-          lastUsedAt: Value(row['lastUsedAt'] == null
-              ? null
-              : _date(row['lastUsedAt'])),
+          lastUsedAt: Value(
+              row['lastUsedAt'] == null ? null : _date(row['lastUsedAt'])),
           archived: Value(row['archived'] as bool? ?? false),
           hlc: Value(row['hlc'] as String?),
           nodeId: Value(row['nodeId'] as String?),
@@ -446,10 +442,10 @@ class SyncEngine {
         (id, row) => PlanEntriesCompanion(
           id: Value(id),
           day: Value(row['day'] as String? ?? ''),
-          slot: Value(_enumIndex(
-              PlanSlotDb.values, row['slot'], PlanSlotDb.other)),
-          kind: Value(_enumIndex(
-              PlanKindDb.values, row['kind'], PlanKindDb.note)),
+          slot: Value(
+              _enumIndex(PlanSlotDb.values, row['slot'], PlanSlotDb.other)),
+          kind: Value(
+              _enumIndex(PlanKindDb.values, row['kind'], PlanKindDb.note)),
           refId: Value(row['refId'] as String?),
           note: Value(row['note'] as String?),
           hlc: Value(row['hlc'] as String?),

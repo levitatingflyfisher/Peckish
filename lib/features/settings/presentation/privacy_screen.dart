@@ -14,8 +14,8 @@ class PrivacyScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     Widget section(String title) => Padding(
-          padding: const EdgeInsets.only(
-              top: AppSpacing.lg, bottom: AppSpacing.sm),
+          padding:
+              const EdgeInsets.only(top: AppSpacing.lg, bottom: AppSpacing.sm),
           child: Text(title, style: theme.textTheme.titleMedium),
         );
     Widget row(IconData icon, String title, String body,
@@ -52,55 +52,77 @@ class PrivacyScreen extends StatelessWidget {
             style: theme.textTheme.bodyMedium,
           ),
           section('Every day — nothing leaves'),
-          row(Icons.wifi_off_outlined, 'Logging, planning, groceries, history',
+          row(
+              Icons.wifi_off_outlined,
+              'Logging, planning, groceries, history',
               'The 13,652-food database is bundled inside the app. Search, '
-              'portions, targets, suggestions, charts: all on-phone, '
-              'nothing leaves, data off is a normal day.'),
-          row(Icons.photo_camera_outlined, 'Snap your plate',
+                  'portions, targets, suggestions, charts: all on-phone, '
+                  'nothing leaves, data off is a normal day.'),
+          row(
+              Icons.photo_camera_outlined,
+              'Snap your plate',
               'The photo never leaves. Labels are computed on the phone by '
-              'the system classifier — that one piece rides Google Play '
-              'services, so on a de-Googled phone this button bows out '
-              'and everything else carries on.'),
-          row(Icons.psychology_outlined, '"On this phone" AI',
+                  'the system classifier — that one piece rides Google Play '
+                  'services, so on a de-Googled phone this button bows out '
+                  'and everything else carries on.'),
+          row(
+              Icons.psychology_outlined,
+              '"On this phone" AI',
               'Guesses run inside the downloaded model — nothing leaves, '
-              'not even the words. The one network touch is the download '
-              'itself, below.'),
+                  'not even the words. The one network touch is the download '
+                  'itself, below.'),
           section('Only when you act'),
-          row(Icons.qr_code_scanner, 'Barcode scan',
+          row(
+              Icons.qr_code_scanner,
+              'Barcode scan',
               'With the offline database, scans are answered on the phone. '
-              'A miss only goes online when you tap Ask openfoodfacts.org — '
-              'the 13 digits, nothing else.',
+                  'A miss only goes online when you tap Ask openfoodfacts.org — '
+                  'the 13 digits, nothing else.',
               color: AppColors.butter),
-          row(Icons.qr_code_2_outlined, 'Offline barcode database',
+          row(
+              Icons.qr_code_2_outlined,
+              'Offline barcode database',
               'Tapping Download fetches a database file from github.com, '
-              'once. After that, scans stay on the phone. Delete it any '
-              'time.',
+                  'once. After that, scans stay on the phone. Delete it any '
+                  'time.',
               color: AppColors.butter),
-          row(Icons.download_outlined, 'Model download',
+          row(
+              Icons.download_outlined,
+              'Model download',
               'Tapping Download fetches the model file from huggingface.co '
-              '(the trusted litert-community org). Delete it any time.',
+                  '(the trusted litert-community org). Delete it any time.',
               color: AppColors.butter),
-          row(Icons.link_outlined, 'Recipe import',
+          row(
+              Icons.link_outlined,
+              'Recipe import',
               'The one recipe URL you paste is fetched, parsed, and '
-              'discarded.',
+                  'discarded.',
               color: AppColors.butter),
-          row(Icons.auto_awesome_outlined, 'Claude / local server AI',
+          row(
+              Icons.auto_awesome_outlined,
+              'Claude / local server AI',
               'If you configured one, the words you type in the guess box '
-              'go to that service and nowhere else. Off by default.',
+                  'go to that service and nowhere else. Off by default.',
               color: AppColors.butter),
-          row(Icons.fireplace_outlined, 'AI guess via your home stove',
+          row(
+              Icons.fireplace_outlined,
+              'AI guess via your home stove',
               'The guess-box words travel sealed under your household '
-              'phrase — encrypted to your own machine, only when you ask, '
-              'and nowhere else.',
+                  'phrase — encrypted to your own machine, only when you ask, '
+                  'and nowhere else.',
               color: AppColors.butter),
-          row(Icons.sync_outlined, 'Household sync',
+          row(
+              Icons.sync_outlined,
+              'Household sync',
               'Encrypted bundles move between your own devices on your own '
-              'Wi-Fi. Diaries and targets never sync at all.',
+                  'Wi-Fi. Diaries and targets never sync at all.',
               color: AppColors.butter),
           section('Never'),
-          row(Icons.block_outlined, 'No accounts, no analytics, no fonts CDN',
+          row(
+              Icons.block_outlined,
+              'No accounts, no analytics, no fonts CDN',
               'No sign-in exists, nothing is tracked, and the fonts ship '
-              'inside the app.',
+                  'inside the app.',
               color: AppColors.clay),
         ],
       ),

@@ -43,9 +43,9 @@ class SettingsScreen extends ConsumerWidget {
           ListTile(
             leading: const Icon(Icons.flag_outlined),
             title: const Text('Daily targets'),
-            subtitle: const Text(
-                'Optional numbers to aim for — a floor for protein, '
-                'a budget for the day.'),
+            subtitle:
+                const Text('Optional numbers to aim for — a floor for protein, '
+                    'a budget for the day.'),
             onTap: () => showTargetsDialog(context, ref),
           ),
           SwitchListTile(
@@ -55,9 +55,8 @@ class SettingsScreen extends ConsumerWidget {
                 'Ideas from your regulars to finish the day’s targets. '
                 'All math stays on this phone.'),
             value: prefs.value?.suggestionsEnabled ?? true,
-            onChanged: (on) => ref
-                .read(settingsRepositoryProvider)
-                .setSuggestionsEnabled(on),
+            onChanged: (on) =>
+                ref.read(settingsRepositoryProvider).setSuggestionsEnabled(on),
           ),
           const SizedBox(height: AppSpacing.lg),
 
@@ -87,8 +86,8 @@ class SettingsScreen extends ConsumerWidget {
             ListTile(
               leading: const Icon(Icons.qr_code_2_outlined),
               title: const Text('Offline barcode lookup'),
-              subtitle: const Text(
-                  'Answer scans from this phone — nothing leaves.'),
+              subtitle:
+                  const Text('Answer scans from this phone — nothing leaves.'),
               onTap: () => context.push('/barcode-db'),
             ),
           ListTile(

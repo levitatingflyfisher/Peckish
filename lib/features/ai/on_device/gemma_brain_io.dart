@@ -79,7 +79,8 @@ class GemmaLocalBrain implements LocalBrain {
       _pluginReady = true;
     }
     final file = await _downloads.modelFile(spec);
-    await FlutterGemma.installModel(modelType: _resolveModelType(spec.modelType))
+    await FlutterGemma.installModel(
+            modelType: _resolveModelType(spec.modelType))
         .fromFile(file.path)
         .install();
     return FlutterGemma.getActiveModel(
@@ -89,7 +90,6 @@ class GemmaLocalBrain implements LocalBrain {
   }
 
   /// Spec strings → plugin enum by name, so the spec layer stays pure Dart.
-  static ModelType _resolveModelType(String name) =>
-      ModelType.values.firstWhere((t) => t.name == name,
-          orElse: () => ModelType.gemmaIt);
+  static ModelType _resolveModelType(String name) => ModelType.values
+      .firstWhere((t) => t.name == name, orElse: () => ModelType.gemmaIt);
 }

@@ -7,6 +7,7 @@ import 'package:peckish/features/diary/domain/diary_entry.dart';
 import 'package:peckish/features/plan/domain/plan_entry.dart';
 import 'package:peckish/shared/theme/app_colors.dart';
 import 'package:peckish/shared/theme/app_spacing.dart';
+import 'package:peckish/shared/widgets/input_modal.dart';
 
 /// The week — Peckish's signature surface. Each day is a plate: an empty ring
 /// until dinner is planned, filled butter-warm once it is. "Leftovers" and
@@ -53,8 +54,8 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
         leading: IconButton(
           icon: const Icon(Icons.chevron_left),
           tooltip: 'Previous week',
-          onPressed: () => setState(() =>
-              _weekStart = _weekStart.subtract(const Duration(days: 7))),
+          onPressed: () => setState(
+              () => _weekStart = _weekStart.subtract(const Duration(days: 7))),
         ),
         actions: [
           IconButton(
@@ -139,12 +140,12 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
                   label: const Text('Note…'),
                   onPressed: () async {
                     final controller = TextEditingController();
-                    final note = await showDialog<String>(
-                      context: sheetContext,
+                    final note = await showInputDialog<String>(
+                      sheetContext,
                       builder: (d) => AlertDialog(
                         title: const Text('Plan a note'),
-                        content: TextField(
-                            controller: controller, autofocus: true),
+                        content:
+                            TextField(controller: controller, autofocus: true),
                         actions: [
                           TextButton(
                               onPressed: () => Navigator.of(d).pop(),
@@ -156,7 +157,9 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
                         ],
                       ),
                     );
-                    if (note != null && note.isNotEmpty && sheetContext.mounted) {
+                    if (note != null &&
+                        note.isNotEmpty &&
+                        sheetContext.mounted) {
                       await _addNote(sheetContext, day, note);
                     }
                   },
@@ -171,8 +174,8 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
                 ListTile(
                   leading: const Icon(Icons.menu_book_outlined),
                   title: Text(r.title),
-                  onTap: () => _addRef(
-                      sheetContext, day, PlanKind.recipe, r.id),
+                  onTap: () =>
+                      _addRef(sheetContext, day, PlanKind.recipe, r.id),
                 ),
             ],
             if (meals.isNotEmpty) ...[
@@ -183,8 +186,7 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
                 ListTile(
                   leading: const Icon(Icons.restaurant_outlined),
                   title: Text(m.name),
-                  onTap: () =>
-                      _addRef(sheetContext, day, PlanKind.meal, m.id),
+                  onTap: () => _addRef(sheetContext, day, PlanKind.meal, m.id),
                 ),
             ],
           ],
@@ -194,7 +196,8 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
   }
 
   Future<void> _addNote(BuildContext sheetContext, String day, String note) =>
-      _upsert(sheetContext,
+      _upsert(
+          sheetContext,
           PlanEntry(
             id: const Uuid().v4(),
             day: day,
@@ -203,9 +206,10 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
             note: note,
           ));
 
-  Future<void> _addRef(BuildContext sheetContext, String day, PlanKind kind,
-          String refId) =>
-      _upsert(sheetContext,
+  Future<void> _addRef(
+          BuildContext sheetContext, String day, PlanKind kind, String refId) =>
+      _upsert(
+          sheetContext,
           PlanEntry(
             id: const Uuid().v4(),
             day: day,
@@ -225,8 +229,7 @@ final _weekProvider =
     StreamProvider.autoDispose.family((ref, String weekStartDay) {
   final start = DateTime.parse(weekStartDay);
   final days = [
-    for (var i = 0; i < 7; i++)
-      DiaryEntry.dayOf(start.add(Duration(days: i))),
+    for (var i = 0; i < 7; i++) DiaryEntry.dayOf(start.add(Duration(days: i))),
   ];
   return ref.watch(planRepositoryProvider).watchDays(days);
 });
@@ -266,7 +269,8 @@ class _DayRow extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('${_names[date.weekday - 1]} ${date.month}/${date.day}',
+                      Text(
+                          '${_names[date.weekday - 1]} ${date.month}/${date.day}',
                           style: Theme.of(context).textTheme.titleMedium),
                       if (planned)
                         for (final e in entries)
@@ -275,9 +279,8 @@ class _DayRow extends ConsumerWidget {
                               Expanded(
                                 child: Text(e.title,
                                     overflow: TextOverflow.ellipsis,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .bodyMedium),
+                                    style:
+                                        Theme.of(context).textTheme.bodyMedium),
                               ),
                               IconButton(
                                 icon: const Icon(Icons.close, size: 18),

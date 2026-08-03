@@ -122,7 +122,8 @@ class PeckishExport {
       Map<String, dynamic> raw, String key) {
     final v = raw[key];
     if (v == null) return const [];
-    if (v is! List) throw FormatException("export section '$key' is not a list");
+    if (v is! List)
+      throw FormatException("export section '$key' is not a list");
     return v.cast<Map<String, dynamic>>();
   }
 
@@ -229,9 +230,8 @@ class PeckishExport {
         unitLabel: raw['unitLabel'] as String,
         grams: (raw['grams'] as num?)?.toDouble(),
         macros: _macrosFrom(raw['macros']),
-        source: EntrySource.values
-            .firstWhere((s) => s.name == raw['source'],
-                orElse: () => EntrySource.manual),
+        source: EntrySource.values.firstWhere((s) => s.name == raw['source'],
+            orElse: () => EntrySource.manual),
         createdAt: DateTime.parse(raw['createdAt'] as String),
       );
 

@@ -25,7 +25,6 @@ class AboutScreen extends StatelessWidget {
             style: text.titleMedium?.copyWith(color: AppColors.paprika),
           ),
           const SizedBox(height: AppSpacing.lg),
-
           const _Section(
             title: 'What Peckish is',
             body: 'Peckish is the family food app: a recipe box, a weekly '
@@ -57,7 +56,6 @@ class AboutScreen extends StatelessWidget {
                 'Facts contributors, ODbL. Peckish is not medical or dietary '
                 'advice — for anything clinical, talk to a professional.',
           ),
-
           const SizedBox(height: AppSpacing.sm),
           Text('Version ${AppInfo.appVersion}',
               style: text.bodyMedium?.copyWith(color: AppColors.stone)),

@@ -10,9 +10,9 @@ class LocalSettingsRepository implements SettingsRepository {
   static const _kSuggest = 'suggest.enabled';
   static const _kSuggestDismissed = 'suggest.dismissed';
 
-  Future<void> _set(String key, String value) => _db
-      .into(_db.userPrefs)
-      .insertOnConflictUpdate(UserPrefsCompanion.insert(key: key, value: value));
+  Future<void> _set(String key, String value) =>
+      _db.into(_db.userPrefs).insertOnConflictUpdate(
+          UserPrefsCompanion.insert(key: key, value: value));
 
   @override
   Future<UserPrefs> getUserPrefs() async {

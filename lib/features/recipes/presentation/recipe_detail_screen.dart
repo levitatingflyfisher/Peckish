@@ -108,5 +108,5 @@ class RecipeDetailScreen extends ConsumerWidget {
   }
 }
 
-final _recipeProvider = FutureProvider.autoDispose.family(
-    (ref, String id) => ref.watch(recipeRepositoryProvider).byId(id));
+final _recipeProvider = FutureProvider.autoDispose
+    .family((ref, String id) => ref.watch(recipeRepositoryProvider).byId(id));

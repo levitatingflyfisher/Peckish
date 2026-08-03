@@ -22,8 +22,7 @@ class LocalModelsSection extends ConsumerStatefulWidget {
   final ValueChanged<String> onSelect;
 
   @override
-  ConsumerState<LocalModelsSection> createState() =>
-      _LocalModelsSectionState();
+  ConsumerState<LocalModelsSection> createState() => _LocalModelsSectionState();
 }
 
 class _LocalModelsSectionState extends ConsumerState<LocalModelsSection>
@@ -85,15 +84,13 @@ class _LocalModelsSectionState extends ConsumerState<LocalModelsSection>
           children: [
             for (final spec in PeckishModelSpec.availableModels)
               DownloadCardTile<Never>(
-                status:
-                    downloadStatuses[spec.id] ?? const DownloadNotStarted(),
+                status: downloadStatuses[spec.id] ?? const DownloadNotStarted(),
                 title: '${spec.displayName} · '
                     '${formatApproxBytes(spec.sizeBytes)}',
                 leading: Radio<String>(value: spec.id),
                 contentPadding: EdgeInsets.zero,
                 notDownloadedSubtitle: spec.description,
-                installedSubtitle: (theme, detail) =>
-                    const Text('Downloaded'),
+                installedSubtitle: (theme, detail) => const Text('Downloaded'),
                 failedSubtitle:
                     "Couldn't finish — Retry picks up where it stopped.",
                 deleteTooltip: 'Delete this model',

@@ -56,9 +56,9 @@ class SyncCodec {
   /// hand-rolling a KDF. The same [secret] on two paired devices yields the
   /// same key; a different secret yields an unrelated key.
   static Future<Uint8List> deriveKey(String secret) => KeyDerivation.deriveKey(
-    Uint8List.fromList(utf8.encode(secret)),
-    domain: keyDomain,
-  );
+        Uint8List.fromList(utf8.encode(secret)),
+        domain: keyDomain,
+      );
 
   /// Builds the AAD bytes for a frame on [endpointTag].
   ///

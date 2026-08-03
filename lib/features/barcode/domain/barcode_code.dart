@@ -35,7 +35,8 @@ class BarcodeCode {
   }
 
   @override
-  bool operator ==(Object other) => other is BarcodeCode && other.value == value;
+  bool operator ==(Object other) =>
+      other is BarcodeCode && other.value == value;
 
   @override
   int get hashCode => value.hashCode;
