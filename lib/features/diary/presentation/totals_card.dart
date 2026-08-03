@@ -32,19 +32,25 @@ class TotalsCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
+            // A Wrap, not a Row: when the accessibility text scale means
+            // the number and its caption can't share a line, the caption
+            // drops below at full size. A Row squeezed the number into
+            // whatever was left, which first split "2900" into "29" over
+            // "00" and then, once told not to wrap, shrank the day's
+            // headline number smaller than its own label.
+            Wrap(
+              crossAxisAlignment: WrapCrossAlignment.end,
+              spacing: AppSpacing.xs,
               children: [
-                Flexible(
-                  child: Text(
-                    _fmt(totals.kcal),
-                    style: text.displayMedium?.copyWith(
-                      color: AppColors.paprika,
-                      fontWeight: FontWeight.w700,
-                    ),
+                Text(
+                  _fmt(totals.kcal),
+                  maxLines: 1,
+                  softWrap: false,
+                  style: text.displayMedium?.copyWith(
+                    color: AppColors.paprika,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
-                const SizedBox(width: AppSpacing.xs),
                 Padding(
                   padding: const EdgeInsets.only(bottom: 8),
                   child: Text(
@@ -106,12 +112,31 @@ class _MacroChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final v = value == null ? '—' : '${value!.round()}g';
     final suffix = target == null ? '' : ' / ${role.mark}${target!.round()}g';
-    return Chip(
-      avatar: CircleAvatar(backgroundColor: color, radius: 6),
-      label: Text('$label $v$suffix'),
-      visualDensity: VisualDensity.comfortable,
+    // A pill rather than a Chip, which looks the same and behaves at a
+    // large accessibility text scale. Chip fixes its own height and shears
+    // its label to one line: 'Protein 169g / min 15' was 142px of a label
+    // that needed 357, and forcing the label to wrap only moved the
+    // clipping from the right edge to the bottom one. A target silently
+    // cut in half is worse than a taller pill.
+    return Container(
+      padding:
+          const EdgeInsets.symmetric(horizontal: 12, vertical: AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.stone.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          CircleAvatar(backgroundColor: color, radius: 6),
+          const SizedBox(width: AppSpacing.sm),
+          Flexible(child: Text('$label $v$suffix')),
+        ],
+      ),
     );
   }
 }

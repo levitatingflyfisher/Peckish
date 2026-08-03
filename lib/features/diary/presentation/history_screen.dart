@@ -48,22 +48,20 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
     return DateTime(d.year, d.month);
   }
 
-  String get _monthKey =>
-      '${_month.year.toString().padLeft(4, '0')}-'
+  String get _monthKey => '${_month.year.toString().padLeft(4, '0')}-'
       '${_month.month.toString().padLeft(2, '0')}';
 
   /// True once the visible month contains today — there is no forward from
   /// the month you are living in.
   bool get _atCurrentMonth => !_month.isBefore(_firstOfMonthOf(_today));
 
-  void _step(int months) => setState(() =>
-      _month = DateTime(_month.year, _month.month + months));
+  void _step(int months) =>
+      setState(() => _month = DateTime(_month.year, _month.month + months));
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final totals =
-        ref.watch(_monthProvider(_monthKey)).valueOrNull ?? const {};
+    final totals = ref.watch(_monthProvider(_monthKey)).valueOrNull ?? const {};
     final targets =
         ref.watch(_targetsProvider).valueOrNull ?? const DailyTargets();
     final axis = targets.axes.firstWhere((a) => a.axis == _axis);
@@ -80,69 +78,85 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('History')),
-      body: ListView(
-        padding: const EdgeInsets.all(AppSpacing.lg),
+      // The month control is pinned OUTSIDE the scroll view. It used to
+      // ride at the top of the list, which meant that by the time you had
+      // scrolled down to the calendar — the only reason to open this
+      // screen — the way to change months had scrolled away with it.
+      body: Column(
         children: [
-          _MonthBar(
-            label: '${monthFullNames[_month.month - 1]} ${_month.year}',
-            onPrev: () => _step(-1),
-            onNext: _atCurrentMonth ? null : () => _step(1),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          // Scale-down beats wrapping: at large text scales on narrow
-          // phones the four segments would fold their labels mid-word into
-          // tall broken columns (the fleet's recurring overflow shape).
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            child: SegmentedButton<String>(
-              segments: [
-                for (final a in targets.axes)
-                  ButtonSegment(value: a.axis, label: Text(_axisLabel(a.axis))),
-              ],
-              selected: {_axis},
-              showSelectedIcon: false,
-              style: const ButtonStyle(
-                  visualDensity: VisualDensity.compact,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-              onSelectionChanged: (s) => setState(() => _axis = s.first),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, 0),
+            child: _MonthBar(
+              label: '${monthFullNames[_month.month - 1]} ${_month.year}',
+              onPrev: () => _step(-1),
+              onNext: _atCurrentMonth ? null : () => _step(1),
             ),
           ),
-          const SizedBox(height: AppSpacing.md),
-          if (logged.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-              child: Text(
-                'Your month fills in as you log. Come back after a few '
-                'plates.',
-                style: theme.textTheme.bodyMedium
-                    ?.copyWith(color: AppColors.stone),
-              ),
-            )
-          else ...[
-            _TrendChart(days: days, totals: totals, axis: axis),
-            if (axis.target != null)
-              Padding(
-                padding: const EdgeInsets.only(top: AppSpacing.xs),
-                child: Text(
-                  '${axis.role.mark}${axis.target!.round()}'
-                  '${_axis == 'kcal' ? ' kcal' : 'g $_axis'} target',
-                  textAlign: TextAlign.end,
-                  style: theme.textTheme.labelSmall
-                      ?.copyWith(color: AppColors.stone),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, AppSpacing.lg),
+              children: [
+                // Scale-down beats wrapping: at large text scales on narrow
+                // phones the four segments would fold their labels mid-word into
+                // tall broken columns (the fleet's recurring overflow shape).
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: SegmentedButton<String>(
+                    segments: [
+                      for (final a in targets.axes)
+                        ButtonSegment(
+                            value: a.axis, label: Text(_axisLabel(a.axis))),
+                    ],
+                    selected: {_axis},
+                    showSelectedIcon: false,
+                    style: const ButtonStyle(
+                        visualDensity: VisualDensity.compact,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                    onSelectionChanged: (s) => setState(() => _axis = s.first),
+                  ),
                 ),
-              ),
-            const SizedBox(height: AppSpacing.sm),
-            _MonthStats(logged: logged),
-          ],
-          const SizedBox(height: AppSpacing.lg),
-          Text('Tap any day to add to it or fix it',
-              style: theme.textTheme.titleMedium),
-          const SizedBox(height: AppSpacing.sm),
-          _Calendar(
-            month: _month,
-            today: _today,
-            totals: totals,
-            axis: axis,
+                const SizedBox(height: AppSpacing.md),
+                if (logged.isEmpty)
+                  Padding(
+                    padding:
+                        const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                    child: Text(
+                      'Your month fills in as you log. Come back after a few '
+                      'plates.',
+                      style: theme.textTheme.bodyMedium
+                          ?.copyWith(color: AppColors.stone),
+                    ),
+                  )
+                else ...[
+                  _TrendChart(days: days, totals: totals, axis: axis),
+                  if (axis.target != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: AppSpacing.xs),
+                      child: Text(
+                        '${axis.role.mark}${axis.target!.round()}'
+                        '${_axis == 'kcal' ? ' kcal' : 'g $_axis'} target',
+                        textAlign: TextAlign.end,
+                        style: theme.textTheme.labelSmall
+                            ?.copyWith(color: AppColors.stone),
+                      ),
+                    ),
+                  const SizedBox(height: AppSpacing.sm),
+                  _MonthStats(logged: logged),
+                ],
+                const SizedBox(height: AppSpacing.lg),
+                Text('Tap any day to add to it or fix it',
+                    style: theme.textTheme.titleMedium),
+                const SizedBox(height: AppSpacing.sm),
+                _Calendar(
+                  month: _month,
+                  today: _today,
+                  totals: totals,
+                  axis: axis,
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -170,8 +184,8 @@ final _monthProvider = StreamProvider.autoDispose
 });
 final _targetsProvider = StreamProvider.autoDispose(
     (ref) => ref.watch(targetsRepositoryProvider).watch());
-final _dayEntriesProvider = StreamProvider.autoDispose
-    .family((ref, String day) =>
+final _dayEntriesProvider = StreamProvider.autoDispose.family(
+    (ref, String day) =>
         ref.watch(diaryRepositoryProvider).watchEntriesForDay(day));
 
 /// '‹  August 2026  ›' — forward is null at the current month.
@@ -403,8 +417,7 @@ class _TrendPainter extends CustomPainter {
   List<List<Offset>> _runs() {
     final runs = <List<Offset>>[];
     for (var i = 0; i < offsets.length; i++) {
-      final consecutive =
-          i > 0 && offsets[i].index == offsets[i - 1].index + 1;
+      final consecutive = i > 0 && offsets[i].index == offsets[i - 1].index + 1;
       if (consecutive) {
         runs.last.add(offsets[i].offset);
       } else {
@@ -622,8 +635,7 @@ class HistoryDayScreen extends ConsumerWidget {
     final entries = ref.watch(_dayEntriesProvider(day)).valueOrNull ?? const [];
     // Folded from the entries already watched above — one drift watch feeds
     // the card and the list both. Seeded with the all-null set, never zero.
-    final totals =
-        entries.fold(const MacroSet(), (sum, e) => sum + e.macros);
+    final totals = entries.fold(const MacroSet(), (sum, e) => sum + e.macros);
     final targets =
         ref.watch(_targetsProvider).valueOrNull ?? const DailyTargets();
     return Scaffold(
