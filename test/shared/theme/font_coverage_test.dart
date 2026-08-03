@@ -48,6 +48,13 @@ void main() {
     return covered;
   }
 
+
+  /// True for code points a system emoji font will render regardless of what
+  /// this app bundles: the pictographic planes, plus the zero-width joiner
+  /// and variation selectors that glue emoji sequences together.
+  bool isEmoji(int r) =>
+      r >= 0x1F000 || r == 0x200D || (r >= 0xFE00 && r <= 0xFE0F);
+
   late Set<int> drawable;
 
   setUpAll(() {
@@ -105,11 +112,22 @@ void main() {
         .where((f) => f.path.endsWith('.dart') &&
             !f.path.endsWith('.g.dart'))) {
       for (final line in file.readAsLinesSync()) {
+        // A string literal is not always display text. A character class
+        // like [\s$€£¥₹¢] exists so a pasted price parses — it is never
+        // drawn, and "fixing" it would break input. Patterns opt out here;
+        // anything else needs the explicit marker.
+        if (line.contains('RegExp(') || line.contains('// not-rendered')) {
+          continue;
+        }
         final code = line.trimLeft();
         if (code.startsWith('//')) continue; // prose, never rendered
         for (final m in quoted.allMatches(line)) {
           for (final r in m[0]!.runes) {
-            if (r > 0x7F && !drawable.contains(r)) {
+            // Emoji are exempt: every mobile OS renders them from a
+            // dedicated colour-emoji font, so they are NOT drawn from ours
+            // and do NOT box. Arrows, checks and currency signs have no
+            // such guarantee — those are the ones that bite.
+            if (r > 0x7F && !isEmoji(r) && !drawable.contains(r)) {
               offenders
                   .putIfAbsent(
                       '${String.fromCharCode(r)} '
