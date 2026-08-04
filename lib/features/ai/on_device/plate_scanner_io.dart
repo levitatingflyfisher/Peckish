@@ -11,8 +11,14 @@ import 'package:peckish/features/ai/on_device/plate_scan.dart';
 bool get plateScanSupported => defaultTargetPlatform == TargetPlatform.android;
 
 /// The rung-1 gateway: one photo in, the classifier's sightings out.
-/// A fresh labeler per call, closed in `finally` — the base model lives in
-/// Play Services, so there is nothing heavy to keep resident.
+/// A fresh labeler per call, closed in `finally` — the model is BUNDLED
+/// into the APK (the merged manifest registers `BundledLabelRegistrar`),
+/// so there is no download to wait on and nothing heavy to keep resident.
+///
+/// Its ceiling is low and worth knowing: the base labeler is a general
+/// scene classifier with roughly nineteen edible things among its 430
+/// labels, so on most plates the best it can say is "Food". See
+/// [PlateScan.genericFoodLabels].
 class PlateScanner {
   Future<List<DetectedLabel>> labelsOf(String imagePath) async {
     final labeler = ImageLabeler(

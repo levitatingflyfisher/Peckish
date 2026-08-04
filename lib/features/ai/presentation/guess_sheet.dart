@@ -253,8 +253,17 @@ class _GuessSheetState extends ConsumerState<_GuessSheet> {
       if (!mounted) return;
       _finish(
           guess,
-          "Couldn't spot any food in that photo — describe the "
-          'meal below instead.');
+          // Two different failures, two different sentences. The labeler
+          // reporting 'Food' at 0.94 and the labeler seeing a sink are not
+          // the same event, and the old copy called both of them "no food",
+          // which is why this read as the feature being broken.
+          PlateScan.sawFoodButNotWhat(labels)
+              ? 'That looks like a meal, but the photo labeller only gets '
+                  'as far as "food" — it knows about nineteen dishes, not '
+                  'yours. Say what it was and the numbers come from the '
+                  'same place.'
+              : "Couldn't spot any food in that photo — describe the "
+                  'meal below instead.');
     } on PlateUnavailableException {
       if (!mounted) return;
       setState(() {

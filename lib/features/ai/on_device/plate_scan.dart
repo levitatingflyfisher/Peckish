@@ -34,48 +34,71 @@ class PlateScan {
   /// ML Kit base-labeler food labels → USDA spine search terms. Curated by
   /// hand (lowercase keys); anything absent is skipped. Generic scene and
   /// meal-occasion words stay OUT on purpose.
+  /// ML Kit label → the term to search the bundled USDA spine for.
+  ///
+  /// EVERY key here is a label the shipped labeler can actually emit —
+  /// pinned against `test/fixtures/mlkit_image_labels.txt`, its published
+  /// 430-label vocabulary. The first version of this map was written from
+  /// imagination: 30 of its 40 keys named labels ML Kit has never had
+  /// ('sandwich', 'salad', 'chicken', 'rice'…), so on a real plate nothing
+  /// matched and the sheet said no food was seen.
+  ///
+  /// Note how short this is. The base labeler is a general scene
+  /// classifier, not a food model — roughly nineteen edible things in four
+  /// hundred and thirty. That is the honest ceiling of rung 1.
   static const labelSearches = <String, String>{
-    'apple': 'apple raw',
-    'bacon': 'bacon',
-    'banana': 'banana raw',
+    'bento': 'rice cooked',
     'bread': 'bread',
-    'burrito': 'burrito',
     'cake': 'cake',
-    'candy': 'candy',
-    'cheese': 'cheese cheddar',
-    'chicken': 'chicken',
-    'chocolate': 'chocolate',
+    'cappuccino': 'coffee with milk',
+    'cheeseburger': 'cheeseburger',
     'coffee': 'coffee',
+    'cola': 'cola',
     'cookie': 'cookie',
-    'crumpet': 'english muffin',
-    'curry': 'curry',
-    'dessert': 'dessert',
-    'egg': 'egg',
+    'couscous': 'couscous cooked',
     'fruit': 'fruit salad',
-    'hamburger': 'hamburger',
+    'gelato': 'ice cream',
     'hot dog': 'frankfurter',
-    'ice cream': 'ice cream',
     'juice': 'orange juice',
-    'meatball': 'meatball',
-    'milk': 'milk',
-    'muffin': 'muffin',
-    'mushroom': 'mushroom',
-    'pancake': 'pancake',
-    'pasta': 'pasta',
+    'pho': 'soup noodle',
+    'pie': 'pie',
     'pizza': 'pizza',
-    'popcorn': 'popcorn',
-    'rice': 'rice cooked',
-    'salad': 'salad',
-    'sandwich': 'sandwich',
-    'seafood': 'fish',
-    'soup': 'soup',
     'sushi': 'sushi',
-    'taco': 'taco',
-    'tea': 'tea',
-    'toast': 'bread toasted',
     'vegetable': 'vegetables mixed',
-    'waffle': 'waffle',
+    'wine': 'wine',
   };
+
+  /// Labels that say "this is food" without saying which food.
+  ///
+  /// These are the commonest sightings on a photograph of a meal, and they
+  /// are deliberately NOT in [labelSearches] — guessing a specific food
+  /// from 'Food' would be fabrication. But they are not nothing either,
+  /// and telling someone no food was seen when the labeler reported Food
+  /// at 0.94 is simply untrue. [sawFoodButNotWhat] is how the sheet tells
+  /// the difference.
+  static const genericFoodLabels = <String>{
+    'food',
+    'cuisine',
+    'fast food',
+    'lunch',
+    'supper',
+  };
+
+  /// True when the labeler was confident something edible is in the frame
+  /// but nothing specific enough to look up came back.
+  ///
+  /// The distinction the user actually feels: "there is no food here" and
+  /// "I can see it is a meal, I just cannot name it" deserve different
+  /// sentences and different next steps.
+  static bool sawFoodButNotWhat(List<DetectedLabel> labels) {
+    var generic = false;
+    for (final l in labels) {
+      if (l.confidence < noiseFloor) continue;
+      if (labelSearches.containsKey(l.label.toLowerCase())) return false;
+      if (genericFoodLabels.contains(l.label.toLowerCase())) generic = true;
+    }
+    return generic;
+  }
 
   /// Labels in, drafts out. [lookup] resolves a search term to the best
   /// spine hit (or null — a mapped label with no hit yields nothing, not
