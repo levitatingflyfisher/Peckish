@@ -1,0 +1,17 @@
+The family food app. A recipe box, a weekly dinner plan, the grocery list that writes itself from that plan, and a quiet one-tap food diary for anyone in the house who wants their own numbers.
+
+• Weekly plan — decide once, shop once
+• A grocery list built from the plan, not typed twice
+• Recipe box, with import from a pasted URL
+• Food diary: your regulars are one tap on ANY day, not just today
+• Barcode scanning, or type the digits — two doors, neither remembered
+• A bundled USDA food spine: 13,652 foods, offline forever
+• Optional downloadable barcode databases for offline lookups
+• Encrypted backup with a 12-word recovery phrase
+
+Network use is narrow and named: fetching one recipe page you paste, and Open Food Facts barcode lookups that send only the barcode. Day-to-day logging, planning and lists never touch the network.
+
+No ads, no accounts, no analytics.
+
+Free and open source, MIT licensed.
+Source: https://github.com/levitatingflyfisher/Peckish
