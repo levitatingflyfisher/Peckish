@@ -145,7 +145,7 @@ void main() {
 
     await submit(tester, '3017620422004');
     expect(requests, 0, reason: 'invalid codes must not reach the API');
-    expect(find.textContaining('check the numbers'), findsOneWidget);
+    expect(find.textContaining('Check the numbers'), findsOneWidget);
     await unmount(tester);
   });
 
@@ -160,7 +160,7 @@ void main() {
     await submit(tester, '3017620422003');
     expect(requests, 0, reason: 'a local answer must never touch the network');
     expect(find.text('Nutella (Ferrero)'), findsOneWidget);
-    expect(find.text('From your phone — USDA database'), findsOneWidget);
+    expect(find.text('From your phone: USDA database'), findsOneWidget);
     expect(find.text('Log it'), findsOneWidget);
     await unmount(tester);
   });
@@ -175,7 +175,7 @@ void main() {
 
     await submit(tester, '3017620422003');
     expect(requests, 0);
-    expect(find.text('From your phone — Open Food Facts'), findsOneWidget);
+    expect(find.text('From your phone: Open Food Facts'), findsOneWidget);
     await unmount(tester);
   });
 
@@ -188,7 +188,7 @@ void main() {
 
     await submit(tester, '3017620422003');
     expect(requests, 0, reason: 'a miss must not auto-fetch');
-    expect(find.text("Not in your phone's food database."), findsOneWidget);
+    expect(find.text('Not in your phone’s food database.'), findsOneWidget);
     expect(askButton, findsOneWidget);
     expect(getDbButton, findsNothing,
         reason: 'a phone that has the database is not pointed at it');
@@ -348,7 +348,7 @@ void main() {
 
     expect(find.byType(ScannerView), findsNothing);
     expect(find.byType(BarcodeSketch), findsOneWidget);
-    expect(find.textContaining("couldn't start"), findsOneWidget);
+    expect(find.textContaining('couldn’t start'), findsOneWidget);
     expect(find.textContaining('CameraAccessDenied'), findsNothing,
         reason: 'a calm line, never raw exception text');
     await unmount(tester);
@@ -442,7 +442,7 @@ void main() {
     // The screen's contract: failures are states with next steps. The
     // field must come back so the user can just try again.
     expect(tester.widget<TextField>(find.byType(TextField)).enabled, isTrue);
-    expect(find.textContaining('try again'), findsOneWidget);
+    expect(find.textContaining('Try again'), findsOneWidget);
     await unmount(tester);
   });
 
@@ -460,7 +460,7 @@ void main() {
     // Mistyped follow-up: the old Ask must not survive aimed at the
     // previous code — two more taps would log the wrong food.
     await submit(tester, '3017620422004');
-    expect(find.textContaining('check the numbers'), findsOneWidget);
+    expect(find.textContaining('Check the numbers'), findsOneWidget);
     expect(askButton, findsNothing);
     await unmount(tester);
   });
@@ -480,7 +480,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(tester.widget<TextField>(find.byType(TextField)).enabled, isTrue);
-    expect(find.textContaining('try again'), findsOneWidget);
+    expect(find.textContaining('Try again'), findsOneWidget);
     await unmount(tester);
   });
 }

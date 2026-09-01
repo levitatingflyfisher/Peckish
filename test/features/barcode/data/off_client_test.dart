@@ -84,5 +84,22 @@ void main() {
       expect(
           () => client.fetchProduct(code), throwsA(isA<OffLookupException>()));
     });
+
+    test('a transport failure is a sentence, never the raw exception',
+        () async {
+      // lens audit writing-01: the message is shown on the scan screen
+      // verbatim, so the exception's own text must not ride inside it.
+      final client = OffClient(
+          client: MockClient(
+              (_) async => throw http.ClientException('Failed host lookup')));
+      await expectLater(
+        () => client.fetchProduct(code),
+        throwsA(isA<OffLookupException>()
+            .having((e) => e.message, 'message',
+                isNot(contains('Failed host lookup')))
+            .having((e) => e.message, 'message',
+                isNot(contains('Exception')))),
+      );
+    });
   });
 }

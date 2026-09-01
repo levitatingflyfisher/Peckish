@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:openhearth_design/openhearth_design.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import 'package:peckish/shared/theme/app_colors.dart';
-import 'package:peckish/shared/widgets/confirm_dialog.dart';
+
 
 /// The one download-card engine behind both download UIs (the AI dialog's
 /// local models, the barcode screen's offline slices): the sealed
@@ -216,11 +217,15 @@ mixin DownloadCardEngine<W extends StatefulWidget, S, D> on State<W> {
   }
 
   Future<void> confirmAndDeleteItem(S item) async {
-    final confirmed = await showConfirmDialog(
+    // Still asks, unlike the app's other deliberate deletes: this removes a
+    // downloaded file (up to gigabytes) that no soft delete can hold, and
+    // the way back is the whole download again.
+    final confirmed = await showOhConfirm(
       context,
       title: deleteConfirmTitle(item),
       message: deleteConfirmMessage(item),
-      confirmLabel: 'Delete',
+      confirmLabel: 'Delete download',
+      confirmColor: AppColors.clay,
     );
     if (!confirmed) return;
     await deleteItemFiles(item);
@@ -276,7 +281,7 @@ class DownloadCardTile<D> extends StatelessWidget {
         DownloadNotStarted() =>
           Text(notDownloadedSubtitle, style: theme.textTheme.bodySmall),
         DownloadPaused() => Text(
-            'Paused partway — Resume picks up from the same byte.',
+            'Paused partway: Resume picks up from the same byte.',
             style: theme.textTheme.bodySmall),
         DownloadInProgress(:final percent) => Text(
             percent == null ? 'Downloading…' : 'Downloading… $percent%',

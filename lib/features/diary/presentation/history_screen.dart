@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:openhearth_design/openhearth_design.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -13,6 +14,7 @@ import 'package:peckish/features/diary/presentation/totals_card.dart';
 import 'package:peckish/features/food/domain/macro_set.dart';
 import 'package:peckish/shared/theme/app_colors.dart';
 import 'package:peckish/shared/theme/app_spacing.dart';
+import 'package:peckish/shared/widgets/theme_toggle_action.dart';
 
 /// History — the answer to "what happens to today, tomorrow?": nothing
 /// disappears. A month at a time: the trend line for the axis you picked
@@ -77,89 +79,95 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
     ];
 
     return Scaffold(
-      appBar: AppBar(title: const Text('History')),
+      appBar: AppBar(
+        title: const Text('History'),
+        actions: const [ThemeToggleAction()],
+      ),
       // The month control is pinned OUTSIDE the scroll view. It used to
       // ride at the top of the list, which meant that by the time you had
       // scrolled down to the calendar — the only reason to open this
       // screen — the way to change months had scrolled away with it.
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-                AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, 0),
-            child: _MonthBar(
-              label: '${monthFullNames[_month.month - 1]} ${_month.year}',
-              onPrev: () => _step(-1),
-              onNext: _atCurrentMonth ? null : () => _step(1),
-            ),
-          ),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, AppSpacing.lg),
-              children: [
-                // Scale-down beats wrapping: at large text scales on narrow
-                // phones the four segments would fold their labels mid-word into
-                // tall broken columns (the fleet's recurring overflow shape).
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: SegmentedButton<String>(
-                    segments: [
-                      for (final a in targets.axes)
-                        ButtonSegment(
-                            value: a.axis, label: Text(_axisLabel(a.axis))),
-                    ],
-                    selected: {_axis},
-                    showSelectedIcon: false,
-                    style: const ButtonStyle(
-                        visualDensity: VisualDensity.compact,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-                    onSelectionChanged: (s) => setState(() => _axis = s.first),
-                  ),
+      body: OhPage(
+          padding: EdgeInsets.zero,
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, 0),
+                child: _MonthBar(
+                  label: '${monthFullNames[_month.month - 1]} ${_month.year}',
+                  onPrev: () => _step(-1),
+                  onNext: _atCurrentMonth ? null : () => _step(1),
                 ),
-                const SizedBox(height: AppSpacing.md),
-                if (logged.isEmpty)
-                  Padding(
-                    padding:
-                        const EdgeInsets.symmetric(vertical: AppSpacing.md),
-                    child: Text(
-                      'Your month fills in as you log. Come back after a few '
-                      'plates.',
-                      style: theme.textTheme.bodyMedium
-                          ?.copyWith(color: AppColors.stone),
-                    ),
-                  )
-                else ...[
-                  _TrendChart(days: days, totals: totals, axis: axis),
-                  if (axis.target != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: AppSpacing.xs),
-                      child: Text(
-                        '${axis.role.mark}${axis.target!.round()}'
-                        '${_axis == 'kcal' ? ' kcal' : 'g $_axis'} target',
-                        textAlign: TextAlign.end,
-                        style: theme.textTheme.labelSmall
-                            ?.copyWith(color: AppColors.stone),
+              ),
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(AppSpacing.lg,
+                      AppSpacing.sm, AppSpacing.lg, AppSpacing.lg),
+                  children: [
+                    // Scale-down beats wrapping: at large text scales on narrow
+                    // phones the four segments would fold their labels mid-word into
+                    // tall broken columns (the fleet's recurring overflow shape).
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: SegmentedButton<String>(
+                        segments: [
+                          for (final a in targets.axes)
+                            ButtonSegment(
+                                value: a.axis, label: Text(_axisLabel(a.axis))),
+                        ],
+                        selected: {_axis},
+                        showSelectedIcon: false,
+                        style: const ButtonStyle(
+                            visualDensity: VisualDensity.compact,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                        onSelectionChanged: (s) =>
+                            setState(() => _axis = s.first),
                       ),
                     ),
-                  const SizedBox(height: AppSpacing.sm),
-                  _MonthStats(logged: logged),
-                ],
-                const SizedBox(height: AppSpacing.lg),
-                Text('Tap any day to add to it or fix it',
-                    style: theme.textTheme.titleMedium),
-                const SizedBox(height: AppSpacing.sm),
-                _Calendar(
-                  month: _month,
-                  today: _today,
-                  totals: totals,
-                  axis: axis,
+                    const SizedBox(height: AppSpacing.md),
+                    if (logged.isEmpty)
+                      Padding(
+                        padding:
+                            const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                        child: Text(
+                          'Your month fills in as you log. Come back after a few '
+                          'plates.',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                              color: AppColors.secondaryText(context)),
+                        ),
+                      )
+                    else ...[
+                      _TrendChart(days: days, totals: totals, axis: axis),
+                      if (axis.target != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: AppSpacing.xs),
+                          child: Text(
+                            '${axis.role.mark}${axis.target!.round()}'
+                            '${_axis == 'kcal' ? ' kcal' : 'g $_axis'} target',
+                            textAlign: TextAlign.end,
+                            style: theme.textTheme.labelSmall?.copyWith(
+                                color: AppColors.secondaryText(context)),
+                          ),
+                        ),
+                      const SizedBox(height: AppSpacing.sm),
+                      _MonthStats(logged: logged),
+                    ],
+                    const SizedBox(height: AppSpacing.lg),
+                    Text('Tap any day to add to it or fix it',
+                        style: theme.textTheme.titleMedium),
+                    const SizedBox(height: AppSpacing.sm),
+                    _Calendar(
+                      month: _month,
+                      today: _today,
+                      totals: totals,
+                      axis: axis,
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-        ],
-      ),
+              ),
+            ],
+          )),
     );
   }
 
@@ -251,14 +259,29 @@ class _TrendChart extends StatelessWidget {
     if (scale <= 0) scale = 1;
     final ceiling = scale * 1.15;
 
+    // The scale labels are the theme's labelSmall at the reader's text
+    // scale (a literal 9 px never grew for anyone). The gutter widens to
+    // the widest label so a larger label never runs into the line.
+    final labelStyle =
+        (Theme.of(context).textTheme.labelSmall ?? const TextStyle())
+            .copyWith(color: AppColors.secondaryText(context));
+    final textScaler = MediaQuery.textScalerOf(context);
+    final widest = TextPainter(
+      text: TextSpan(text: _compact(ceiling), style: labelStyle),
+      textDirection: TextDirection.ltr,
+      textScaler: textScaler,
+    )..layout();
+    final leftPad = widest.width + 4 > _leftPad ? widest.width + 4 : _leftPad;
+    widest.dispose();
+
     return SizedBox(
       height: _height,
       child: LayoutBuilder(builder: (context, constraints) {
-        final chartW = constraints.maxWidth - _leftPad;
+        final chartW = constraints.maxWidth - leftPad;
         final h = constraints.maxHeight;
         double xOf(int i) => days.length == 1
-            ? _leftPad + chartW / 2
-            : _leftPad + (i / (days.length - 1)) * chartW;
+            ? leftPad + chartW / 2
+            : leftPad + (i / (days.length - 1)) * chartW;
         // Height ABOVE the floor, so every element below shares one frame.
         double liftOf(double v) => (v / ceiling).clamp(0.0, 1.0) * h;
 
@@ -283,14 +306,14 @@ class _TrendChart extends StatelessWidget {
                 // The canvas labels borrow the app's own type — a bare
                 // TextStyle would fall back to the platform default and
                 // read as a different font from every Text beside it.
-                labelStyle: (Theme.of(context).textTheme.labelSmall ??
-                        const TextStyle())
-                    .copyWith(color: AppColors.stone, fontSize: 9),
+                labelStyle: labelStyle,
+                textScaler: textScaler,
+                leftPad: leftPad,
               ),
             ),
             if (target != null)
               Positioned(
-                left: _leftPad,
+                left: leftPad,
                 right: 0,
                 bottom: liftOf(target),
                 child: Container(
@@ -312,7 +335,7 @@ class _TrendChart extends StatelessWidget {
               ),
             // The zero line, named so the frame itself is testable.
             Positioned(
-              left: _leftPad,
+              left: leftPad,
               right: 0,
               bottom: 0,
               child: Container(
@@ -347,6 +370,8 @@ class _TrendPainter extends CustomPainter {
     required this.compact,
     required this.lineColor,
     required this.labelStyle,
+    required this.textScaler,
+    required this.leftPad,
   });
 
   final List<_Pt> offsets;
@@ -354,8 +379,8 @@ class _TrendPainter extends CustomPainter {
   final String Function(double) compact;
   final Color lineColor;
   final TextStyle labelStyle;
-
-  static const _leftPad = _TrendChart._leftPad;
+  final TextScaler textScaler;
+  final double leftPad;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -363,7 +388,7 @@ class _TrendPainter extends CustomPainter {
     for (final frac in const [0.0, 0.5, 1.0]) {
       final y = size.height * (1 - frac);
       canvas.drawLine(
-        Offset(_leftPad, y),
+        Offset(leftPad, y),
         Offset(size.width, y),
         Paint()
           ..color = (labelStyle.color ?? lineColor).withValues(alpha: 0.25)
@@ -371,7 +396,7 @@ class _TrendPainter extends CustomPainter {
       );
       // The topmost label hangs BELOW its rule; above it would be clipped
       // off the top of the chart box.
-      _label(canvas, compact(ceiling * frac), 0, frac == 1.0 ? y + 1 : y - 6);
+      _label(canvas, compact(ceiling * frac), 0, y, below: frac == 1.0);
     }
 
     // Consecutive calendar days join up; a gap in logging breaks the line
@@ -427,19 +452,26 @@ class _TrendPainter extends CustomPainter {
     return runs;
   }
 
-  void _label(Canvas canvas, String text, double x, double y) {
+  /// Sits on its rule (or hangs just below it), measured at the label's
+  /// real height so a scaled-up label never straddles the line.
+  void _label(Canvas canvas, String text, double x, double y,
+      {bool below = false}) {
     final tp = TextPainter(
       text: TextSpan(text: text, style: labelStyle),
       textDirection: TextDirection.ltr,
+      textScaler: textScaler,
     )..layout();
-    tp.paint(canvas, Offset(x, y));
+    tp.paint(canvas, Offset(x, below ? y + 1 : y - tp.height));
+    tp.dispose();
   }
 
   @override
   bool shouldRepaint(_TrendPainter old) =>
       old.offsets != offsets ||
       old.ceiling != ceiling ||
-      old.labelStyle != labelStyle;
+      old.labelStyle != labelStyle ||
+      old.textScaler != textScaler ||
+      old.leftPad != leftPad;
 }
 
 /// The month grid, Monday-first. Every past cell opens that day's plate;
@@ -480,7 +512,7 @@ class _Calendar extends StatelessWidget {
                 child: Text(letter,
                     textAlign: TextAlign.center,
                     style: theme.textTheme.labelSmall
-                        ?.copyWith(color: AppColors.stone)),
+                        ?.copyWith(color: AppColors.secondaryText(context))),
               ),
           ],
         ),
@@ -565,7 +597,9 @@ class _DayCell extends StatelessWidget {
                   children: [
                     Text(number,
                         style: theme.textTheme.labelMedium?.copyWith(
-                            color: isFuture ? AppColors.stone : null)),
+                            color: isFuture
+                                ? AppColors.secondaryText(context)
+                                : null)),
                     if (value != null)
                       Text(compact(value!),
                           style: theme.textTheme.labelSmall
@@ -613,7 +647,7 @@ class _MonthStats extends StatelessWidget {
       style: Theme.of(context)
           .textTheme
           .bodyMedium
-          ?.copyWith(color: AppColors.stone),
+          ?.copyWith(color: AppColors.secondaryText(context)),
     );
   }
 }
@@ -641,32 +675,34 @@ class HistoryDayScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: Text(prettyDay(day))),
       floatingActionButton: SpeedDialFab(day: day),
-      body: ListView(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        children: [
-          TotalsCard(totals: totals, targets: targets),
-          const SizedBox(height: AppSpacing.lg),
-          // Every chip feeds THIS day. Filling a gap is nearly always a
-          // food you eat all the time, so the one-tap route has to be here
-          // and not only on Today.
-          RegularsRail(day: day),
-          const SizedBox(height: AppSpacing.lg),
-          if (entries.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
-              child: Text(
-                'Nothing logged this day.',
-                style: Theme.of(context)
-                    .textTheme
-                    .bodyMedium
-                    ?.copyWith(color: AppColors.stone),
-              ),
-            )
-          else
-            for (final entry in entries) EntryTile(entry: entry),
-          const SizedBox(height: 96), // room above the FAB
-        ],
-      ),
+      body: OhPage(
+          padding: EdgeInsets.zero,
+          child: ListView(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            children: [
+              TotalsCard(totals: totals, targets: targets),
+              const SizedBox(height: AppSpacing.lg),
+              // Every chip feeds THIS day. Filling a gap is nearly always a
+              // food you eat all the time, so the one-tap route has to be here
+              // and not only on Today.
+              RegularsRail(day: day),
+              const SizedBox(height: AppSpacing.lg),
+              if (entries.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+                  child: Text(
+                    'Nothing logged this day.',
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodyMedium
+                        ?.copyWith(color: AppColors.secondaryText(context)),
+                  ),
+                )
+              else
+                for (final entry in entries) EntryTile(entry: entry),
+              const SizedBox(height: 96), // room above the FAB
+            ],
+          )),
     );
   }
 }

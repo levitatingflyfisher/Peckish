@@ -10,10 +10,12 @@ import 'package:peckish/features/diary/presentation/entry_tile.dart';
 import 'package:peckish/features/diary/presentation/today_screen.dart';
 import 'package:peckish/features/food/domain/macro_set.dart';
 import 'package:peckish/shared/theme/app_theme.dart';
+import 'package:peckish/shared/widgets/undo_host.dart';
 
-// VISION.md's law: "forgiveness over prevention applies to data too" — a
-// diary entry used to die by unconfirmed swipe hard-delete. Swipe now asks,
-// and once removed the toast can put the line straight back.
+// VISION.md's law: "forgiveness over prevention applies to data too". A
+// swipe is an easy gesture, so it asks first, naming the line (the fleet
+// delete ruling; the operator's own example is this app's food row). Once
+// removed, the Undo stays until the person acts: it never times out.
 void main() {
   late AppDatabase db;
 
@@ -38,7 +40,11 @@ void main() {
 
   Widget host() => ProviderScope(
         overrides: [appDatabaseProvider.overrideWithValue(db)],
-        child: MaterialApp(theme: AppTheme.light, home: const TodayScreen()),
+        child: MaterialApp(
+          theme: AppTheme.light,
+          builder: (context, child) => UndoHost(child: child!),
+          home: const TodayScreen(),
+        ),
       );
 
   Future<void> unmount(WidgetTester tester) async {
@@ -46,7 +52,7 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
   }
 
-  testWidgets('a swipe asks first — Cancel leaves the line alone',
+  testWidgets('a swipe asks first, naming the line; Cancel leaves it alone',
       (tester) async {
     await seedToday(tester);
     await tester.pumpWidget(host());
@@ -56,7 +62,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Delete Oops?'), findsOneWidget,
-        reason: 'the user explicitly asked for a delete confirmation');
+        reason: 'a swipe is an easy gesture, so it asks first');
+    expect(find.widgetWithText(FilledButton, 'Delete line'), findsOneWidget,
+        reason: 'the button names the act, never a bare "Delete"');
     await tester.tap(find.text('Cancel'));
     await tester.pumpAndSettle();
 
@@ -65,19 +73,22 @@ void main() {
     await unmount(tester);
   });
 
-  testWidgets('confirming removes the line and offers Undo', (tester) async {
+  testWidgets('confirming removes the line and the Undo does not expire',
+      (tester) async {
     await seedToday(tester);
     await tester.pumpWidget(host());
     await tester.pumpAndSettle();
 
     await tester.drag(find.byType(EntryTile), const Offset(-500, 0));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Delete'));
+    await tester.tap(find.text('Delete line'));
     await tester.pumpAndSettle();
 
     expect(find.text('249 kcal'), findsNothing);
-    expect(find.text('Removed Oops'), findsOneWidget);
-    expect(find.text('Undo'), findsOneWidget);
+    expect(find.text('Deleted Oops'), findsOneWidget);
+    await tester.pump(const Duration(hours: 1));
+    expect(find.text('Undo'), findsOneWidget,
+        reason: 'an Undo that vanishes while you read it strands you');
     await unmount(tester);
   });
 
@@ -88,7 +99,7 @@ void main() {
 
     await tester.drag(find.byType(EntryTile), const Offset(-500, 0));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Delete'));
+    await tester.tap(find.text('Delete line'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Undo'));
     await tester.pumpAndSettle();

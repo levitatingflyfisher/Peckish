@@ -40,7 +40,7 @@ class GuessService {
   Future<MealGuess> guess(String description) async {
     if (!config.configured) {
       throw const GuessException(
-          'No AI is set up yet — add a key or a local server in Settings.');
+          'No AI is set up yet: add a key or a local server in Settings.');
     }
     final raw = switch (config.backend) {
       AiBackend.anthropic => await _askAnthropic(description),
@@ -56,7 +56,7 @@ class GuessService {
     final brain = stoveBrain;
     if (brain == null) {
       throw const GuessException(
-          "The stove isn't available on this platform — pick another "
+          'The stove isn’t available on this platform: pick another '
           'option in Settings.');
     }
     try {
@@ -67,11 +67,11 @@ class GuessService {
       rethrow;
     } on Exception catch (_) {
       throw const GuessException(
-          "The stove couldn't answer — check its address and the household "
+          'The stove couldn’t answer: check its address and the household '
           'phrase in Settings, then try again.');
     } on Error catch (_) {
       throw const GuessException(
-          "The stove couldn't answer — check its address and the household "
+          'The stove couldn’t answer: check its address and the household '
           'phrase in Settings, then try again.');
     }
   }
@@ -80,7 +80,7 @@ class GuessService {
     final brain = localBrain;
     if (brain == null) {
       throw const GuessException(
-          "On-device AI isn't available on this platform — pick another "
+          'On-device AI isn’t available on this platform: pick another '
           'option in Settings.');
     }
     try {
@@ -89,11 +89,11 @@ class GuessService {
       rethrow;
     } on Exception catch (_) {
       throw const GuessException(
-          "The on-device model couldn't answer — check that it finished "
+          'The on-device model couldn’t answer: check that it finished '
           'downloading in Settings, then try again.');
     } on Error catch (_) {
       throw const GuessException(
-          "The on-device model couldn't answer — check that it finished "
+          'The on-device model couldn’t answer: check that it finished '
           'downloading in Settings, then try again.');
     }
   }
@@ -166,16 +166,16 @@ class GuessService {
           .timeout(_timeout);
     } on Exception {
       throw const GuessException(
-          "Couldn't reach the AI — check the connection (or that your local "
+          'Couldn’t reach the AI: check the connection (or that your local '
           'server is running).');
     }
     if (res.statusCode == 401 || res.statusCode == 403) {
       throw const GuessException(
-          'The AI service refused the key — check it in Settings.');
+          'The AI service refused the key: check it in Settings.');
     }
     if (res.statusCode != 200) {
       throw GuessException(
-          'The AI service answered ${res.statusCode} — try again in a '
+          'The AI service answered ${res.statusCode}: try again in a '
           'moment.');
     }
     final decoded = jsonDecode(utf8.decode(res.bodyBytes));

@@ -45,6 +45,18 @@ class CustomFoodRepository {
     ));
   }
 
+  /// Undo for [delete]: lifts the tombstone, stamped fresh so the restore
+  /// wins the household merge over the deletion.
+  Future<void> restore(String id) async {
+    final s = await _clock.stamp();
+    await (_db.update(_db.customFoods)..where((f) => f.id.equals(id)))
+        .write(CustomFoodsCompanion(
+      isDeleted: const Value(false),
+      hlc: Value(s.hlc),
+      nodeId: Value(s.nodeId),
+    ));
+  }
+
   /// The household's own answer to a scanned code. Matched on the
   /// normalized form, so a UPC-A saved off a tin answers the EAN-13 the
   /// camera reads. Resting foods still answer: archiving hides a food from

@@ -83,7 +83,7 @@ class GemmaLocalBrain implements LocalBrain, ModelDiagnostics {
     } on TimeoutException catch (e) {
       _lastNativeError = e.toString();
       throw GuessException(
-          "${spec.displayName} is taking too long to answer — try again, "
+          '${spec.displayName} is taking too long to answer: try again, '
           'or a smaller model in Settings might be steadier on this phone.');
     }
   }
@@ -138,7 +138,7 @@ class GemmaLocalBrain implements LocalBrain, ModelDiagnostics {
     if (!await _downloads.isDownloaded(spec)) {
       _lastNativeError = 'model not downloaded: ${spec.id}';
       throw GuessException(
-          '${spec.displayName} isn\'t on this phone yet — download it in '
+          '${spec.displayName} isn’t on this phone yet: download it in '
           'Settings, then try again.');
     }
 
@@ -181,8 +181,8 @@ class GemmaLocalBrain implements LocalBrain, ModelDiagnostics {
       (_loader ?? _loadReal)(spec, backend).timeout(initTimeout);
 
   static String _loadFailureMessage(PeckishModelSpec spec) =>
-      "${spec.displayName} couldn't load on this phone — 'Check the "
-      "model' in Settings can say more, or try a smaller model.";
+      '${spec.displayName} couldn’t load on this phone. “Check the '
+      'model” in Settings can say more, or try a smaller model.';
 
   Future<InferenceModel> _loadReal(
       PeckishModelSpec spec, PreferredBackend backend) async {

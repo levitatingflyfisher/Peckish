@@ -205,7 +205,7 @@ void main() {
     await tester.tap(find.byTooltip('Delete this model'));
     await tester.pumpAndSettle();
     await tester.runAsync(() async {
-      await tester.tap(find.text('Delete'));
+      await tester.tap(find.text('Delete download'));
       await Future<void>.delayed(const Duration(milliseconds: 50));
     });
     await tester.pumpAndSettle();

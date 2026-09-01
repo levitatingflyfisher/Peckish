@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer' as developer;
 
 import 'package:http/http.dart' as http;
 import 'package:peckish/features/barcode/domain/barcode_code.dart';
@@ -55,14 +56,20 @@ class OffClient {
         'User-Agent': userAgent,
         'Accept': 'application/json',
       }).timeout(const Duration(seconds: 15));
-    } on Exception catch (e) {
-      throw OffLookupException('Lookup failed — are you online? ($e)');
+    } on Exception catch (e, st) {
+      // The message is shown on the scan screen as is; the exception's own
+      // text is for the log, not the household (lens audit writing-01).
+      developer.log('Open Food Facts lookup failed',
+          name: 'peckish.barcode', error: e, stackTrace: st);
+      throw const OffLookupException(
+          'Couldn’t reach Open Food Facts. Check your connection and ask '
+          'again.');
     }
 
     if (response.statusCode == 404) throw OffProductNotFound(code.value);
     if (response.statusCode != 200) {
       throw OffLookupException(
-          'Open Food Facts answered ${response.statusCode} — try again in a '
+          'Open Food Facts answered ${response.statusCode}: try again in a '
           'moment.');
     }
     if (response.bodyBytes.length > maxBytes) {
@@ -74,7 +81,7 @@ class OffClient {
       decoded = jsonDecode(utf8.decode(response.bodyBytes));
     } on FormatException {
       throw const OffLookupException(
-          'Open Food Facts sent something unreadable — try again in a '
+          'Open Food Facts sent something unreadable: try again in a '
           'moment.');
     }
     if (decoded is! Map<String, dynamic>) {

@@ -12,6 +12,8 @@ import 'package:peckish/features/diary/presentation/today_screen.dart';
 import 'package:peckish/features/food/domain/macro_set.dart';
 import 'package:peckish/shared/theme/app_theme.dart';
 
+import '../../../support/backup_overrides.dart';
+
 // Drift widget-test rules apply — see the canonical comment in
 // test/features/groceries/presentation/groceries_screen_test.dart.
 //
@@ -24,12 +26,18 @@ void main() {
   setUp(() => db = AppDatabase(NativeDatabase.memory()));
 
   Widget todayHost() => ProviderScope(
-        overrides: [appDatabaseProvider.overrideWithValue(db)],
+        overrides: [
+        appDatabaseProvider.overrideWithValue(db),
+        ...backupTestOverrides(),
+      ],
         child: MaterialApp(theme: AppTheme.light, home: const TodayScreen()),
       );
 
   Widget buttonHost() => ProviderScope(
-        overrides: [appDatabaseProvider.overrideWithValue(db)],
+        overrides: [
+        appDatabaseProvider.overrideWithValue(db),
+        ...backupTestOverrides(),
+      ],
         child: MaterialApp(
           theme: AppTheme.light,
           home: Scaffold(
@@ -148,7 +156,10 @@ void main() {
   testWidgets('Settings has the Daily targets tile and it opens the editor',
       (tester) async {
     await tester.pumpWidget(ProviderScope(
-      overrides: [appDatabaseProvider.overrideWithValue(db)],
+      overrides: [
+        appDatabaseProvider.overrideWithValue(db),
+        ...backupTestOverrides(),
+      ],
       child: Consumer(
         builder: (context, ref, _) => MaterialApp.router(
           theme: AppTheme.light,
@@ -158,7 +169,7 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('Settings'));
+    await tester.tap(find.text('Settings'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Daily targets'));
     await tester.pumpAndSettle();

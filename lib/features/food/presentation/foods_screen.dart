@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:openhearth_design/openhearth_design.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:peckish/core/providers/core_providers.dart';
@@ -16,7 +17,7 @@ import 'package:peckish/features/food/domain/usda_food.dart';
 import 'package:peckish/shared/extensions/qty_format.dart';
 import 'package:peckish/shared/theme/app_colors.dart';
 import 'package:peckish/shared/theme/app_spacing.dart';
-import 'package:peckish/shared/widgets/confirm_dialog.dart';
+import 'package:peckish/shared/widgets/undo_host.dart';
 import 'package:peckish/shared/widgets/num_field.dart';
 import 'package:peckish/shared/widgets/input_modal.dart';
 
@@ -76,27 +77,29 @@ class _FoodsScreenState extends ConsumerState<FoodsScreen> {
     final query = ref.watch(_queryProvider);
     return Scaffold(
       appBar: AppBar(title: const Text('Foods')),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-                AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, AppSpacing.sm),
-            child: TextField(
-              decoration: const InputDecoration(
-                prefixIcon: Icon(Icons.search),
-                hintText: 'Search your foods — works offline',
-                border: OutlineInputBorder(),
+      body: OhPage(
+          padding: EdgeInsets.zero,
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, AppSpacing.sm),
+                child: TextField(
+                  decoration: const InputDecoration(
+                    prefixIcon: Icon(Icons.search),
+                    hintText: 'Search your foods (works offline)',
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: _onChanged,
+                ),
               ),
-              onChanged: _onChanged,
-            ),
-          ),
-          Expanded(
-            child: query.trim().isEmpty
-                ? _IdleFoods(day: widget.day)
-                : _SearchResults(day: widget.day),
-          ),
-        ],
-      ),
+              Expanded(
+                child: query.trim().isEmpty
+                    ? _IdleFoods(day: widget.day)
+                    : _SearchResults(day: widget.day),
+              ),
+            ],
+          )),
     );
   }
 }
@@ -106,9 +109,8 @@ class _FoodsScreenState extends ConsumerState<FoodsScreen> {
 /// screen closes.
 final _queryProvider = StateProvider.autoDispose((_) => '');
 
-final _visibleCappedProvider = StreamProvider.autoDispose((ref) => ref
-    .watch(foodUsageRepositoryProvider)
-    .watchVisible(limit: _regularsCap));
+final _visibleCappedProvider = StreamProvider.autoDispose((ref) =>
+    ref.watch(foodUsageRepositoryProvider).watchVisible(limit: _regularsCap));
 final _visibleAllProvider = StreamProvider.autoDispose(
     (ref) => ref.watch(foodUsageRepositoryProvider).watchVisible());
 final _hiddenProvider = StreamProvider.autoDispose(
@@ -132,7 +134,8 @@ Future<void> _logMeal(
     ..showSnackBar(SnackBar(content: Text('Logged ${meal.name}')));
 }
 
-Widget _mealTile(BuildContext context, WidgetRef ref, SavedMeal meal, String? day) {
+Widget _mealTile(
+    BuildContext context, WidgetRef ref, SavedMeal meal, String? day) {
   final kcal = meal.totals.kcal;
   return ListTile(
     contentPadding: EdgeInsets.zero,
@@ -163,8 +166,8 @@ class _IdleFoodsState extends ConsumerState<_IdleFoods> {
 
   @override
   Widget build(BuildContext context) {
-    final visible =
-        ref.watch(_showAllRegulars ? _visibleAllProvider : _visibleCappedProvider);
+    final visible = ref
+        .watch(_showAllRegulars ? _visibleAllProvider : _visibleCappedProvider);
     final hidden = ref.watch(_hiddenProvider);
     final customs = ref.watch(_customsProvider);
     final meals = ref.watch(_mealsProvider);
@@ -178,8 +181,10 @@ class _IdleFoodsState extends ConsumerState<_IdleFoods> {
         (customs.value ?? const <CustomFood>[]).where((c) => c.archived);
     final mealList = meals.value ?? const <SavedMeal>[];
 
-    final loaded =
-        visible.hasValue && hidden.hasValue && customs.hasValue && meals.hasValue;
+    final loaded = visible.hasValue &&
+        hidden.hasValue &&
+        customs.hasValue &&
+        meals.hasValue;
     final empty = loaded &&
         live.isEmpty &&
         hiddenList.isEmpty &&
@@ -192,12 +197,13 @@ class _IdleFoodsState extends ConsumerState<_IdleFoods> {
     // frame is the kind of jank this screen never needs.
     final items = <Widget>[
       if (live.isNotEmpty || hiddenList.isNotEmpty) ...[
-        Text('Regulars — by last use', style: text.titleMedium),
+        Text('Regulars, by last use', style: text.titleMedium),
         const SizedBox(height: AppSpacing.xs),
         Text(
-          'What you actually reach for — deleting diary lines '
+          'What you actually reach for. Deleting diary lines '
           'never clears this.',
-          style: text.bodySmall?.copyWith(color: AppColors.stone),
+          style:
+              text.bodySmall?.copyWith(color: AppColors.secondaryText(context)),
         ),
         for (final u in live) _RegularTile(usage: u, day: widget.day),
         if (!_showAllRegulars && live.length >= _regularsCap)
@@ -220,11 +226,12 @@ class _IdleFoodsState extends ConsumerState<_IdleFoods> {
         const SizedBox(height: AppSpacing.lg),
       ],
       if (activeCustoms.isNotEmpty || archivedCustoms.isNotEmpty) ...[
-        Text('My Foods — A to Z', style: text.titleMedium),
+        Text('My Foods, A to Z', style: text.titleMedium),
         const SizedBox(height: AppSpacing.xs),
         Text(
-          'Household-defined foods — per serving, yours to edit.',
-          style: text.bodySmall?.copyWith(color: AppColors.stone),
+          'Household-defined foods, per serving, yours to edit.',
+          style:
+              text.bodySmall?.copyWith(color: AppColors.secondaryText(context)),
         ),
         for (final c in activeCustoms) _CustomTile(food: c, day: widget.day),
         if (archivedCustoms.isNotEmpty)
@@ -250,11 +257,12 @@ class _IdleFoodsState extends ConsumerState<_IdleFoods> {
             child: Padding(
               padding: const EdgeInsets.all(AppSpacing.xl),
               child: Text(
-                'Log a few foods and they gather here — your regulars '
+                'Log a few foods and they gather here: your regulars '
                 'for one-tap relogging, and My Foods for the household '
                 'staples you define.',
                 textAlign: TextAlign.center,
-                style: text.bodyMedium?.copyWith(color: AppColors.stone),
+                style: text.bodyMedium
+                    ?.copyWith(color: AppColors.secondaryText(context)),
               ),
             ),
           )
@@ -305,7 +313,7 @@ class _SearchResults extends ConsumerWidget {
     final results = ref.watch(_searchProvider);
     final text = Theme.of(context).textTheme;
     if (spine.isLoading) {
-      return const Center(child: Text('Setting the table — one moment…'));
+      return const Center(child: Text('Setting the table, one moment…'));
     }
     final (regulars, customs, meals, usdaFoods) = results.value ??
         const (
@@ -324,7 +332,8 @@ class _SearchResults extends ConsumerWidget {
           padding: const EdgeInsets.all(AppSpacing.lg),
           child: Text(
             'Nothing found. Try fewer words.',
-            style: text.bodyMedium?.copyWith(color: AppColors.stone),
+            style: text.bodyMedium
+                ?.copyWith(color: AppColors.secondaryText(context)),
           ),
         ),
       );
@@ -454,16 +463,23 @@ class _CustomTile extends ConsumerWidget {
               await repo.setArchived(food.id, archived: false);
               ref.invalidate(_customsProvider);
             case 'delete':
-              final sure = await showConfirmDialog(
-                context,
-                title: 'Delete ${food.name}?',
-                message: 'Past diary entries keep their numbers — only the '
-                    'food definition goes.',
+              // Chosen from a menu, so deliberate: no dialog, a lasting
+              // Undo. Past diary entries keep their numbers either way;
+              // only the food definition goes.
+              final undo = ref.read(undoControllerProvider);
+              // The row (and its context) is gone by the time Undo is
+              // tapped; the container is not.
+              final container =
+                  ProviderScope.containerOf(context, listen: false);
+              await repo.delete(food.id);
+              ref.invalidate(_customsProvider);
+              undo.show(
+                message: 'Deleted ${food.name}',
+                onUndo: () async {
+                  await repo.restore(food.id);
+                  container.invalidate(_customsProvider);
+                },
               );
-              if (sure) {
-                await repo.delete(food.id);
-                ref.invalidate(_customsProvider);
-              }
           }
         },
         itemBuilder: (_) => [

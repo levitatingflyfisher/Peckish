@@ -7,6 +7,8 @@ import 'package:peckish/core/router/app_router.dart';
 import 'package:peckish/core/storage/app_database.dart';
 import 'package:peckish/shared/theme/app_theme.dart';
 
+import '../../support/backup_overrides.dart';
+
 // Drift widget-test rules apply — see the canonical comment in
 // test/features/groceries/presentation/groceries_screen_test.dart.
 //
@@ -20,7 +22,10 @@ void main() {
   setUp(() => db = AppDatabase(NativeDatabase.memory()));
 
   Widget host() => ProviderScope(
-        overrides: [appDatabaseProvider.overrideWithValue(db)],
+        overrides: [
+          appDatabaseProvider.overrideWithValue(db),
+          ...backupTestOverrides(),
+        ],
         child: Consumer(
           builder: (context, ref, _) => MaterialApp.router(
             theme: AppTheme.light,
@@ -39,7 +44,7 @@ void main() {
     await tester.pumpWidget(host());
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('Settings'));
+    await tester.tap(find.text('Settings'));
     await tester.pumpAndSettle();
     expect(find.text('Appearance'), findsOneWidget,
         reason: 'the Settings screen should be up');
@@ -126,10 +131,15 @@ void main() {
     await tester.pumpWidget(host());
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('Settings'));
+    await tester.tap(find.text('Settings'));
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(find.text('About Peckish'), 200,
         scrollable: find.byType(Scrollable).last);
+    // scrollUntilVisible stops as soon as any sliver of the row shows; the
+    // longer backup section (0.3.0) left the row's centre under the bottom
+    // edge, so the tap missed. Bring the whole row on screen first.
+    await tester.ensureVisible(find.text('About Peckish'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('About Peckish'));
     await tester.pumpAndSettle();
     expect(find.byType(BackButton), findsOneWidget,

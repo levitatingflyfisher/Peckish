@@ -62,6 +62,21 @@ class RecipeRepository {
     });
   }
 
+  /// Undo for [delete]: re-seats the recipe captured before the delete,
+  /// ingredients and all (delete dropped the ingredient rows), with a fresh
+  /// stamp so the restore wins the household merge over the tombstone.
+  Future<void> restore(Recipe recipe) async {
+    final row = await _stamped(
+        _recipeRow(recipe).copyWith(isDeleted: const Value(false)));
+    await _db.transaction(() async {
+      await _db.into(_db.recipes).insertOnConflictUpdate(row);
+      await (_db.delete(_db.recipeIngredients)
+            ..where((i) => i.recipeId.equals(recipe.id)))
+          .go();
+      await _insertIngredients(recipe.id, recipe.ingredients);
+    });
+  }
+
   Future<RecipesCompanion> _stamped(RecipesCompanion row) async {
     final s = await _clock.stamp();
     return row.copyWith(hlc: Value(s.hlc), nodeId: Value(s.nodeId));

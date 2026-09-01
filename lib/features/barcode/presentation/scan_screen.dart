@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:openhearth_design/openhearth_design.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:peckish/features/barcode/data/barcode_resolver.dart';
@@ -14,6 +15,7 @@ import 'package:peckish/features/barcode/presentation/product_sheet.dart';
 import 'package:peckish/features/barcode/presentation/scanner_view.dart';
 import 'package:peckish/features/diary/presentation/regulars_rail.dart';
 import 'package:peckish/shared/theme/app_spacing.dart';
+import 'package:peckish/shared/widgets/bar_actions.dart';
 
 /// One lookup client for the app; overridable in tests.
 final offClientProvider = Provider<OffClient>((ref) => OffClient());
@@ -105,7 +107,7 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
     if (!mounted) return;
     setState(() {
       _cameraOff = true;
-      _message = "The camera couldn't start here — type the numbers instead.";
+      _message = 'The camera couldn’t start here. Type the numbers instead.';
     });
   }
 
@@ -131,94 +133,104 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
       appBar: AppBar(
         title: const Text('Scan a barcode'),
         actions: [
-          if (_hasCamera)
-            IconButton(
-              icon: Icon(_cameraOff
-                  ? Icons.videocam_off_outlined
-                  : Icons.videocam_outlined),
-              tooltip:
-                  _cameraOff ? 'Turn the camera on' : 'Turn the camera off',
-              onPressed: () => setState(() => _cameraOff = !_cameraOff),
-            ),
-        ],
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: _cameraUp
-                ? _cameraPane(theme)
-                : _busyWithACode && _read != null
-                    ? _readPane(theme, _read!)
-                    : _typePane(),
-          ),
-          SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (_message != null)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                      child: Text(_message!, style: theme.textTheme.bodyMedium),
-                    ),
-                  // The miss state: the network is a question, asked out
-                  // loud. Nothing fetches until this button is tapped.
-                  if (_missCode != null) ...[
-                    OutlinedButton(
-                      onPressed: _busy ? null : _askOnline,
-                      child: const Text('Ask openfoodfacts.org'),
-                    ),
-                    // Web has no local slices (ADR-0010): no pointer there.
-                    if (!_missAnyLocalDb && !kIsWeb)
-                      TextButton(
-                        onPressed: () => context.push('/barcode-db'),
-                        child: const Text('Get the offline database'),
-                      ),
-                    // The way out of the question, and back to hunting.
-                    TextButton(
-                      onPressed: _busy ? null : _scanAgain,
-                      child: const Text('Scan again'),
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                  ],
-                  TextField(
-                    controller: _controller,
-                    // Only through the Type door. Everywhere else the
-                    // camera is the point, and a keyboard over the preview
-                    // is the thing being fixed, not the fix.
-                    autofocus: widget.startTyping,
-                    enabled: !_busy && !_sheetOpen,
-                    keyboardType: TextInputType.number,
-                    decoration: InputDecoration(
-                      labelText: 'Barcode numbers',
-                      hintText: 'e.g. 3017620422003',
-                      border: const OutlineInputBorder(),
-                      suffixIcon: _busy
-                          ? const Padding(
-                              padding: EdgeInsets.all(12),
-                              child: SizedBox(
-                                width: 20,
-                                height: 20,
-                                child:
-                                    CircularProgressIndicator(strokeWidth: 2),
-                              ),
-                            )
-                          : IconButton(
-                              icon: const Icon(Icons.search),
-                              onPressed: () => _handleRaw(_controller.text),
-                            ),
-                    ),
-                    onSubmitted: _handleRaw,
-                  ),
-                ],
+          BarActions(children: [
+            if (_hasCamera)
+              // Icon plus a word (fleet ruling on top bars); the tooltip
+              // keeps the whole sentence for a long press or a screen reader.
+              Tooltip(
+                message:
+                    _cameraOff ? 'Turn the camera on' : 'Turn the camera off',
+                child: TextButton.icon(
+                  icon: Icon(_cameraOff
+                      ? Icons.videocam_off_outlined
+                      : Icons.videocam_outlined),
+                  label: Text(_cameraOff ? 'Start camera' : 'Stop camera'),
+                  onPressed: () => setState(() => _cameraOff = !_cameraOff),
+                ),
               ),
-            ),
-          ),
+          ]),
         ],
       ),
+      body: OhPage(
+          padding: EdgeInsets.zero,
+          child: Column(
+            children: [
+              Expanded(
+                child: _cameraUp
+                    ? _cameraPane(theme)
+                    : _busyWithACode && _read != null
+                        ? _readPane(theme, _read!)
+                        : _typePane(),
+              ),
+              SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (_message != null)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                          child: Text(_message!,
+                              style: theme.textTheme.bodyMedium),
+                        ),
+                      // The miss state: the network is a question, asked out
+                      // loud. Nothing fetches until this button is tapped.
+                      if (_missCode != null) ...[
+                        OutlinedButton(
+                          onPressed: _busy ? null : _askOnline,
+                          child: const Text('Ask openfoodfacts.org'),
+                        ),
+                        // Web has no local slices (ADR-0010): no pointer there.
+                        if (!_missAnyLocalDb && !kIsWeb)
+                          TextButton(
+                            onPressed: () => context.push('/barcode-db'),
+                            child: const Text('Get the offline database'),
+                          ),
+                        // The way out of the question, and back to hunting.
+                        TextButton(
+                          onPressed: _busy ? null : _scanAgain,
+                          child: const Text('Scan again'),
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                      ],
+                      TextField(
+                        controller: _controller,
+                        // Only through the Type door. Everywhere else the
+                        // camera is the point, and a keyboard over the preview
+                        // is the thing being fixed, not the fix.
+                        autofocus: widget.startTyping,
+                        enabled: !_busy && !_sheetOpen,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          labelText: 'Barcode numbers',
+                          hintText: 'e.g. 3017620422003',
+                          border: const OutlineInputBorder(),
+                          suffixIcon: _busy
+                              ? const Padding(
+                                  padding: EdgeInsets.all(12),
+                                  child: SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2),
+                                  ),
+                                )
+                              : IconButton(
+                                  icon: const Icon(Icons.search),
+                                  onPressed: () => _handleRaw(_controller.text),
+                                ),
+                        ),
+                        onSubmitted: _handleRaw,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          )),
     );
   }
 
@@ -233,7 +245,7 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
             child: Text(
               // The v0.2 lesson: with no shutter button, people wait for
               // one. Say out loud that none is needed.
-              'Hold the barcode in view — it reads on its own. '
+              'Hold the barcode in view. It reads on its own. '
               'Dim light? Try the flash.',
               textAlign: TextAlign.center,
               style: theme.textTheme.bodySmall,
@@ -280,7 +292,7 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
         // the PREVIOUS scan would log the wrong food two taps later.
         _missCode = null;
         _message =
-            "That doesn't look like a barcode — check the numbers and try "
+            'That doesn’t look like a barcode. Check the numbers and try '
             'again.';
       });
       return;
@@ -303,7 +315,7 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
       if (!mounted) return;
       setState(() {
         _busy = false;
-        _message = "Couldn't check your phone's database — try again.";
+        _message = 'Couldn’t check your phone’s database. Try again.';
       });
       return;
     }
@@ -324,12 +336,12 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
           _missCode = code;
           _missAnyLocalDb = anyLocalDb;
           _message = anyLocalDb
-              ? "Not in your phone's food database."
+              ? 'Not in your phone’s food database.'
               : kIsWeb
                   // Web has no local slices (ADR-0010): don't promise one.
-                  ? 'Not looked up yet — on the web, lookups only happen '
+                  ? 'Not looked up yet. On the web, lookups only happen '
                       'when you ask.'
-                  : "Peckish hasn't looked this up — barcode answers can "
+                  : 'Peckish hasn’t looked this up. Barcode answers can '
                       'live on your phone.';
         });
     }
@@ -351,8 +363,8 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
         _busy = false;
         _missCode = null;
         _message =
-            "This one's not in the shared database yet. Quick add it with "
-            'the numbers from the label — takes ten seconds.';
+            'This one’s not in the shared database yet. Quick add it with '
+            'the numbers from the label: takes ten seconds.';
       });
     } on OffLookupException catch (e) {
       if (!mounted) return;
@@ -368,7 +380,7 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
       if (!mounted) return;
       setState(() {
         _busy = false;
-        _message = "That didn't work — try again in a moment.";
+        _message = 'That didn’t work. Try again in a moment.';
       });
     }
   }
@@ -394,8 +406,8 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
   /// Credits the slice that answered — ODbL wants attribution pinned to
   /// the OFF data (ADR-0010).
   static String _sourceNote(String sourceId) => switch (sourceId) {
-        'usda' => 'From your phone — USDA database',
-        'off_us' => 'From your phone — Open Food Facts',
+        'usda' => 'From your phone: USDA database',
+        'off_us' => 'From your phone: Open Food Facts',
         _ => 'From your phone',
       };
 }

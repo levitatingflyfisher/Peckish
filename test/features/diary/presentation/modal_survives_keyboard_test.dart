@@ -2,6 +2,7 @@ import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:openhearth_design/openhearth_design.dart';
 import 'package:peckish/core/providers/core_providers.dart';
 import 'package:peckish/core/storage/app_database.dart';
 import 'package:peckish/features/barcode/domain/off_product.dart';
@@ -9,7 +10,6 @@ import 'package:peckish/features/barcode/presentation/product_sheet.dart';
 import 'package:peckish/features/diary/presentation/add_sheet.dart';
 import 'package:peckish/features/food/domain/macro_set.dart';
 import 'package:peckish/shared/theme/app_theme.dart';
-import 'package:peckish/shared/widgets/confirm_dialog.dart';
 
 // Drift widget-test rules apply — see the canonical comment in
 // test/features/groceries/presentation/groceries_screen_test.dart.
@@ -188,7 +188,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('sheet-close')));
     await tester.pumpAndSettle();
 
-    expect(find.text('Search foods — works offline'), findsNothing);
+    expect(find.text('Search foods (works offline)'), findsNothing);
     await unmount(tester);
   });
 
@@ -198,8 +198,10 @@ void main() {
     // for "never mind" — it only becomes a bug when it destroys work.
     await tester.pumpWidget(host(Builder(
       builder: (context) => TextButton(
-        onPressed: () => showConfirmDialog(context,
-            title: 'Delete this?', message: 'It will be gone.'),
+        onPressed: () => showOhConfirm(context,
+            title: 'Delete this?',
+            message: 'It will be gone.',
+            confirmLabel: 'Delete it'),
         child: const Text('open'),
       ),
     )));

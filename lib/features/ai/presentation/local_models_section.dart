@@ -119,7 +119,7 @@ class _LocalModelsSectionState extends ConsumerState<LocalModelsSection>
                 notDownloadedSubtitle: spec.description,
                 installedSubtitle: (theme, detail) => const Text('Downloaded'),
                 failedSubtitle:
-                    "Couldn't finish — Retry picks up where it stopped.",
+                    'Couldn’t finish. Retry picks up where it stopped.',
                 deleteTooltip: 'Delete this model',
                 onDownload: () => startDownload(spec),
                 onDelete: () => confirmAndDeleteItem(spec),
@@ -141,7 +141,7 @@ class _LocalModelsSectionState extends ConsumerState<LocalModelsSection>
                   child: SelectableText(
                     r.report,
                     style: theme.textTheme.bodySmall?.copyWith(
-                      color: r.ok ? AppColors.stone : AppColors.clay,
+                      color: r.ok ? AppColors.secondaryText(context) : AppColors.clay,
                     ),
                   ),
                 ),

@@ -21,6 +21,7 @@
 - [Export format](reference/export-format.md)
 
 ## Explanation
+- [Personas](explanation/personas.md): who agents play when they test the UI, with scenarios.
 - [Design philosophy](explanation/design-philosophy.md) — meals not bodies,
   the two-tap law, unknown-is-never-zero, the grocery regeneration laws.
 

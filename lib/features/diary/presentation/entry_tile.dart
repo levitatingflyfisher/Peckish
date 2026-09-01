@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:openhearth_design/openhearth_design.dart';
 
 import 'package:peckish/core/providers/core_providers.dart';
 import 'package:peckish/features/diary/domain/diary_entry.dart';
@@ -8,40 +9,34 @@ import 'package:peckish/features/food/domain/macro_set.dart';
 import 'package:peckish/shared/extensions/qty_format.dart';
 import 'package:peckish/shared/theme/app_colors.dart';
 import 'package:peckish/shared/theme/app_spacing.dart';
-import 'package:peckish/shared/widgets/confirm_dialog.dart';
+import 'package:peckish/shared/widgets/undo_host.dart';
 
 /// One diary line, wherever a day is shown (Today, a history day). A tap
 /// opens the fix-this-line sheet unless the caller overrides [onTap].
 ///
-/// Swipe-away asks first (the user explicitly asked for a delete
-/// confirmation) and, once removed, offers Undo — VISION.md's "forgiveness
-/// over prevention applies to data too" law used to be broken here: an
-/// unconfirmed swipe was a silent hard-delete with no way back.
+/// Swipe-away asks first (an easy gesture, per the fleet delete ruling)
+/// and, once removed, offers an Undo that never times out. VISION.md's
+/// "forgiveness over prevention applies to data too" law used to be broken
+/// here: an unconfirmed swipe was a silent hard-delete with no way back.
 class EntryTile extends ConsumerWidget {
   const EntryTile({super.key, required this.entry, this.onTap});
 
   final DiaryEntry entry;
   final VoidCallback? onTap;
 
-  Future<void> _delete(BuildContext context, WidgetRef ref) async {
-    // Read the repository itself, not `ref` — by the time Undo is tapped
-    // this tile is long gone from the tree (that IS the delete), and a
-    // ConsumerWidget's `ref` throws once its element is disposed.
+  Future<void> _delete(WidgetRef ref) async {
+    // Read the repository itself, not `ref`, inside Undo: by the time Undo
+    // is tapped this tile is long gone from the tree (that IS the delete),
+    // and a ConsumerWidget's `ref` throws once its element is disposed.
     final repo = ref.read(diaryRepositoryProvider);
+    final undo = ref.read(undoControllerProvider);
     await repo.delete(entry.id);
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(context)
-      ..clearSnackBars()
-      ..showSnackBar(SnackBar(
-        content: Text('Removed ${entry.label}'),
-        action: SnackBarAction(
-          label: 'Undo',
-          // Re-insert the captured row verbatim — same id/day/at/macros —
-          // never touching the usage table (undoing a delete is not a
-          // fresh use of the food).
-          onPressed: () => repo.restore(entry),
-        ),
-      ));
+    undo.show(
+      message: 'Deleted ${entry.label}',
+      // Re-insert the captured row verbatim (same id/day/at/macros), never
+      // touching the usage table: undoing a delete is not a fresh use.
+      onUndo: () => repo.restore(entry),
+    );
   }
 
   @override
@@ -49,11 +44,14 @@ class EntryTile extends ConsumerWidget {
     return Dismissible(
       key: ValueKey(entry.id),
       direction: DismissDirection.endToStart,
-      confirmDismiss: (_) => showConfirmDialog(
+      // A swipe is an easy gesture, so it asks first, naming the line.
+      confirmDismiss: (_) => showOhConfirm(
         context,
         title: 'Delete ${entry.label}?',
-        message: 'This line comes off the ledger — Undo puts it straight '
+        message: 'This line comes off the ledger. Undo puts it straight '
             'back if you change your mind.',
+        confirmLabel: 'Delete line',
+        confirmColor: AppColors.clay,
       ),
       background: Container(
         alignment: Alignment.centerRight,
@@ -61,7 +59,7 @@ class EntryTile extends ConsumerWidget {
         color: AppColors.clay,
         child: const Icon(Icons.delete_outline, color: Colors.white),
       ),
-      onDismissed: (_) => _delete(context, ref),
+      onDismissed: (_) => _delete(ref),
       child: ListTile(
         contentPadding: EdgeInsets.zero,
         minVerticalPadding: AppSpacing.sm,
@@ -88,7 +86,7 @@ class EntryTile extends ConsumerWidget {
                 style: Theme.of(context)
                     .textTheme
                     .bodySmall
-                    ?.copyWith(color: AppColors.stone),
+                    ?.copyWith(color: AppColors.secondaryText(context)),
               ),
           ],
         ),

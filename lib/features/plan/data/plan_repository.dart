@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 
 import 'package:peckish/core/storage/app_database.dart';
+import 'package:peckish/features/recipes/data/recipe_repository.dart';
 import 'package:peckish/features/plan/domain/plan_entry.dart';
 import 'package:peckish/features/sync/data/sync_clock.dart';
 
@@ -34,6 +35,18 @@ class PlanRepository {
     await (_db.update(_db.planEntries)..where((p) => p.id.equals(id)))
         .write(PlanEntriesCompanion(
       isDeleted: const Value(true),
+      hlc: Value(s.hlc),
+      nodeId: Value(s.nodeId),
+    ));
+  }
+
+  /// Undo for [remove]: lifts the tombstone, stamped fresh so the restore
+  /// wins the household merge over the removal.
+  Future<void> restore(String id) async {
+    final s = await _clock.stamp();
+    await (_db.update(_db.planEntries)..where((p) => p.id.equals(id)))
+        .write(PlanEntriesCompanion(
+      isDeleted: const Value(false),
       hlc: Value(s.hlc),
       nodeId: Value(s.nodeId),
     ));
@@ -92,13 +105,15 @@ class PlanRepository {
     };
     // Tombstoned refs resolve like hard-deleted ones: '(deleted …)'.
     final recipeTitles = <String, String>{};
-    if (recipeIds.isNotEmpty) {
-      final recipes = await (_db.select(_db.recipes)
-            ..where((r) => r.id.isIn(recipeIds) & r.isDeleted.equals(false)))
-          .get();
-      for (final r in recipes) {
-        recipeTitles[r.id] = r.title;
-      }
+    final recipeKcal = <String, double?>{};
+    final recipes = RecipeRepository(_db);
+    for (final id in recipeIds) {
+      // byId skips tombstones and brings the ingredients, which the
+      // computed per-serving figure needs when the site declared none.
+      final r = await recipes.byId(id);
+      if (r == null) continue;
+      recipeTitles[id] = r.title;
+      recipeKcal[id] = r.perServing?.kcal;
     }
     final mealNames = <String, String>{};
     if (mealIds.isNotEmpty) {
@@ -123,6 +138,8 @@ class PlanRepository {
             PlanKindDb.meal => mealNames[r.refId] ?? '(deleted meal)',
             PlanKindDb.note => r.note ?? '',
           },
+          kcalPerServing:
+              r.kind == PlanKindDb.recipe ? recipeKcal[r.refId] : null,
         ),
     ];
   }

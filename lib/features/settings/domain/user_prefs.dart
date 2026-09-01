@@ -1,3 +1,5 @@
+import 'package:openhearth_design/openhearth_design.dart';
+
 /// User preferences persisted in the local drift key→value store.
 ///
 /// Holds only app-shell toggles (theme, the suggestion card's switch and
@@ -5,12 +7,13 @@
 /// plans — lives in its own tables, never here.
 class UserPrefs {
   const UserPrefs({
-    this.isDarkMode = false,
+    this.themeMode = OhThemeModePreference.defaultValue,
     this.suggestionsEnabled = true,
     this.suggestionsDismissedDay,
   });
 
-  final bool isDarkMode;
+  /// Light, dark, or follow the phone (the default, per the fleet ruling).
+  final OhThemeModePreference themeMode;
 
   /// The "Round out your day" master switch (Settings › Your day).
   final bool suggestionsEnabled;
@@ -26,11 +29,11 @@ class UserPrefs {
   @override
   bool operator ==(Object other) =>
       other is UserPrefs &&
-      other.isDarkMode == isDarkMode &&
+      other.themeMode == themeMode &&
       other.suggestionsEnabled == suggestionsEnabled &&
       other.suggestionsDismissedDay == suggestionsDismissedDay;
 
   @override
   int get hashCode =>
-      Object.hash(isDarkMode, suggestionsEnabled, suggestionsDismissedDay);
+      Object.hash(themeMode, suggestionsEnabled, suggestionsDismissedDay);
 }

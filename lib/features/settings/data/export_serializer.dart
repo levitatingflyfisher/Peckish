@@ -87,7 +87,7 @@ class PeckishExport {
     if (version is! int || version > schemaVersion) {
       throw FormatException(
         'export schema $version is newer than this app understands '
-        '($schemaVersion) — update Peckish, then restore',
+        '($schemaVersion): update Peckish, then restore',
       );
     }
     final stamp = raw['createdAt'];

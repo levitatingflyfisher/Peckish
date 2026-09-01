@@ -119,7 +119,7 @@ class BarcodeDbDownloadService {
   Stream<(int, int)> download(BarcodeDbSpec spec) async* {
     if (spec.sha256Gz == 'PENDING') {
       throw StateError(
-          'Catalog entry "${spec.id}" has no measured sha256Gz yet — '
+          'Catalog entry “${spec.id}” has no measured sha256Gz yet: '
           'a slice without a hash is never downloadable (ADR-0010).');
     }
     final gz = await _gz(spec);
@@ -165,8 +165,8 @@ class BarcodeDbDownloadService {
     if (digest.toString() != spec.sha256Gz.toLowerCase()) {
       await gz.delete();
       throw BarcodeDbIntegrityException(
-          'Downloaded "${spec.id}" did not match its published checksum. '
-          'The file was removed — trying again is safe.');
+          'Downloaded “${spec.id}” did not match its published checksum. '
+          'The file was removed: trying again is safe.');
     }
 
     // Verified: gunzip streaming to .part, then the atomic promotion —

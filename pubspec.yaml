@@ -115,22 +115,5 @@ flutter:
     - assets/icon/
     - assets/food/
 
-  fonts:
-    - family: Lora
-      fonts:
-        - asset: assets/fonts/Lora-Regular.ttf
-        - asset: assets/fonts/Lora-Italic.ttf
-          style: italic
-        - asset: assets/fonts/Lora-Medium.ttf
-          weight: 500
-        - asset: assets/fonts/Lora-Bold.ttf
-          weight: 700
-    - family: Nunito
-      fonts:
-        - asset: assets/fonts/Nunito-Regular.ttf
-        - asset: assets/fonts/Nunito-Medium.ttf
-          weight: 500
-        - asset: assets/fonts/Nunito-SemiBold.ttf
-          weight: 600
-        - asset: assets/fonts/Nunito-Bold.ttf
-          weight: 700
+  # Lora/Nunito come from openhearth_design's package fonts (0.7.1+): one
+  # copy for the whole fleet, still bundled, never fetched.

@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:openhearth_design/openhearth_design.dart';
 
 import 'package:peckish/core/providers/core_providers.dart';
 import 'package:peckish/features/groceries/domain/grocery_item.dart';
+import 'package:peckish/features/plan/domain/week.dart';
 import 'package:peckish/shared/theme/app_colors.dart';
 import 'package:peckish/shared/theme/app_spacing.dart';
+import 'package:peckish/shared/widgets/theme_toggle_action.dart';
+import 'package:peckish/shared/widgets/undo_host.dart';
 
 /// The list, walked aisle by aisle. Whole-row tap targets (the Furrow
 /// lesson: checkboxes are for thumbs, not cursors).
@@ -29,53 +33,100 @@ class GroceriesScreen extends ConsumerWidget {
       byAisle.putIfAbsent(item.aisle, () => []).add(item);
     }
 
+    final anyChecked =
+        (items.value ?? const <GroceryItem>[]).any((i) => i.checked);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Groceries'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.remove_done),
-            tooltip: 'Clear checked',
-            onPressed: () => ref.read(groceryRepositoryProvider).clearChecked(),
-          ),
-        ],
+        actions: const [ThemeToggleAction()],
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        children: [
-          const _AddField(),
-          const SizedBox(height: AppSpacing.md),
-          if ((items.value ?? const []).isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl),
-              child: Text(
-                'The list is empty. Plan the week, then "Set the table" — '
-                'or add things by hand above.',
-                style: Theme.of(context)
-                    .textTheme
-                    .bodyMedium
-                    ?.copyWith(color: AppColors.stone),
-              ),
-            )
-          else
-            for (final aisle in GroceryAisle.values)
-              if (byAisle.containsKey(aisle)) ...[
-                Padding(
-                  padding: const EdgeInsets.only(
-                      top: AppSpacing.md, bottom: AppSpacing.xs),
-                  child: Text(_aisleNames[aisle]!,
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleMedium
-                          ?.copyWith(color: AppColors.paprika)),
+      body: OhPage(
+          padding: EdgeInsets.zero,
+          child: ListView(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            children: [
+              const _AddField(),
+              // A word, not a glyph whose only name is a tooltip a thumb
+              // never sees (lens audit dmmt-07), shown only when there is
+              // something to clear. It lives in the page, beside the list
+              // it acts on, not in a bar that cannot fit it at large text.
+              // Deliberate, so it does not ask: it reports its scope and
+              // hands it back (humane-05).
+              if (anyChecked)
+                Align(
+                  alignment: AlignmentDirectional.centerEnd,
+                  child: TextButton.icon(
+                    icon: const Icon(Icons.remove_done),
+                    label: const Text('Clear checked'),
+                    onPressed: () => _clearChecked(ref),
+                  ),
                 ),
-                for (final item in byAisle[aisle]!) _ItemRow(item: item),
-              ],
-          const SizedBox(height: 96),
-        ],
-      ),
+              const SizedBox(height: AppSpacing.md),
+              if ((items.value ?? const []).isEmpty)
+                // The act, not a description of it (lens audit dmmt-08,
+                // finding 3): the same regenerate path and the same week as
+                // Plan's Set the table, from the one screen that needs it.
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        'The list is empty. Build it from the dinners planned '
+                        'this week, or add things by hand above.',
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodyMedium
+                            ?.copyWith(color: AppColors.secondaryText(context)),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      FilledButton.icon(
+                        icon: const Icon(Icons.shopping_basket_outlined),
+                        label:
+                            const Text('Set the table from this week’s plan'),
+                        style: FilledButton.styleFrom(
+                            minimumSize: const Size.fromHeight(52)),
+                        onPressed: () => ref
+                            .read(groceryRepositoryProvider)
+                            .regenerateFromPlan(
+                                weekDays(mondayOf(DateTime.now()))),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                for (final aisle in GroceryAisle.values)
+                  if (byAisle.containsKey(aisle)) ...[
+                    Padding(
+                      padding: const EdgeInsets.only(
+                          top: AppSpacing.md, bottom: AppSpacing.xs),
+                      child: Text(_aisleNames[aisle]!,
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleMedium
+                              ?.copyWith(color: AppColors.paprika)),
+                    ),
+                    for (final item in byAisle[aisle]!) _ItemRow(item: item),
+                  ],
+              const SizedBox(height: 96),
+            ],
+          )),
     );
   }
+}
+
+Future<void> _clearChecked(WidgetRef ref) async {
+  final repo = ref.read(groceryRepositoryProvider);
+  final undo = ref.read(undoControllerProvider);
+  final cleared = await repo.clearChecked();
+  if (cleared.isEmpty) return;
+  undo.show(
+    message: cleared.length == 1
+        ? 'Cleared 1 checked item'
+        : 'Cleared ${cleared.length} checked items',
+    onUndo: () => repo.restore(cleared),
+  );
 }
 
 final _itemsProvider = StreamProvider.autoDispose(
@@ -135,7 +186,25 @@ class _ItemRow extends ConsumerWidget {
         color: AppColors.clay,
         child: const Icon(Icons.delete_outline, color: Colors.white),
       ),
-      onDismissed: (_) => ref.read(groceryRepositoryProvider).remove(item.id),
+      // A swipe is an easy gesture, used one-handed in a shop: it asks
+      // first, naming the item, and the removal can still be undone.
+      confirmDismiss: (_) => showOhConfirm(
+        context,
+        title: 'Remove ${item.name}?',
+        confirmLabel: 'Remove item',
+        confirmColor: AppColors.clay,
+      ),
+      onDismissed: (_) async {
+        // Read both before the await: the row leaves the tree with the
+        // delete, and a disposed ConsumerWidget's ref throws.
+        final repo = ref.read(groceryRepositoryProvider);
+        final undo = ref.read(undoControllerProvider);
+        await repo.remove(item.id);
+        undo.show(
+          message: 'Removed ${item.name}',
+          onUndo: () => repo.restore([item.id]),
+        );
+      },
       child: InkWell(
         onTap: () => ref
             .read(groceryRepositoryProvider)
@@ -162,7 +231,7 @@ class _ItemRow extends ConsumerWidget {
                   style: item.checked
                       ? Theme.of(context).textTheme.bodyLarge?.copyWith(
                           decoration: TextDecoration.lineThrough,
-                          color: AppColors.stone)
+                          color: AppColors.secondaryText(context))
                       : Theme.of(context).textTheme.bodyLarge,
                 ),
               ),

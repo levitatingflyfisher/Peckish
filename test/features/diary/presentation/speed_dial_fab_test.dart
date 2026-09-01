@@ -151,7 +151,7 @@ void main() {
     await tester.tap(find.text('Find food'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Search foods — works offline'), findsOneWidget);
+    expect(find.text('Search foods (works offline)'), findsOneWidget);
     expect(find.textContaining('Adding to'), findsNothing,
         reason: 'Today names no day');
     await unmount(tester);
@@ -183,7 +183,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.widgetWithText(TextField, 'What was it?'), findsOneWidget);
-    expect(find.text('Search foods — works offline'), findsNothing,
+    expect(find.text('Search foods (works offline)'), findsNothing,
         reason: 'the sheet resolved v0.3/#184 by not existing here at all');
     await unmount(tester);
   });

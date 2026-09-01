@@ -219,7 +219,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Log it'), findsNothing);
-    expect(find.text('Search foods — works offline'), findsNothing,
+    expect(find.text('Search foods (works offline)'), findsNothing,
         reason: 'no sheet was ever opened on this path');
     await unmount(tester);
   });

@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:openhearth_design/openhearth_design.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
 import 'package:peckish/core/providers/core_providers.dart';
 import 'package:peckish/features/diary/domain/diary_entry.dart';
 import 'package:peckish/features/plan/domain/plan_entry.dart';
+import 'package:peckish/features/plan/domain/week.dart';
 import 'package:peckish/shared/theme/app_colors.dart';
 import 'package:peckish/shared/theme/app_spacing.dart';
 import 'package:peckish/shared/widgets/input_modal.dart';
+import 'package:peckish/shared/widgets/theme_toggle_action.dart';
+import 'package:peckish/shared/widgets/undo_host.dart';
 
 /// The week — Peckish's signature surface. Each day is a plate: an empty ring
 /// until dinner is planned, filled butter-warm once it is. "Leftovers" and
@@ -27,15 +31,10 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
   @override
   void initState() {
     super.initState();
-    final now = DateTime.now();
-    _weekStart = DateTime(now.year, now.month, now.day)
-        .subtract(Duration(days: now.weekday - 1));
+    _weekStart = mondayOf(DateTime.now());
   }
 
-  List<String> get _days => [
-        for (var i = 0; i < 7; i++)
-          DiaryEntry.dayOf(_weekStart.add(Duration(days: i))),
-      ];
+  List<String> get _days => weekDays(_weekStart);
 
   @override
   Widget build(BuildContext context) {
@@ -49,59 +48,95 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
     }
 
     return Scaffold(
+      // The tab's own name in the bar (lens audit dmmt-04: the bar held
+      // only a date range), with room for the theme choice. The week
+      // stepper moves into the page, pinned above the days the way
+      // History pins its month bar.
       appBar: AppBar(
-        title: Text(_weekTitle()),
-        leading: IconButton(
-          icon: const Icon(Icons.chevron_left),
-          tooltip: 'Previous week',
-          onPressed: () => setState(
-              () => _weekStart = _weekStart.subtract(const Duration(days: 7))),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.chevron_right),
-            tooltip: 'Next week',
-            onPressed: () => setState(
-                () => _weekStart = _weekStart.add(const Duration(days: 7))),
-          ),
-        ],
+        title: const Text('Plan'),
+        actions: const [ThemeToggleAction()],
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        children: [
-          for (var i = 0; i < 7; i++)
-            _DayRow(
-              date: _weekStart.add(Duration(days: i)),
-              day: _days[i],
-              entries: byDay[_days[i]] ?? const [],
-              onAdd: () => _showAddToDay(context, _days[i]),
-            ),
-          const SizedBox(height: AppSpacing.lg),
-          FilledButton.icon(
-            icon: const Icon(Icons.shopping_basket_outlined),
-            label: const Text('Set the table — build the grocery list'),
-            style: FilledButton.styleFrom(
-              minimumSize: const Size.fromHeight(52),
-            ),
-            onPressed: () async {
-              await ref
-                  .read(groceryRepositoryProvider)
-                  .regenerateFromPlan(_days);
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                    content:
-                        Text('Grocery list refilled from this week’s plan')));
-              }
-            },
-          ),
-          const SizedBox(height: 96),
-        ],
-      ),
+      body: OhPage(
+          padding: EdgeInsets.zero,
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.chevron_left),
+                      tooltip: 'Previous week',
+                      onPressed: () => setState(() => _weekStart = DateTime(
+                          _weekStart.year,
+                          _weekStart.month,
+                          _weekStart.day - 7)),
+                    ),
+                    Expanded(
+                      child: Text(
+                        _weekTitle(),
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.chevron_right),
+                      tooltip: 'Next week',
+                      onPressed: () => setState(() => _weekStart = DateTime(
+                          _weekStart.year,
+                          _weekStart.month,
+                          _weekStart.day + 7)),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  children: [
+                    for (var i = 0; i < 7; i++)
+                      _DayRow(
+                        date: DateTime(_weekStart.year, _weekStart.month,
+                            _weekStart.day + i),
+                        day: _days[i],
+                        entries: byDay[_days[i]] ?? const [],
+                        onAdd: () => _showAddToDay(context, _days[i]),
+                      ),
+                    const SizedBox(height: AppSpacing.lg),
+                  ],
+                ),
+              ),
+              // Pinned below the week, outside the scroll, in the thumb zone:
+              // the app's central act was off the first screenful on every
+              // phone (lens audit finding 3, dmmt-08).
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.md),
+                child: FilledButton.icon(
+                  icon: const Icon(Icons.shopping_basket_outlined),
+                  label: const Text('Set the table: build the grocery list'),
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size.fromHeight(52),
+                  ),
+                  onPressed: () async {
+                    await ref
+                        .read(groceryRepositoryProvider)
+                        .regenerateFromPlan(_days);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                          content: Text(
+                              'Grocery list refilled from this week’s plan')));
+                    }
+                  },
+                ),
+              ),
+            ],
+          )),
     );
   }
 
   String _weekTitle() {
-    final end = _weekStart.add(const Duration(days: 6));
+    final end = DateTime(_weekStart.year, _weekStart.month, _weekStart.day + 6);
     String md(DateTime d) => '${d.month}/${d.day}';
     return 'Week of ${md(_weekStart)}–${md(end)}';
   }
@@ -225,14 +260,10 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
   }
 }
 
-final _weekProvider =
-    StreamProvider.autoDispose.family((ref, String weekStartDay) {
-  final start = DateTime.parse(weekStartDay);
-  final days = [
-    for (var i = 0; i < 7; i++) DiaryEntry.dayOf(start.add(Duration(days: i))),
-  ];
-  return ref.watch(planRepositoryProvider).watchDays(days);
-});
+final _weekProvider = StreamProvider.autoDispose.family(
+    (ref, String weekStartDay) => ref
+        .watch(planRepositoryProvider)
+        .watchDays(weekDays(DateTime.parse(weekStartDay))));
 
 class _DayRow extends ConsumerWidget {
   const _DayRow({
@@ -277,18 +308,45 @@ class _DayRow extends ConsumerWidget {
                           Row(
                             children: [
                               Expanded(
-                                child: Text(e.title,
-                                    overflow: TextOverflow.ellipsis,
-                                    style:
-                                        Theme.of(context).textTheme.bodyMedium),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(e.title,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodyMedium),
+                                    // The number the recipe already knows
+                                    // (lens audit visual-display-10). Plain
+                                    // text that wraps, never a Chip, and
+                                    // absent when unknown, never a zero.
+                                    if (e.kcalPerServing case final kcal?)
+                                      Text('${kcal.round()} kcal per serving',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall
+                                              ?.copyWith(
+                                                  color:
+                                                      AppColors.secondaryText(
+                                                          context))),
+                                  ],
+                                ),
                               ),
+                              // A deliberate tap: removes at once, with
+                              // the app-wide Undo to hand it back.
                               IconButton(
                                 icon: const Icon(Icons.close, size: 18),
-                                tooltip: 'Remove',
+                                tooltip: 'Remove ${e.title}',
                                 visualDensity: VisualDensity.compact,
-                                onPressed: () => ref
-                                    .read(planRepositoryProvider)
-                                    .remove(e.id),
+                                onPressed: () async {
+                                  final repo = ref.read(planRepositoryProvider);
+                                  final undo = ref.read(undoControllerProvider);
+                                  await repo.remove(e.id);
+                                  undo.show(
+                                    message: 'Removed ${e.title}',
+                                    onUndo: () => repo.restore(e.id),
+                                  );
+                                },
                               ),
                             ],
                           )
@@ -297,7 +355,8 @@ class _DayRow extends ConsumerWidget {
                             style: Theme.of(context)
                                 .textTheme
                                 .bodyMedium
-                                ?.copyWith(color: AppColors.stone)),
+                                ?.copyWith(
+                                    color: AppColors.secondaryText(context))),
                     ],
                   ),
                 ),

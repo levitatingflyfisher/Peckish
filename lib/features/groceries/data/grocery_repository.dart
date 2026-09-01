@@ -89,12 +89,39 @@ class GroceryRepository {
     ));
   }
 
-  /// Sweep the bought things off the list.
-  Future<void> clearChecked() async {
+  /// Sweep the bought things off the list. Returns the ids it tombstoned,
+  /// so the Undo can hand exactly those back (and say how many).
+  Future<List<String>> clearChecked() async {
     final s = await _clock.stamp();
-    await (_db.update(_db.groceryItems)..where((g) => g.checked.equals(true)))
+    return _db.transaction(() async {
+      final ids = await (_db.selectOnly(_db.groceryItems)
+            ..addColumns([_db.groceryItems.id])
+            ..where(_db.groceryItems.checked.equals(true) &
+                _db.groceryItems.isDeleted.equals(false)))
+          .map((r) => r.read(_db.groceryItems.id)!)
+          .get();
+      if (ids.isEmpty) return ids;
+      await (_db.update(_db.groceryItems)..where((g) => g.id.isIn(ids)))
+          .write(GroceryItemsCompanion(
+        isDeleted: const Value(true),
+        hlc: Value(s.hlc),
+        nodeId: Value(s.nodeId),
+      ));
+      return ids;
+    });
+  }
+
+  /// Undo for [remove] and [clearChecked]: lifts the tombstones, stamped
+  /// fresh so the restore wins the household's last-write-wins merge over
+  /// the deletion it undoes. Rows come back exactly as they were (checked
+  /// ones still checked).
+  Future<void> restore(Iterable<String> ids) async {
+    final list = ids.toList();
+    if (list.isEmpty) return;
+    final s = await _clock.stamp();
+    await (_db.update(_db.groceryItems)..where((g) => g.id.isIn(list)))
         .write(GroceryItemsCompanion(
-      isDeleted: const Value(true),
+      isDeleted: const Value(false),
       hlc: Value(s.hlc),
       nodeId: Value(s.nodeId),
     ));

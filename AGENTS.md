@@ -76,8 +76,14 @@ docs/README.md (Diátaxis hub). Decisions live in docs/adr/.
   right for a modal with nothing typed in it (a confirm, a portion
   picker) — the rule is scoped to work that can be lost, not to modals in
   general.
-- **Only print glyphs the bundled fonts have.** Peckish ships Lora +
-  Nunito precisely so it depends on nobody else's type — so ≥, ≤, ≈, →
+- **A full screen holding typed work keeps a draft.** The recipe editor
+  writes what is typed to `RecipeDraftStore` (shared preferences, keyed
+  `new` / `edit:<id>` / `import:<url>`) as it is typed, so back, a tab
+  switch or the app being killed loses nothing; Save and Start over clear
+  it, and Erase all data takes every draft. Drafts are not in backups.
+- **Only print glyphs the bundled fonts have.** Peckish draws in Lora +
+  Nunito, bundled as openhearth_design's package fonts (the app keeps no
+  copy of its own), precisely so it depends on nobody's network — so ≥, ≤, ≈, →
   and friends render as boxes. test/shared/theme/font_coverage_test.dart
   walks every string literal in `lib/` against both cmaps; it is the
   reason target roles read "min"/"max".

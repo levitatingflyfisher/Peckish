@@ -15,6 +15,7 @@ import 'package:peckish/features/food/domain/custom_food.dart';
 import 'package:peckish/features/food/presentation/foods_screen.dart';
 import 'package:peckish/features/food/domain/macro_set.dart';
 import 'package:peckish/shared/theme/app_theme.dart';
+import 'package:peckish/shared/widgets/undo_host.dart';
 
 // v0.10: /foods becomes ONE searchable surface. Root cause #4: three lists
 // (Regulars sorted last-used-first, My Foods A-Z, Saved meals manual order)
@@ -29,7 +30,11 @@ Widget host(AppDatabase db, {String? day}) => ProviderScope(
         appDatabaseProvider.overrideWithValue(db),
         spineReadyProvider.overrideWith((ref) async {}),
       ],
-      child: MaterialApp(theme: AppTheme.light, home: FoodsScreen(day: day)),
+      child: MaterialApp(
+        theme: AppTheme.light,
+        builder: (context, child) => UndoHost(child: child!),
+        home: FoodsScreen(day: day),
+      ),
     );
 
 Future<void> unmount(WidgetTester tester) async {
@@ -97,7 +102,7 @@ void main() {
       await tester.pumpWidget(host(db));
       await tester.pumpAndSettle();
 
-      expect(find.text('Regulars — by last use'), findsOneWidget);
+      expect(find.text('Regulars, by last use'), findsOneWidget);
       expect(find.text('Oatmeal'), findsOneWidget);
       expect(find.textContaining('2×'), findsOneWidget);
       await unmount(tester);
@@ -134,7 +139,7 @@ void main() {
       await tester.pumpWidget(host(db));
       await tester.pumpAndSettle();
 
-      expect(find.text('My Foods — A to Z'), findsOneWidget);
+      expect(find.text('My Foods, A to Z'), findsOneWidget);
       expect(find.text('Cafe Rio salad'), findsOneWidget);
 
       await tester.tap(find.byIcon(Icons.more_vert).first);
@@ -155,24 +160,31 @@ void main() {
       await unmount(tester);
     });
 
-    testWidgets('Delete asks first, then the food is gone', (tester) async {
+    testWidgets('Delete is deliberate: gone at once, with a lasting Undo',
+        (tester) async {
       await tester.runAsync(() => CustomFoodRepository(db).create(food()));
       await tester.pumpWidget(host(db));
       await tester.pumpAndSettle();
 
       await tester.tap(find.byIcon(Icons.more_vert).first);
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Delete'));
-      await tester.pumpAndSettle();
-
-      expect(find.textContaining('Delete'), findsWidgets);
       await tester.runAsync(() async {
-        await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
+        await tester.tap(find.text('Delete'));
         await Future<void>.delayed(const Duration(milliseconds: 50));
       });
       await tester.pumpAndSettle();
 
+      expect(find.byType(AlertDialog), findsNothing,
+          reason: 'choosing Delete from the menu is already the decision');
       expect(find.text('Cafe Rio salad'), findsNothing);
+      expect(find.text('Deleted Cafe Rio salad'), findsOneWidget);
+
+      await tester.runAsync(() async {
+        await tester.tap(find.text('Undo'));
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+      });
+      await tester.pumpAndSettle();
+      expect(find.text('Cafe Rio salad'), findsOneWidget);
       await unmount(tester);
     });
 
@@ -333,11 +345,11 @@ void main() {
       await tester.pumpWidget(host(db));
       await tester.pumpAndSettle();
       await search(tester, 'oat');
-      expect(find.text('Regulars — by last use'), findsNothing);
+      expect(find.text('Regulars, by last use'), findsNothing);
 
       await tester.enterText(find.byType(TextField).first, '');
       await tester.pumpAndSettle();
-      expect(find.text('Regulars — by last use'), findsOneWidget);
+      expect(find.text('Regulars, by last use'), findsOneWidget);
       await unmount(tester);
     });
   });

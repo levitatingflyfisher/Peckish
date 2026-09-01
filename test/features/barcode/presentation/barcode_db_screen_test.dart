@@ -158,7 +158,7 @@ void main() {
 
     expect(find.textContaining('checksum'), findsOneWidget,
         reason: 'the integrity story reaches the card');
-    expect(find.text("Couldn't finish — trying again is safe."), findsNothing,
+    expect(find.text('Couldn’t finish. Trying again is safe.'), findsNothing,
         reason: 'a checksum failure must not read as a network drop');
   });
 
@@ -197,7 +197,7 @@ void main() {
     expect(service.deleted, isEmpty,
         reason: 'nothing is deleted before the user confirms');
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Delete download'));
     await tester.pumpAndSettle();
 
     expect(service.deleted, ['usda']);

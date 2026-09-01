@@ -7,7 +7,7 @@ Future<void> shareExport({
   required String fileName,
 }) async {
   throw UnsupportedError(
-    "Saving an export file isn't available in the web version of Peckish yet "
-    '— use the Android app to export your data.',
+    'Saving an export file isn’t available in the web version of Peckish yet. '
+    'Use the Android app to export your data.',
   );
 }

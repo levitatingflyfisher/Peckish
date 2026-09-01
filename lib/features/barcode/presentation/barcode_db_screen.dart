@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:openhearth_design/openhearth_design.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:peckish/features/barcode/data/barcode_db_download_service.dart';
@@ -71,7 +72,7 @@ class _BarcodeDbScreenState extends ConsumerState<BarcodeDbScreen>
 
   @override
   String deleteConfirmMessage(BarcodeDbSpec spec) =>
-      'Scans go back to asking — only when you say so. You can '
+      'Scans go back to asking, only when you say so. You can '
       'download it again any time.';
 
   /// Reads the slice's own meta table for provenance — product_count and
@@ -112,72 +113,77 @@ class _BarcodeDbScreenState extends ConsumerState<BarcodeDbScreen>
     if (!_slicesSupported) {
       return Scaffold(
         appBar: AppBar(title: const Text('Offline barcode lookup')),
-        body: Padding(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          child: Text(
-            'Offline barcode databases live on the phone app — on the web, '
-            'lookups happen only when you ask.',
-            style: theme.textTheme.bodyMedium,
-          ),
-        ),
+        body: OhPage(
+            padding: EdgeInsets.zero,
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: Text(
+                'Offline barcode databases live on the phone app. On the web, '
+                'lookups happen only when you ask.',
+                style: theme.textTheme.bodyMedium,
+              ),
+            )),
       );
     }
     return Scaffold(
       appBar: AppBar(title: const Text('Offline barcode lookup')),
-      body: ListView(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        children: [
-          Text(
-            'Download once, and barcode scans are answered on this phone — '
-            'nothing leaves. A code these don\'t know can still be asked '
-            'online, one tap at a time.',
-            style: theme.textTheme.bodyMedium,
-          ),
-          const SizedBox(height: AppSpacing.md),
-          for (final spec in barcodeDbCatalog)
-            Card(
-              margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-              child: DownloadCardTile<_SliceMeta>(
-                status: downloadStatuses[spec.id] ?? const DownloadNotStarted(),
-                title: spec.approxBytes > 0
-                    ? '${spec.displayName} · '
-                        '${formatApproxBytes(spec.approxBytes)}'
-                    : spec.displayName,
-                notDownloadedSubtitle: 'Not downloaded — scans ask online, '
-                    'one tap at a time.',
-                installedSubtitle: (theme, meta) => Text(
-                    [
-                      'On this phone',
-                      if (meta?.productCount case final count?)
-                        '$count products',
-                      if (meta?.builtAt case final built?) 'built $built',
-                    ].join(' · '),
-                    style: theme.textTheme.bodySmall),
-                failedSubtitle: "Couldn't finish — trying again is safe.",
-                deleteTooltip: 'Delete this database',
-                onDownload: () => startDownload(spec),
-                onDelete: () => confirmAndDeleteItem(spec),
+      body: OhPage(
+          padding: EdgeInsets.zero,
+          child: ListView(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            children: [
+              Text(
+                'Download once, and barcode scans are answered on this phone. '
+                'Nothing leaves. A code these don’t know can still be asked '
+                'online, one tap at a time.',
+                style: theme.textTheme.bodyMedium,
               ),
-            ),
-          const SizedBox(height: AppSpacing.lg),
-          Text('About the data', style: theme.textTheme.titleMedium),
-          const SizedBox(height: AppSpacing.sm),
-          for (final spec in barcodeDbCatalog)
-            Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-              child: Text(
-                '${spec.displayName}: ${spec.attribution} '
-                '${spec.licenseName} — ${spec.licenseUrl}',
+              const SizedBox(height: AppSpacing.md),
+              for (final spec in barcodeDbCatalog)
+                Card(
+                  margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+                  child: DownloadCardTile<_SliceMeta>(
+                    status:
+                        downloadStatuses[spec.id] ?? const DownloadNotStarted(),
+                    title: spec.approxBytes > 0
+                        ? '${spec.displayName} · '
+                            '${formatApproxBytes(spec.approxBytes)}'
+                        : spec.displayName,
+                    notDownloadedSubtitle: 'Not downloaded: scans ask online, '
+                        'one tap at a time.',
+                    installedSubtitle: (theme, meta) => Text(
+                        [
+                          'On this phone',
+                          if (meta?.productCount case final count?)
+                            '$count products',
+                          if (meta?.builtAt case final built?) 'built $built',
+                        ].join(' · '),
+                        style: theme.textTheme.bodySmall),
+                    failedSubtitle: 'Couldn’t finish. Trying again is safe.',
+                    deleteTooltip: 'Delete this database',
+                    onDownload: () => startDownload(spec),
+                    onDelete: () => confirmAndDeleteItem(spec),
+                  ),
+                ),
+              const SizedBox(height: AppSpacing.lg),
+              Text('About the data', style: theme.textTheme.titleMedium),
+              const SizedBox(height: AppSpacing.sm),
+              for (final spec in barcodeDbCatalog)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                  child: Text(
+                    '${spec.displayName}: ${spec.attribution} '
+                    '${spec.licenseName}: ${spec.licenseUrl}',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ),
+              Text(
+                'Databases are separate files and stay separate: Open Food '
+                'Facts data remains under its own license.',
                 style: theme.textTheme.bodySmall,
               ),
-            ),
-          Text(
-            'Databases are separate files and stay separate — Open Food '
-            'Facts data remains under its own license.',
-            style: theme.textTheme.bodySmall,
-          ),
-        ],
-      ),
+            ],
+          )),
     );
   }
 }

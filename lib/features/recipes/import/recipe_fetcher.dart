@@ -1,4 +1,9 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
+
+/// The one fetcher the paste-a-link flow uses; a seam so widget tests can
+/// hand it a MockClient.
+final recipeFetcherProvider = Provider<RecipeFetcher>((ref) => RecipeFetcher());
 
 /// Fetches exactly one user-pasted recipe page. This is one of the two
 /// network flows the app has (the other is barcode lookup): user-initiated,
@@ -28,7 +33,7 @@ class RecipeFetcher {
     }).timeout(const Duration(seconds: 20));
     if (response.statusCode != 200) {
       throw http.ClientException(
-          'The site answered ${response.statusCode} — try copying the '
+          'The site answered ${response.statusCode}: try copying the '
           'recipe text instead.',
           url);
     }

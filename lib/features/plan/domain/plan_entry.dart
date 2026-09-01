@@ -18,6 +18,7 @@ class PlanEntry {
     this.refId,
     this.note,
     this.title = '',
+    this.kcalPerServing,
   });
 
   final String id;
@@ -33,4 +34,9 @@ class PlanEntry {
 
   /// Resolved display title (read-side only; ignored on write).
   final String title;
+
+  /// A planned recipe's kcal per serving, resolved live like [title]
+  /// (read-side only). Null for meals and notes, and when unknown: an
+  /// unknown is never a zero.
+  final double? kcalPerServing;
 }

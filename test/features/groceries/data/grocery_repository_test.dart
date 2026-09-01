@@ -120,6 +120,48 @@ void main() {
     expect(remaining, hasLength(1));
     expect(remaining.single.checked, isFalse);
   });
+
+  test('clearChecked reports what it took, and restore puts exactly that back',
+      () async {
+    // The Undo for "Clear checked" (lens audit humane-05): it restores the
+    // rows it cleared, and only those.
+    await repo.addManual('Milk');
+    await repo.addManual('Eggs');
+    await repo.addManual('Bread');
+    final items = await repo.getAll();
+    final milk = items.singleWhere((i) => i.name == 'Milk');
+    final eggs = items.singleWhere((i) => i.name == 'Eggs');
+    await repo.setChecked(milk.id, checked: true);
+    await repo.setChecked(eggs.id, checked: true);
+
+    final cleared = await repo.clearChecked();
+    expect(cleared.toSet(), {milk.id, eggs.id});
+    expect((await repo.getAll()).map((i) => i.name), ['Bread']);
+
+    await repo.restore(cleared);
+    final back = await repo.getAll();
+    expect(back.map((i) => i.name).toSet(), {'Milk', 'Eggs', 'Bread'});
+    expect(back.where((i) => i.checked).map((i) => i.name).toSet(),
+        {'Milk', 'Eggs'},
+        reason: 'they come back as they were: checked');
+  });
+
+  test('a restored row is stamped newer than its tombstone', () async {
+    // Household sync is last-write-wins on the HLC: a restore that kept
+    // the tombstone's stamp would lose to the deletion on the other phone.
+    await repo.addManual('Milk');
+    final id = (await repo.getAll()).single.id;
+    await repo.remove(id);
+    final tomb = await (db.select(db.groceryItems)
+          ..where((g) => g.id.equals(id)))
+        .getSingle();
+    await repo.restore([id]);
+    final row = await (db.select(db.groceryItems)
+          ..where((g) => g.id.equals(id)))
+        .getSingle();
+    expect(row.isDeleted, isFalse);
+    expect(row.hlc!.compareTo(tomb.hlc!), greaterThan(0));
+  });
 }
 
 /// Deterministic ids for tests.

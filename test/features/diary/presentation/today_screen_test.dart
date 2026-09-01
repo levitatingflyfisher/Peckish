@@ -52,7 +52,25 @@ void main() {
     await tester.pumpWidget(host(db));
     await tester.pumpAndSettle();
     expect(find.text('0'), findsWidgets); // kcal total
-    expect(find.textContaining('Nothing yet'), findsOneWidget);
+    // lens audit dmmt-03: a fresh install has no regulars rail, so the
+    // empty state must not point "above" at nothing; it names the + alone.
+    expect(find.text('Nothing logged yet. Tap + to add your first meal.'),
+        findsOneWidget);
+    expect(find.textContaining('regular'), findsNothing);
+    await unmount(tester);
+  });
+
+  testWidgets('once regulars exist, the empty state names the rail by its '
+      'heading', (tester) async {
+    await tester.runAsync(
+        () => DiaryRepository(db).log(entry(id: 'e-1', day: '2020-01-01')));
+    await tester.pumpWidget(host(db));
+    await tester.pumpAndSettle();
+    expect(find.text('Your regulars'), findsOneWidget);
+    expect(
+        find.text('Nothing logged yet. Tap one of Your regulars, or + to '
+            'add.'),
+        findsOneWidget);
     await unmount(tester);
   });
 
@@ -109,7 +127,7 @@ void main() {
     // first — see delete_undo_test.dart for the confirm/Undo coverage.
     await tester.drag(find.text('249 kcal'), const Offset(-500, 0));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Delete'));
+    await tester.tap(find.text('Delete line'));
     await tester.pumpAndSettle();
 
     expect(find.text('249 kcal'), findsNothing);

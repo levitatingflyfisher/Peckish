@@ -11,6 +11,7 @@ import 'package:peckish/features/diary/presentation/history_screen.dart';
 import 'package:peckish/features/diary/presentation/today_screen.dart';
 import 'package:peckish/features/food/domain/macro_set.dart';
 import 'package:peckish/shared/theme/app_theme.dart';
+import 'package:peckish/shared/widgets/undo_host.dart';
 
 // Drift widget-test rules apply — see the canonical comment in
 // test/features/groceries/presentation/groceries_screen_test.dart.
@@ -45,7 +46,11 @@ void main() {
 
   Widget todayHost() => ProviderScope(
         overrides: [appDatabaseProvider.overrideWithValue(db)],
-        child: MaterialApp(theme: AppTheme.light, home: const TodayScreen()),
+        child: MaterialApp(
+          theme: AppTheme.light,
+          builder: (context, child) => UndoHost(child: child!),
+          home: const TodayScreen(),
+        ),
       );
 
   Future<void> unmount(WidgetTester tester) async {
@@ -136,10 +141,11 @@ void main() {
   });
 
   testWidgets(
-      'Delete in the edit sheet asks, then removes the line with an Undo',
+      'Delete in the edit sheet is deliberate: no dialog, a lasting Undo',
       (tester) async {
-    // Swipe was the only, undiscoverable way to delete a line — the sheet
-    // you land on by TAPPING a line now offers the same forgiving path.
+    // Tapping Delete in the sheet you opened on purpose is already the
+    // decision (fleet delete ruling): it deletes at once, the sheet closes,
+    // and the Undo bar stays until the person acts.
     await seed(tester);
     await tester.pumpWidget(todayHost());
     await tester.pumpAndSettle();
@@ -150,22 +156,18 @@ void main() {
 
     await tester.tap(find.text('Delete'));
     await tester.pumpAndSettle();
-    expect(find.text('Delete Egg burrito?'), findsOneWidget,
-        reason: 'the same confirm the swipe path uses — this is not a '
-            'second, weaker delete');
-
-    await tester.tap(find.text('Delete').last);
-    await tester.pumpAndSettle();
-
+    expect(find.byType(AlertDialog), findsNothing,
+        reason: 'no "are you sure?" over a deliberate delete');
     expect(find.text('Fix this line'), findsNothing,
-        reason: 'confirming closes the edit sheet too');
+        reason: 'the sheet closes with its line');
     expect(
       find.descendant(
           of: find.byType(EntryTile), matching: find.text('Egg burrito')),
       findsNothing,
     );
-    expect(find.text('Removed Egg burrito'), findsOneWidget);
+    expect(find.text('Deleted Egg burrito'), findsOneWidget);
 
+    await tester.pump(const Duration(hours: 1));
     await tester.tap(find.text('Undo'));
     await tester.pumpAndSettle();
     expect(
@@ -173,30 +175,6 @@ void main() {
           of: find.byType(EntryTile), matching: find.text('Egg burrito')),
       findsOneWidget,
       reason: 'Undo re-seats the exact line that was removed',
-    );
-    await unmount(tester);
-  });
-
-  testWidgets('Cancelling the delete confirm leaves the edit sheet open',
-      (tester) async {
-    await seed(tester);
-    await tester.pumpWidget(todayHost());
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.descendant(
-        of: find.byType(EntryTile), matching: find.text('Egg burrito')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Delete'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Cancel').last);
-    await tester.pumpAndSettle();
-
-    expect(find.text('Fix this line'), findsOneWidget,
-        reason: 'backing out of the confirm returns to the edit sheet');
-    expect(
-      find.descendant(
-          of: find.byType(EntryTile), matching: find.text('Egg burrito')),
-      findsOneWidget,
     );
     await unmount(tester);
   });

@@ -107,7 +107,7 @@ class _GuessSheetState extends ConsumerState<_GuessSheet> {
             _draft == null
                 ? 'Describe the meal in your own words. The AI drafts the '
                     'lines; nothing is logged until you say so.'
-                : 'AI guesses — prune what it got wrong, then log.',
+                : 'AI guesses: prune what it got wrong, then log.',
             style: theme.textTheme.bodySmall,
           ),
           if (widget.day != null)
@@ -187,7 +187,7 @@ class _GuessSheetState extends ConsumerState<_GuessSheet> {
             FilledButton(
               onPressed: _draft!.isEmpty ? null : _logAll,
               child: Text(
-                  'Log ${_draft!.length} ${_draft!.length == 1 ? "entry" : "entries"}'),
+                  'Log ${_draft!.length} ${_draft!.length == 1 ? 'entry' : 'entries'}'),
             ),
             TextButton(
               onPressed: () => setState(() {
@@ -221,7 +221,7 @@ class _GuessSheetState extends ConsumerState<_GuessSheet> {
       if (!mounted) return;
       _finish(
           guess,
-          "The AI couldn't make anything of that — try naming "
+          'The AI couldn’t make anything of that: try naming '
           'the foods more plainly, or Quick add them yourself.');
     } on GuessException catch (e) {
       if (!mounted) return;
@@ -260,16 +260,16 @@ class _GuessSheetState extends ConsumerState<_GuessSheet> {
           // which is why this read as the feature being broken.
           PlateScan.sawFoodButNotWhat(labels)
               ? 'That looks like a meal, but the photo labeller only gets '
-                  'as far as "food" — it knows about nineteen dishes, not '
+                  'as far as “food”: it knows about nineteen dishes, not '
                   'yours. Say what it was and the numbers come from the '
                   'same place.'
-              : "Couldn't spot any food in that photo — describe the "
+              : 'Couldn’t spot any food in that photo: describe the '
                   'meal below instead.');
     } on PlateUnavailableException {
       if (!mounted) return;
       setState(() {
         _busy = false;
-        _message = "This phone can't label photos — that one piece rides "
+        _message = 'This phone can’t label photos: that one piece rides '
             'Google Play services. Everything else, including the '
             'downloaded on-device model, works without it: describe the '
             'meal below.';
@@ -278,7 +278,7 @@ class _GuessSheetState extends ConsumerState<_GuessSheet> {
       if (!mounted) return;
       setState(() {
         _busy = false;
-        _message = "Couldn't read that photo — describe the meal below "
+        _message = 'Couldn’t read that photo: describe the meal below '
             'instead.';
       });
     }

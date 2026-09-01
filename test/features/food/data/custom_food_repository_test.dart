@@ -74,4 +74,13 @@ void main() {
     expect(got!.perServing.kcal, 700);
     expect(got.perServing.proteinG, isNull);
   });
+
+  test('restore undoes a delete', () async {
+    await repo.create(caferio());
+    await repo.delete('cf-1');
+    expect(await repo.byId('cf-1'), isNull);
+    await repo.restore('cf-1');
+    expect((await repo.byId('cf-1'))!.name,
+        'Cafe Rio grilled chicken salad (small)');
+  });
 }

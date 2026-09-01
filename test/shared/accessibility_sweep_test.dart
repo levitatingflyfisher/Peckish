@@ -123,7 +123,7 @@ void main() {
     await tester.tap(find.text('Find food'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Search foods — works offline'), findsOneWidget,
+    expect(find.text('Search foods (works offline)'), findsOneWidget,
         reason: 'the sheet is still reachable at 2× text');
     expect(tester.takeException(), isNull);
 

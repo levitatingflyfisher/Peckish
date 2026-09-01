@@ -127,7 +127,7 @@ void main() {
     });
     await tester.pumpAndSettle();
 
-    expect(find.textContaining("Couldn't spot any food"), findsOneWidget);
+    expect(find.textContaining('Couldn’t spot any food'), findsOneWidget);
     expect(find.byType(SnackBar), findsNothing);
     await unmount(tester);
   });

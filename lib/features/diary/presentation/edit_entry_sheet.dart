@@ -7,7 +7,7 @@ import 'package:peckish/features/food/domain/macro_set.dart';
 import 'package:peckish/shared/extensions/qty_format.dart';
 import 'package:peckish/shared/theme/app_colors.dart';
 import 'package:peckish/shared/theme/app_spacing.dart';
-import 'package:peckish/shared/widgets/confirm_dialog.dart';
+import 'package:peckish/shared/widgets/undo_host.dart';
 import 'package:peckish/shared/widgets/num_field.dart';
 import 'package:peckish/shared/widgets/input_modal.dart';
 
@@ -117,32 +117,20 @@ class _EditEntryDialogState extends ConsumerState<_EditEntryDialog> {
     if (mounted) Navigator.of(context).pop();
   }
 
-  /// Swipe used to be the only, undiscoverable way to delete a line — this
-  /// gives the sheet you land on by TAPPING one the same forgiving path:
-  /// the same confirm the swipe uses, then Undo re-seats the exact row.
+  /// Swipe used to be the only, undiscoverable way to delete a line. The
+  /// sheet you land on by TAPPING one has a Delete button, and pressing it
+  /// is already the decision (fleet delete ruling): no dialog, the line
+  /// goes, the sheet closes, and the app-wide Undo re-seats the exact row.
   Future<void> _delete() async {
     final entry = widget.entry;
-    final sure = await showConfirmDialog(
-      context,
-      title: 'Delete ${entry.label}?',
-      message: "This line comes off the ledger — Undo puts it straight "
-          'back if you change your mind.',
-    );
-    if (!sure || !mounted) return;
     final repo = ref.read(diaryRepositoryProvider);
-    final messenger = ScaffoldMessenger.of(context);
+    final undo = ref.read(undoControllerProvider);
     await repo.delete(entry.id);
-    if (!mounted) return;
-    Navigator.of(context).pop();
-    messenger
-      ..clearSnackBars()
-      ..showSnackBar(SnackBar(
-        content: Text('Removed ${entry.label}'),
-        action: SnackBarAction(
-          label: 'Undo',
-          onPressed: () => repo.restore(entry),
-        ),
-      ));
+    if (mounted) Navigator.of(context).pop();
+    undo.show(
+      message: 'Deleted ${entry.label}',
+      onUndo: () => repo.restore(entry),
+    );
   }
 
   Widget _numField(TextEditingController c, String label) => Padding(

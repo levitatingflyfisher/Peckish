@@ -15,6 +15,8 @@ import 'package:peckish/features/food/domain/food_usage.dart';
 import 'package:peckish/features/food/domain/macro_set.dart';
 import 'package:peckish/shared/theme/app_theme.dart';
 
+import '../../../support/backup_overrides.dart';
+
 // Drift widget-test rules apply — see the canonical comment in
 // test/features/groceries/presentation/groceries_screen_test.dart.
 //
@@ -28,7 +30,10 @@ void main() {
   setUp(() => db = AppDatabase(NativeDatabase.memory()));
 
   Widget todayHost() => ProviderScope(
-        overrides: [appDatabaseProvider.overrideWithValue(db)],
+        overrides: [
+        appDatabaseProvider.overrideWithValue(db),
+        ...backupTestOverrides(),
+      ],
         child: MaterialApp(theme: AppTheme.light, home: const TodayScreen()),
       );
 
@@ -74,7 +79,7 @@ void main() {
     // The combo landed as one diary line, and the day is now finished —
     // the card says so instead of proposing more.
     expect(find.textContaining('Egg'), findsWidgets);
-    expect(find.textContaining("You're set for today"), findsOneWidget);
+    expect(find.textContaining('You’re set for today'), findsOneWidget);
     expect(find.text('Log'), findsNothing);
     await unmount(tester);
   });
@@ -98,7 +103,7 @@ void main() {
     await tester.pumpWidget(todayHost());
     await tester.pumpAndSettle();
     expect(find.text('Round out your day'), findsNothing);
-    expect(find.textContaining("You're set"), findsNothing);
+    expect(find.textContaining('You’re set'), findsNothing);
     await unmount(tester);
   });
 
@@ -126,7 +131,7 @@ void main() {
     await tester.pumpWidget(todayHost());
     await tester.pumpAndSettle();
 
-    expect(find.textContaining("You're set for today"), findsOneWidget);
+    expect(find.textContaining('You’re set for today'), findsOneWidget);
     expect(find.text('Log'), findsNothing);
     await unmount(tester);
   });
@@ -135,7 +140,10 @@ void main() {
       (tester) async {
     await seedProteinFloorAndEggs(tester);
     await tester.pumpWidget(ProviderScope(
-      overrides: [appDatabaseProvider.overrideWithValue(db)],
+      overrides: [
+        appDatabaseProvider.overrideWithValue(db),
+        ...backupTestOverrides(),
+      ],
       child: Consumer(
         builder: (context, ref, _) => MaterialApp.router(
           theme: AppTheme.light,
@@ -146,7 +154,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Round out your day'), findsOneWidget);
 
-    await tester.tap(find.byTooltip('Settings'));
+    await tester.tap(find.text('Settings'));
     await tester.pumpAndSettle();
     await tester.runAsync(() async {
       await tester

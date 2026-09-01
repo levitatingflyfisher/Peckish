@@ -1,5 +1,43 @@
 # Changelog
 
+## Unreleased: the fleet fixes
+
+- **A failed recipe import says what went wrong, where you are looking.**
+  The paste dialog stays open while the page is fetched, the button shows
+  it is working, Cancel works at any point, and a failure is one plain
+  sentence under the link (not a link, too slow, didn't answer, no recipe on
+  the page) with Try again and Write it down instead. No more raw error in a
+  toast that vanished.
+- **Deleting follows one rule.** A swipe (a diary line, a grocery item) asks
+  first and names the thing. A delete you chose on purpose (a recipe, a
+  custom food, a planned meal, Clear checked, Delete in a line's sheet)
+  happens at once and offers Undo, and that Undo stays until you tap it,
+  dismiss it, or delete something else. Grocery removals can finally be
+  undone, and Clear checked is a word, shown only when something is checked.
+- **Theme follows your phone** by default, and light, dark or follow the
+  phone is in every tab's top bar. A phone set to dark no longer opens
+  Peckish in cream.
+- **Set the table is easier to find.** It is pinned under the week on Plan,
+  and an empty grocery list offers it directly, for this week's plan.
+- **The week shows its numbers.** A planned recipe shows its kcal per
+  serving on its day.
+- **The recipe editor keeps a draft.** Back, a tab switch or the phone
+  closing the app in the background no longer loses what you typed; come
+  back and it is there, with Start over if you want it.
+- **Easier to read.** Secondary text and empty states meet contrast, the
+  History chart's scale labels grow with your text size, and the pairing
+  code uses the shared code face.
+- **Tablets and the browser** keep each screen to a comfortable width, with
+  the top bars spanning the window.
+- **Backup:** Erase all data first saves a verified safety copy when backup
+  is set up (and erases nothing if that copy fails); Today reminds you,
+  dismissibly, when backup isn't set up; on the web, recovery words are no
+  longer shared with other apps from the same site.
+- **Top-bar actions carry words** (Settings, Edit, Delete, Stop camera).
+  The empty Today screen no longer points at controls that aren't there.
+- Fonts now come from the shared design package (about 340 KB smaller);
+  copy uses proper apostrophes and quotes.
+
 ## 0.10.1 — the camera button is legible again
 
 - **"Snap your plate" was washed out.** Its camera glyph painted in the

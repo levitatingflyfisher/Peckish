@@ -58,7 +58,7 @@ class TotalsCard extends StatelessWidget {
                         ? 'kcal'
                         : 'of ${targets.resolvedKcalRole.mark}'
                             '${_fmt(kcalTarget)} kcal',
-                    style: text.titleMedium?.copyWith(color: AppColors.stone),
+                    style: text.titleMedium?.copyWith(color: AppColors.secondaryText(context)),
                   ),
                 ),
               ],

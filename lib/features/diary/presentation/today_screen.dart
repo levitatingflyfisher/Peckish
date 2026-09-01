@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:openhearth_design/openhearth_design.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sanctuary_backup_ui/sanctuary_backup_ui.dart';
 
 import 'package:peckish/core/providers/core_providers.dart';
 import 'package:peckish/features/diary/domain/daily_targets.dart';
@@ -15,6 +17,8 @@ import 'package:peckish/features/diary/domain/suggestion_engine.dart';
 import 'package:peckish/features/food/domain/macro_set.dart';
 import 'package:peckish/shared/theme/app_colors.dart';
 import 'package:peckish/shared/theme/app_spacing.dart';
+import 'package:peckish/shared/widgets/bar_actions.dart';
+import 'package:peckish/shared/widgets/theme_toggle_action.dart';
 
 /// Today — the daily loop. Law: logging a regular costs ONE tap (the recents
 /// rail); anything else is two (the + sheet). Totals are plain numbers
@@ -33,63 +37,78 @@ class TodayScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Today'),
         actions: [
-          // History lives on the nav bar now — the corner is for Settings
-          // alone.
-          IconButton(
-            icon: const Icon(Icons.settings_outlined),
-            tooltip: 'Settings',
-            onPressed: () => context.push('/settings'),
-          ),
+          BarActions(children: [
+            // History lives on the nav bar now; the corner is for Settings
+            // (icon plus word) and the theme choice.
+            TextButton.icon(
+              icon: const Icon(Icons.settings_outlined),
+              label: const Text('Settings'),
+              onPressed: () => context.push('/settings'),
+            ),
+            const ThemeToggleAction(),
+          ]),
         ],
       ),
       floatingActionButton: const SpeedDialFab(),
-      body: ListView(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        children: [
-          TotalsCard(
-            totals: totals.value ?? const MacroSet(),
-            targets: targets.value ?? const DailyTargets(),
-          ),
-          if (!(targets.value?.isSet ?? true))
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                icon: const Icon(Icons.flag_outlined, size: 18),
-                label: const Text('Set daily targets'),
-                onPressed: () => showTargetsDialog(context, ref),
+      body: OhPage(
+          padding: EdgeInsets.zero,
+          child: ListView(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            children: [
+              // Unfinished backup setup is never forgotten (fleet ruling on
+              // first run): a dismissible line, gone once setup is done.
+              const BackupSetupReminder(),
+              TotalsCard(
+                totals: totals.value ?? const MacroSet(),
+                targets: targets.value ?? const DailyTargets(),
               ),
-            ),
-          if (ref.watch(_suggestionsProvider(today)) case final advice?) ...[
-            const SizedBox(height: AppSpacing.lg),
-            _RoundOutCard(
-              day: today,
-              advice: advice,
-              targets: targets.value ?? const DailyTargets(),
-            ),
-          ],
-          const SizedBox(height: AppSpacing.lg),
-          // Aimed at no day in particular, which means today — the same
-          // rail a past day gets, pointed at now.
-          const RegularsRail(),
-          const SizedBox(height: AppSpacing.lg),
-          Text('Logged today', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: AppSpacing.sm),
-          if ((entries.value ?? const []).isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
-              child: Text(
-                'Nothing yet. Tap a regular above, or + to add.',
-                style: Theme.of(context)
-                    .textTheme
-                    .bodyMedium
-                    ?.copyWith(color: AppColors.stone),
-              ),
-            )
-          else
-            for (final entry in entries.value!) EntryTile(entry: entry),
-          const SizedBox(height: 96), // room above the FAB
-        ],
-      ),
+              if (!(targets.value?.isSet ?? true))
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    icon: const Icon(Icons.flag_outlined, size: 18),
+                    label: const Text('Set daily targets'),
+                    onPressed: () => showTargetsDialog(context, ref),
+                  ),
+                ),
+              if (ref.watch(_suggestionsProvider(today))
+                  case final advice?) ...[
+                const SizedBox(height: AppSpacing.lg),
+                _RoundOutCard(
+                  day: today,
+                  advice: advice,
+                  targets: targets.value ?? const DailyTargets(),
+                ),
+              ],
+              const SizedBox(height: AppSpacing.lg),
+              // Aimed at no day in particular, which means today — the same
+              // rail a past day gets, pointed at now.
+              const RegularsRail(),
+              const SizedBox(height: AppSpacing.lg),
+              Text('Logged today',
+                  style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: AppSpacing.sm),
+              if ((entries.value ?? const []).isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+                  child: Text(
+                    // Names only controls that are on the screen (lens audit
+                    // dmmt-03): a fresh install has no regulars rail.
+                    (ref.watch(regularsProvider).value ?? const []).isEmpty
+                        ? 'Nothing logged yet. Tap + to add your first meal.'
+                        : 'Nothing logged yet. Tap one of Your regulars, or + '
+                            'to add.',
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodyMedium
+                        ?.copyWith(color: AppColors.secondaryText(context)),
+                  ),
+                )
+              else
+                for (final entry in entries.value!) EntryTile(entry: entry),
+              const SizedBox(height: 96), // room above the FAB
+            ],
+          )),
     );
   }
 }
@@ -198,7 +217,7 @@ class _RoundOutCard extends ConsumerWidget {
                   size: 20, color: AppColors.sage),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
-                child: Text("You're set for today — every target met.",
+                child: Text('You’re set for today: every target met.',
                     style: theme.textTheme.bodyMedium),
               ),
               dismiss,
@@ -234,8 +253,8 @@ class _RoundOutCard extends ConsumerWidget {
                         Text(_combo(s), style: theme.textTheme.bodyLarge),
                         Text(
                           _landing(s),
-                          style: theme.textTheme.bodySmall
-                              ?.copyWith(color: AppColors.stone),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                              color: AppColors.secondaryText(context)),
                         ),
                       ],
                     ),

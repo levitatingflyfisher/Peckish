@@ -162,7 +162,7 @@ void main() {
     await tester.tap(find.text('Guess'));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining("couldn't make anything"), findsOneWidget);
+    expect(find.textContaining('couldn’t make anything'), findsOneWidget);
     expect(find.byType(SnackBar), findsNothing);
     await unmount(tester);
   });

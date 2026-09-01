@@ -125,8 +125,8 @@ class _TargetsDialogState extends ConsumerState<_TargetsDialog> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'All optional — leave a box empty to skip it. "At least" is '
-              'a floor to reach; "Under" is a budget to stay within.',
+              'All optional: leave a box empty to skip it. “At least” is '
+              'a floor to reach; “Under” is a budget to stay within.',
               style: theme.textTheme.bodySmall,
             ),
             const SizedBox(height: AppSpacing.md),

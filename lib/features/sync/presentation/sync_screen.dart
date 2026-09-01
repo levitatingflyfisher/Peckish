@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:openhearth_design/openhearth_design.dart';
 import 'package:peckish/core/providers/core_providers.dart';
 import 'package:peckish/features/sync/data/lan_sync_client.dart';
 import 'package:peckish/features/sync/data/lan_sync_server.dart';
@@ -73,111 +74,118 @@ class _SyncScreenState extends ConsumerState<SyncScreen> {
     if (!lanSyncSupported) {
       return Scaffold(
         appBar: AppBar(title: const Text('Household sync')),
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.xl),
-            child: Text(
-              'Household sync runs between the phones and tablets on your '
-              'Wi-Fi — the browser cannot join in. Use the Android app for '
-              'syncing; your data here stays local.',
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodyMedium,
-            ),
-          ),
-        ),
+        body: OhPage(
+            padding: EdgeInsets.zero,
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.xl),
+                child: Text(
+                  'Household sync runs between the phones and tablets on your '
+                  'Wi-Fi: the browser cannot join in. Use the Android app for '
+                  'syncing; your data here stays local.',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodyMedium,
+                ),
+              ),
+            )),
       );
     }
     return Scaffold(
       appBar: AppBar(title: const Text('Household sync')),
-      body: ListView(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        children: [
-          Text(
-            'The kitchen is shared; the plate is yours. Recipes, the weekly '
-            'plan, groceries, custom foods and saved meals sync between '
-            'devices that hold the same household code — encrypted, over '
-            'your own Wi-Fi, touching no server anywhere. Food diaries and '
-            'targets never leave their device.',
-            style: theme.textTheme.bodyMedium,
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          Text('Household code', style: theme.textTheme.titleMedium),
-          const SizedBox(height: AppSpacing.sm),
-          if (_secret == null || _secret!.isEmpty) ...[
-            const Text('No code yet. Create one here, then enter it on the '
-                'other device — the code is the pairing.'),
-            const SizedBox(height: AppSpacing.sm),
-            FilledButton(
-              onPressed: _createCode,
-              child: const Text('Create a household code'),
-            ),
-            TextButton(
-              onPressed: _enterCode,
-              child: const Text('I have a code from another device'),
-            ),
-          ] else ...[
-            Row(
-              children: [
-                Expanded(
-                  child: Text(_secret!,
-                      style: theme.textTheme.bodyMedium
-                          ?.copyWith(fontFamily: 'monospace')),
+      body: OhPage(
+          padding: EdgeInsets.zero,
+          child: ListView(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            children: [
+              Text(
+                'The kitchen is shared; the plate is yours. Recipes, the weekly '
+                'plan, groceries, custom foods and saved meals sync between '
+                'devices that hold the same household code: encrypted, over '
+                'your own Wi-Fi, touching no server anywhere. Food diaries and '
+                'targets never leave their device.',
+                style: theme.textTheme.bodyMedium,
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              Text('Household code', style: theme.textTheme.titleMedium),
+              const SizedBox(height: AppSpacing.sm),
+              if (_secret == null || _secret!.isEmpty) ...[
+                const Text('No code yet. Create one here, then enter it on the '
+                    'other device: the code is the pairing.'),
+                const SizedBox(height: AppSpacing.sm),
+                FilledButton(
+                  onPressed: _createCode,
+                  child: const Text('Create a household code'),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.copy),
-                  tooltip: 'Copy the code',
-                  onPressed: () =>
-                      Clipboard.setData(ClipboardData(text: _secret!)),
+                TextButton(
+                  onPressed: _enterCode,
+                  child: const Text('I have a code from another device'),
+                ),
+              ] else ...[
+                Row(
+                  children: [
+                    Expanded(
+                      // The ladder's code face: a code read aloud or copied
+                      // letter by letter wants fixed-width glyphs.
+                      child: Text(_secret!,
+                          style: OhTypography.code(
+                              color: theme.colorScheme.onSurface)),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.copy),
+                      tooltip: 'Copy the code',
+                      onPressed: () =>
+                          Clipboard.setData(ClipboardData(text: _secret!)),
+                    ),
+                  ],
+                ),
+                TextButton(
+                  onPressed: _enterCode,
+                  child: const Text('Replace with a code from another device'),
                 ),
               ],
-            ),
-            TextButton(
-              onPressed: _enterCode,
-              child: const Text('Replace with a code from another device'),
-            ),
-          ],
-          const SizedBox(height: AppSpacing.lg),
-          Text('This device', style: theme.textTheme.titleMedium),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('Reachable for sync'),
-            subtitle: const Text(
-                'Lets the other device pull from and push to this one '
-                'while Peckish is open.'),
-            value: _listening,
-            onChanged:
-                (_secret?.isNotEmpty ?? false) ? (v) => _toggleServer(v) : null,
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          Text('Sync with a device', style: theme.textTheme.titleMedium),
-          const SizedBox(height: AppSpacing.sm),
-          TextField(
-            controller: _host,
-            keyboardType: TextInputType.url,
-            decoration: const InputDecoration(
-              labelText: 'Other device address',
-              hintText: 'e.g. 192.168.1.23',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          FilledButton(
-            onPressed:
-                (_secret?.isNotEmpty ?? false) && !_busy ? _syncNow : null,
-            child: _busy
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2))
-                : const Text('Sync now'),
-          ),
-          if (_message != null)
-            Padding(
-              padding: const EdgeInsets.only(top: AppSpacing.sm),
-              child: Text(_message!, style: theme.textTheme.bodyMedium),
-            ),
-        ],
-      ),
+              const SizedBox(height: AppSpacing.lg),
+              Text('This device', style: theme.textTheme.titleMedium),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Reachable for sync'),
+                subtitle: const Text(
+                    'Lets the other device pull from and push to this one '
+                    'while Peckish is open.'),
+                value: _listening,
+                onChanged: (_secret?.isNotEmpty ?? false)
+                    ? (v) => _toggleServer(v)
+                    : null,
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              Text('Sync with a device', style: theme.textTheme.titleMedium),
+              const SizedBox(height: AppSpacing.sm),
+              TextField(
+                controller: _host,
+                keyboardType: TextInputType.url,
+                decoration: const InputDecoration(
+                  labelText: 'Other device address',
+                  hintText: 'e.g. 192.168.1.23',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              FilledButton(
+                onPressed:
+                    (_secret?.isNotEmpty ?? false) && !_busy ? _syncNow : null,
+                child: _busy
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Text('Sync now'),
+              ),
+              if (_message != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: AppSpacing.sm),
+                  child: Text(_message!, style: theme.textTheme.bodyMedium),
+                ),
+            ],
+          )),
     );
   }
 
@@ -211,7 +219,7 @@ class _SyncScreenState extends ConsumerState<SyncScreen> {
     if (code == null || code.isEmpty) return;
     if (code.length < kMinSyncSecretLength) {
       setState(() => _message =
-          'That code is too short to be a household code — copy the whole '
+          'That code is too short to be a household code: copy the whole '
               'thing from the other device.');
       return;
     }
@@ -228,7 +236,7 @@ class _SyncScreenState extends ConsumerState<SyncScreen> {
     setState(() {
       _secret = code;
       _message = stamped > 0
-          ? 'Household code saved — $stamped existing items made syncable.'
+          ? 'Household code saved: $stamped existing items made syncable.'
           : 'Household code saved.';
     });
   }
@@ -247,7 +255,7 @@ class _SyncScreenState extends ConsumerState<SyncScreen> {
     final host = _host.text.trim();
     if (host.isEmpty) {
       setState(
-          () => _message = "Enter the other device's address (Settings, then "
+          () => _message = 'Enter the other device’s address (Settings, then '
               'Household sync, shows it there).');
       return;
     }
@@ -265,7 +273,7 @@ class _SyncScreenState extends ConsumerState<SyncScreen> {
       if (!mounted) return;
       setState(() {
         _busy = false;
-        _message = 'Synced — brought in ${result.pulled}, '
+        _message = 'Synced: brought in ${result.pulled}, '
             'sent ${result.pushed}.';
       });
     } catch (e) {
@@ -274,8 +282,8 @@ class _SyncScreenState extends ConsumerState<SyncScreen> {
         _busy = false;
         _message = e is SyncProtocolException
             ? e.message
-            : "Couldn't reach that device — same Wi-Fi, Peckish open, "
-                '"Reachable for sync" turned on?';
+            : 'Couldn’t reach that device: same Wi-Fi, Peckish open, '
+                '“Reachable for sync” turned on?';
       });
     }
   }

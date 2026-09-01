@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:peckish/core/storage/app_database.dart';
 import 'package:peckish/features/diary/data/saved_meal_repository.dart';
 import 'package:peckish/features/diary/domain/saved_meal.dart';
+import 'package:peckish/features/food/domain/macro_set.dart';
 import 'package:peckish/features/plan/data/plan_repository.dart';
 import 'package:peckish/features/plan/domain/plan_entry.dart';
 import 'package:peckish/features/recipes/data/recipe_repository.dart';
@@ -111,5 +112,49 @@ void main() {
     await RecipeRepository(db).delete('r-1');
     final entry = (await repo.entriesForDays(['2026-07-27'])).single;
     expect(entry.title, '(deleted recipe)');
+  });
+
+  test('restore puts a removed plan entry back on its day', () async {
+    await repo.upsert(const PlanEntry(
+      id: 'p-1',
+      day: '2026-07-27',
+      slot: PlanSlot.dinner,
+      kind: PlanKind.recipe,
+      refId: 'r-1',
+    ));
+    await repo.remove('p-1');
+    await repo.restore('p-1');
+    final back = await repo.entriesForDays(['2026-07-27']);
+    expect(back.single.title, 'Weeknight Tacos');
+  });
+
+  test('a planned recipe carries its kcal per serving; notes carry none',
+      () async {
+    // lens audit visual-display-10: the week showed no quantity at all,
+    // though every recipe already knows its kcal per serving.
+    await RecipeRepository(db).create(Recipe(
+      id: 'r-2',
+      title: 'Roast chicken',
+      servings: 4,
+      declaredPerServing: const MacroSet(kcal: 620),
+      createdAt: DateTime(2026, 7, 25),
+    ));
+    await repo.upsert(const PlanEntry(
+      id: 'p-1',
+      day: '2026-07-27',
+      slot: PlanSlot.dinner,
+      kind: PlanKind.recipe,
+      refId: 'r-2',
+    ));
+    await repo.upsert(const PlanEntry(
+      id: 'p-2',
+      day: '2026-07-28',
+      slot: PlanSlot.dinner,
+      kind: PlanKind.note,
+      note: 'Out',
+    ));
+    final got = await repo.entriesForDays(['2026-07-27', '2026-07-28']);
+    expect(got.firstWhere((e) => e.id == 'p-1').kcalPerServing, 620);
+    expect(got.firstWhere((e) => e.id == 'p-2').kcalPerServing, isNull);
   });
 }

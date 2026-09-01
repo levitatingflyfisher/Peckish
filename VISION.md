@@ -19,7 +19,11 @@ one local-first, no-accounts app.
 
 1. **The daily loop costs at most two taps.** Regulars are one.
 2. **Nutrition describes meals.** Weekly dinners are a household fact, not a
-   verdict. Advisory, never blocking; clay, never red.
+   verdict. Advisory, never blocking; clay, never red. (That law is about
+   the household's food and numbers. The one irreversible system act, Erase
+   all data, uses the fleet's urgency red with its icon and word, per the
+   ohStyle colour language: red + icon + word means "this cannot be taken
+   back", never "you ate too much".)
 3. **Every entity has full CRUD.** Edit, delete, reset, archive — forgiveness
    over prevention applies to data too.
 4. **The ledger never rewrites.** Entries snapshot macros at log time.
@@ -33,11 +37,11 @@ one local-first, no-accounts app.
 | Claim | Status |
 |---|---|
 | Offline food search over 13,652 USDA foods | **Shipped** — bundled CC0 spine, version-stamped import |
-| Recipe box with paste-a-URL import | **Shipped** — generic schema.org extractor; per-site long tail NOT covered (recipe-scrapers has 649 subclasses for a reason); manual entry is the honest fallback |
-| Weekly plan + self-writing grocery list | **Shipped** — three regeneration laws, keyword aisle sort (deliberately dumb, user-correctable) |
+| Recipe box with paste-a-URL import | **Shipped** — generic schema.org extractor; per-site long tail NOT covered (recipe-scrapers has 649 subclasses for a reason); manual entry is the honest fallback, offered in place when a fetch fails (the failure is a plain sentence under the link, never the raw error). The editor keeps a draft as you type, so leaving it loses nothing |
+| Weekly plan + self-writing grocery list | **Shipped** — three regeneration laws, keyword aisle sort (deliberately dumb, user-correctable); Set the table is pinned under the week and offered from an empty list; a planned recipe shows its kcal per serving. The plan still never reaches the diary: no "that's what we had" (lens audit finding 4, open) |
 | One-tap diary + staples + targets + history | **Shipped** — target roles (floor / budget / about) with "round out your day" suggestions drawn from your own regulars (v0.4, ADR-0008); a month-shaped history (v0.8) — trend line per macro against its target, tappable calendar, blank days stay visibly blank; a day's own lines show all four macros, not kcal alone |
 | Fixing a day you already lived | **Shipped v0.8, made cheap in v0.9, made findable since** — every way in (Find food, Quick add, Scan, Type a code, Guess it) lives on a speed-dial in the thumb zone, each naming the day before it writes; the **Foods** screen behind "See all" is one searchable surface over regulars, My Foods, saved meals, and the offline spine, with honest sort labels instead of three lists that just looked unsorted |
-| Forgiveness over prevention, for real | **Shipped** — the law was stated in this document before the code kept it: logging a regular and deleting a line both offer Undo, and a swipe-delete asks first. No redo stack — snackbar-undo is the Material norm, and a redo without a visible history surface would be guesswork UX |
+| Forgiveness over prevention, for real | **Shipped** — the law was stated in this document before the code kept it. A swipe (diary line, grocery item) asks first, naming the thing; a deliberate delete (a recipe, a custom food, a planned meal, "Clear checked", Delete in a line's sheet) does not ask and offers an Undo that never times out: it stays under every screen until you tap it, dismiss it, or delete something else (fleet delete ruling, `shared/widgets/undo_host.dart`). Logging a regular offers Undo too. No redo stack: a redo without a visible history surface would be guesswork UX. Downloaded model and barcode files still ask before they go, since no soft delete can hold a gigabyte |
 | A scan you have already answered | **Shipped v0.9** — saving a scanned food keeps its barcode (normalized per ADR-0010), so the resolver answers off your own shelf before any slice and logs at the serving you chose. The network is never asked twice |
 | Encrypted backup / restore (.ohbk) | **Shipped** — sanctuary spine, consequence copy test-bound to the erase set |
 | Ingredient→food matching for computed recipe nutrition | **Schema shipped, UI minimal** — declared (site) nutrition works today; hand-matching lines is future polish |

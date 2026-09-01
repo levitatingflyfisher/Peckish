@@ -42,7 +42,7 @@ class PeckishModelSpec {
         'Qwen2.5-0.5B-Instruct_multi-prefill-seq_q8_ekv1280.task',
     sizeBytes: 572000000, // ~546 MB
     modelType: 'qwen',
-    description: 'Small and quick — right-sized for parsing what you ate. '
+    description: 'Small and quick: right-sized for parsing what you ate. '
         '~550 MB, Apache-2.0, runs fully offline.',
   );
 
@@ -57,7 +57,7 @@ class PeckishModelSpec {
     sizeBytes: 1720000000, // ~1.6 GB
     modelType: 'qwen',
     description: 'Steadier on rambling descriptions. ~1.6 GB, Apache-2.0, '
-        'runs fully offline — needs a phone with room to breathe.',
+        'runs fully offline, but needs a phone with room to breathe.',
   );
 
   /// Default first — the order the UI shows.

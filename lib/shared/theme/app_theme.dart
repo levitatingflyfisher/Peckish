@@ -7,8 +7,9 @@ import 'package:openhearth_design/openhearth_design.dart';
 /// Peckish-specific is a semantic alias in app_colors.dart, which itself
 /// only points at OhColors: no raw hex anywhere in this app.
 ///
-/// Fonts are BUNDLED (assets/fonts/, declared in pubspec) and referenced
-/// by family — never fetched at runtime. No font egress on first launch.
+/// Fonts are BUNDLED as openhearth_design's package fonts (0.7.1+; Peckish
+/// ships no copy of its own) and never fetched at runtime. No font egress
+/// on first launch.
 class AppTheme {
   AppTheme._();
 

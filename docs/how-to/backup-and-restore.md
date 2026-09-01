@@ -14,7 +14,10 @@ recipes, plan, groceries, targets, regulars). The file is the interface:
 keep it, grep it, move it.
 
 **Erase all data** — deletes the user tables, keeps your theme and the
-built-in food database. The confirmation lists what goes; the list is
-test-bound to the truth.
+built-in food database. If backup is set up, a verified safety copy of
+everything goes into Previous backups first, and the erase only happens
+once that copy is proven readable; restoring it brings everything back. If
+the copy fails, nothing is erased. Without backup there is no copy, and the
+confirmation says so.
 
 The bundled USDA spine is never in a backup — it ships with every install.

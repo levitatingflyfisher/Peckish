@@ -101,4 +101,24 @@ void main() {
     await repo.delete('r-1');
     expect(await repo.getAll(includeArchived: true), isEmpty);
   });
+
+  test('restore brings a deleted recipe back whole, ingredients included',
+      () async {
+    // The lasting Undo on a recipe delete re-seats the captured recipe;
+    // delete drops the ingredient rows, so restore must write them again.
+    await repo.create(tacos());
+    final captured = (await repo.byId('r-1'))!;
+    await repo.delete('r-1');
+    expect(await repo.byId('r-1'), isNull);
+
+    await repo.restore(captured);
+    final back = await repo.byId('r-1');
+    expect(back, isNotNull);
+    expect(back!.title, 'Weeknight Tacos');
+    expect(back.ingredients.map((i) => i.text),
+        ['1 lb ground beef', '8 corn tortillas']);
+    final row = await (db.select(db.recipes)..where((r) => r.id.equals('r-1')))
+        .getSingle();
+    expect(row.isDeleted, isFalse);
+  });
 }

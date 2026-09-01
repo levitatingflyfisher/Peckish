@@ -9,6 +9,7 @@ import 'package:peckish/core/router/app_router.dart';
 import 'package:peckish/features/sanctuary_backup/backup_config.dart';
 import 'package:peckish/features/sanctuary_backup/data/backup_serializer.dart';
 import 'package:peckish/shared/theme/app_theme.dart';
+import 'package:peckish/shared/widgets/undo_host.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,6 +27,10 @@ void main() async {
         // core/auth/auth_state.dart stub types of the same name.
         sanctuary.sanctuaryAppDomainProvider.overrideWithValue('peckish'),
         sanctuaryBackupConfigProvider.overrideWithValue(peckishBackupConfig),
+        // Web: every fleet PWA shares one origin, so without this Peckish's
+        // recovery words would sit in the same localStorage slot as every
+        // other app's. Namespaces the key store by app; no-op on native.
+        appScopedKeyStoreOverride(),
         backupSerializerProvider.overrideWith(
           (ref) => PeckishBackupSerializer(ref.watch(appDatabaseProvider)),
         ),
@@ -69,18 +74,12 @@ class _PeckishAppState extends ConsumerState<PeckishApp> {
       darkTheme: AppTheme.dark,
       themeMode: themeMode,
       routerConfig: router,
-      // On wide screens keep the single-column app centered at a comfortable
-      // reading width rather than stretching edge-to-edge (phones pass through).
-      builder: (context, child) {
-        final inner = child ?? const SizedBox.shrink();
-        // sizeOf, not of().size: depend on size alone so keyboard-inset
-        // frames don't rebuild the whole app shell.
-        if (MediaQuery.sizeOf(context).width <= 760) return inner;
-        return ColoredBox(
-          color: Theme.of(context).scaffoldBackgroundColor,
-          child: Center(child: SizedBox(width: 760, child: inner)),
-        );
-      },
+      // Wide screens: every screen caps its own content with OhPage, so the
+      // bars, dialogs and sheets span the window (the old app-wide 760 px
+      // box squeezed them too). The one Undo bar sits under every screen,
+      // so an Undo outlives the page its delete closed.
+      builder: (context, child) =>
+          UndoHost(child: child ?? const SizedBox.shrink()),
     );
   }
 }

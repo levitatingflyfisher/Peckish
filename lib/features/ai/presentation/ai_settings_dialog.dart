@@ -73,8 +73,8 @@ class _AiSettingsDialogState extends ConsumerState<_AiSettingsDialog> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'When you use the guess box, the words you typed there — and '
-              'nothing else — go to the service you pick here. Off means '
+              'When you use the guess box, the words you typed there, and '
+              'nothing else, go to the service you pick here. Off means '
               'nothing ever leaves.',
               style: theme.textTheme.bodySmall,
             ),
@@ -119,7 +119,7 @@ class _AiSettingsDialogState extends ConsumerState<_AiSettingsDialog> {
                       contentPadding: EdgeInsets.zero,
                       title: Text('Household stove'),
                       subtitle:
-                          Text('A home server you own — asks travel encrypted '
+                          Text('A home server you own: asks travel encrypted '
                               'on your own Wi-Fi'),
                     ),
                     if (_backend == AiBackend.stove) ...[
@@ -152,7 +152,7 @@ class _AiSettingsDialogState extends ConsumerState<_AiSettingsDialog> {
                       const SizedBox(height: AppSpacing.sm),
                       Text(
                         'The same household phrase you use for backups '
-                        'works here — the stove only ever learns its own '
+                        'works here. The stove only ever learns its own '
                         'key.',
                         style: theme.textTheme.bodySmall,
                       ),
@@ -165,7 +165,7 @@ class _AiSettingsDialogState extends ConsumerState<_AiSettingsDialog> {
                       contentPadding: EdgeInsets.zero,
                       title: Text('On this phone'),
                       subtitle:
-                          Text('A small model, downloaded once — nothing ever '
+                          Text('A small model, downloaded once: nothing ever '
                               'leaves the device'),
                     ),
                     if (_backend == AiBackend.onDevice)

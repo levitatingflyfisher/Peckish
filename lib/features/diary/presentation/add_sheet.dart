@@ -97,7 +97,7 @@ class _AddSheetState extends ConsumerState<_AddSheet> {
                     // tap, which is the rarer case paying the cost.
                     decoration: const InputDecoration(
                       prefixIcon: Icon(Icons.search),
-                      hintText: 'Search foods — works offline',
+                      hintText: 'Search foods (works offline)',
                       border: OutlineInputBorder(),
                     ),
                     onChanged: _onChanged,
@@ -186,7 +186,7 @@ class _Results extends ConsumerWidget {
     final spine = ref.watch(spineReadyProvider);
     final results = ref.watch(_searchProvider);
     if (spine.isLoading) {
-      return const Center(child: Text('Setting the table — one moment…'));
+      return const Center(child: Text('Setting the table, one moment…'));
     }
     final customs = results.value?.$1 ?? const <CustomFood>[];
     final foods = results.value?.$2 ?? const <UsdaFood>[];
@@ -200,7 +200,7 @@ class _Results extends ConsumerWidget {
             style: Theme.of(context)
                 .textTheme
                 .bodyMedium
-                ?.copyWith(color: AppColors.stone),
+                ?.copyWith(color: AppColors.secondaryText(context)),
           ),
         ),
       );

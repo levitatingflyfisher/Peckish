@@ -16,7 +16,7 @@ Future<String?> stovePhraseProblem(String phrase) async {
     await DomovoiKeys.seedFromPhrase(phrase);
     return null;
   } catch (_) {
-    return "That doesn't look like a household phrase — check the words "
+    return 'That doesn’t look like a household phrase: check the words '
         'and their order (it has a built-in spell check).';
   }
 }
@@ -39,7 +39,7 @@ class _DomovoiStoveBrain implements StoveBrain {
     final phrase = _config.stovePhrase;
     if (host == null || host.isEmpty || phrase == null || phrase.isEmpty) {
       throw const GuessException(
-          "The stove isn't set up yet — add its address and the household "
+          'The stove isn’t set up yet: add its address and the household '
           'phrase in Settings.');
     }
     final client = StoveClient(
@@ -58,7 +58,7 @@ class _DomovoiStoveBrain implements StoveBrain {
     } on Exception {
       // An invalid stored phrase surfaces from seed derivation itself.
       throw const GuessException(
-          "The stove couldn't be asked — check the household phrase in "
+          'The stove couldn’t be asked: check the household phrase in '
           'Settings.');
     }
   }

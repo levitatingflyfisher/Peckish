@@ -85,7 +85,7 @@ void main() {
     expect(find.widgetWithText(TextField, 'Stove address'), findsOneWidget);
     expect(find.widgetWithText(TextField, 'Port'), findsOneWidget);
     expect(find.widgetWithText(TextField, 'Household phrase'), findsOneWidget);
-    expect(find.textContaining('the stove only ever learns its own key'),
+    expect(find.textContaining('The stove only ever learns its own key'),
         findsOneWidget,
         reason: 'the calm promise is the privacy contract');
   });
@@ -140,7 +140,7 @@ void main() {
 
     expect(find.text('Household stove'), findsOneWidget,
         reason: 'the dialog stays open to let the words be fixed');
-    expect(find.textContaining("doesn't look like a household phrase"),
+    expect(find.textContaining('doesn’t look like a household phrase'),
         findsOneWidget);
     final saved = await repo.load();
     expect(saved.backend, AiBackend.none,
