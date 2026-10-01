@@ -53,6 +53,10 @@ Future<void> logRegular(
           // Naming the day is the whole point on a past day: a silent
           // confirmation there reads as "did that go to today?".
           : 'Logged ${template.label} to ${prettyDay(day)}'),
+      // A quick log's Undo is a convenience that lapses with the line; a
+      // snack bar with an action otherwise stays until tapped, across
+      // screens (Flutter's default; conformance C14).
+      persist: false,
       action: SnackBarAction(
         label: 'Undo',
         onPressed: () => ref.read(diaryRepositoryProvider).delete(entry.id),

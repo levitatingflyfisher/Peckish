@@ -130,16 +130,19 @@ class SavedMealRepository {
   /// THE one-tap: copy every item into today's ledger, stamped [at]/[day],
   /// source = tap, and float the staple by stamping lastUsedAt. Goes through
   /// DiaryRepository.log — the single write path — so each item also records
-  /// its regular.
-  Future<void> logMeal(String id,
+  /// its regular. Returns the new entries' ids, for an Undo.
+  Future<List<String>> logMeal(String id,
       {required DateTime at, required String day}) async {
     final meal =
         (await getAll(includeArchived: true)).firstWhere((m) => m.id == id);
     final diary = DiaryRepository(_db);
+    final ids = <String>[];
     await _db.transaction(() async {
       for (final item in meal.items) {
+        final entryId = _newId();
+        ids.add(entryId);
         await diary.log(DiaryEntry(
-          id: _newId(),
+          id: entryId,
           day: day,
           at: at,
           food: item.food,
@@ -155,6 +158,7 @@ class SavedMealRepository {
       await (_db.update(_db.savedMeals)..where((m) => m.id.equals(id)))
           .write(SavedMealsCompanion(lastUsedAt: Value(at)));
     });
+    return ids;
   }
 
   static SavedMealItemsCompanion _itemRow(

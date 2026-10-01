@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 
 import 'package:peckish/core/providers/core_providers.dart';
 import 'package:peckish/features/diary/domain/diary_entry.dart';
+import 'package:peckish/features/food/domain/macro_set.dart';
 import 'package:peckish/features/plan/domain/plan_entry.dart';
 import 'package:peckish/features/plan/domain/week.dart';
 import 'package:peckish/shared/theme/app_colors.dart';
@@ -260,6 +261,52 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
   }
 }
 
+/// Logs a planned recipe (one serving) or staple (every item) into today's
+/// diary and offers the lasting Undo. A recipe whose nutrition is unknown
+/// logs with blanks: an unknown is never a zero.
+@visibleForTesting
+Future<void> logPlanned(WidgetRef ref, PlanEntry e) async {
+  final now = DateTime.now();
+  final day = DiaryEntry.dayOf(now);
+  final diary = ref.read(diaryRepositoryProvider);
+  final undo = ref.read(undoControllerProvider);
+  final List<String> ids;
+  switch (e.kind) {
+    case PlanKind.recipe:
+      final recipe = await ref.read(recipeRepositoryProvider).byId(e.refId!);
+      if (recipe == null) return;
+      final id = const Uuid().v4();
+      await diary.log(DiaryEntry(
+        id: id,
+        day: day,
+        at: now,
+        food: const FoodRef.quick(),
+        label: recipe.title,
+        qty: 1,
+        unitLabel: 'serving',
+        grams: null,
+        macros: recipe.perServing ?? const MacroSet(),
+        source: EntrySource.tap,
+        createdAt: now,
+      ));
+      ids = [id];
+    case PlanKind.meal:
+      ids = await ref
+          .read(savedMealRepositoryProvider)
+          .logMeal(e.refId!, at: now, day: day);
+    case PlanKind.note:
+      return;
+  }
+  undo.show(
+    message: 'Logged ${e.title}',
+    onUndo: () async {
+      for (final id in ids) {
+        await diary.delete(id);
+      }
+    },
+  );
+}
+
 final _weekProvider = StreamProvider.autoDispose.family(
     (ref, String weekStartDay) => ref
         .watch(planRepositoryProvider)
@@ -329,6 +376,19 @@ class _DayRow extends ConsumerWidget {
                                                   color:
                                                       AppColors.secondaryText(
                                                           context))),
+                                    // That's what we had (lens audit
+                                    // finding 4): today's recipe or staple
+                                    // goes in the diary on an explicit tap,
+                                    // never on its own. Under the title, so
+                                    // large text never squeezes the name.
+                                    if (isToday && e.kind != PlanKind.note)
+                                      TextButton.icon(
+                                        onPressed: () => logPlanned(ref, e),
+                                        icon: const Icon(
+                                            Icons.playlist_add_check,
+                                            size: 18),
+                                        label: const Text('Log this'),
+                                      ),
                                   ],
                                 ),
                               ),

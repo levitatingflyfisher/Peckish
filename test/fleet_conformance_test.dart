@@ -35,6 +35,9 @@ void main() => runFleetConformance(const FleetAppConfig(
         // C12: the accent (OhTheme's warmth, no appAccent) must not be
         // mistaken for the error red.
         FleetCheck.c12AccentVsError,
+        // C7-assetText: the bundled USDA food names (assets/food) are what
+        // search and the diary print, and C7's lib/ sweep never reads them.
+        FleetCheck.c7AssetText,
       },
       primaryActionScreens: {
         'TodayScreen',
