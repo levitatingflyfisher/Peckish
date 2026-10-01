@@ -11,6 +11,9 @@ void main() => runFleetConformance(const FleetAppConfig(
       // — which is how the snap-your-plate camera glyph ended up painted
       // in primary against its tonal fill. Guard stays on.
       checks: {
+        // C13: the PWA loads nothing from Google's CDNs. web/flutter_bootstrap.js
+        // points CanvasKit and the engine's fallback fonts at this origin.
+        FleetCheck.c13WebSelfHosted,
         ...FleetAppConfig.withBundledFonts,
         FleetCheck.c8IconButtons,
         // C10: no raw exception text on screen. Failures are a sentence

@@ -19,7 +19,9 @@ void main() {
   setUpAll(() => drawable = bundledFontCoverage(root: Directory.current));
 
   void expectDrawable(String text, {required String where}) {
-    expect(undrawableIn(text, drawable), isEmpty,
+    // web: true — Peckish ships a PWA, where no platform emoji font
+    // fills a gap the bundled faces leave.
+    expect(undrawableIn(text, drawable, web: true), isEmpty,
         reason: '$where prints characters the bundled fonts cannot draw — '
             'they render as boxes');
   }
