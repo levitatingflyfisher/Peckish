@@ -1,6 +1,6 @@
 {
-  "main_dart_js_gz_max_bytes": 1153415,
-  "main_dart_js_gz_note": "2026-07-28 deliberate ratchet for v0.3 (Foods screen + persistent regulars + scanner rework): measured 1098491 bytes + 5%. Prior: 1039632 + 5% (2026-07-17).",
+  "main_dart_js_gz_max_bytes": 1218531,
+  "main_dart_js_gz_note": "2026-10-02 deliberate ratchet: the GitHub CI runner's fresh Flutter 3.38.7 release build measured 1160505 bytes gzipped (a clean local build gives 1160481; an incremental one reused a stale main.dart.js until .dart_tool/flutter_build was deleted); budget = CI figure +5%. Growth since the August CI pass is real code: openhearth_design 0.4.0->0.9.2 (shared top-bar actions/overflow), sanctuary_backup_ui 0.2->0.3 and September app work; fonts are assets, not main.dart.js; no hearth_sync dependency. Prior: 2026-07-28 deliberate ratchet for v0.3 (Foods screen + persistent regulars + scanner rework): measured 1098491 bytes + 5%. Prior: 1039632 + 5% (2026-07-17).",
   "apk_arm64_max_bytes": 44120117,
   "apk_arm64_note": "2026-08-02 potato-pass ratchet DOWN for v0.7.1: measured 42019159 (+5%) after dropping the unused 815KB lucide font (2 icons, dead widget) and the dead auth scaffold. R8 was measured and REVERTED: with the ML stacks kept wholesale it came out ~890KB BIGGER. The remaining floor is native libs (flutter 11.1MB + mlkit 11MB + AOT 10.5MB + zxing 1.9 + sqlite3 1.7); models and barcode DBs are downloads, never bundled. Prior: 44374302 (v0.5, 2026-07-29)."
 }
