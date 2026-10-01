@@ -7,7 +7,6 @@ import 'package:peckish/features/recipes/presentation/recipes_screen.dart';
 import 'package:peckish/shared/extensions/qty_format.dart';
 import 'package:peckish/shared/theme/app_colors.dart';
 import 'package:peckish/shared/theme/app_spacing.dart';
-import 'package:peckish/shared/widgets/bar_actions.dart';
 import 'package:peckish/shared/widgets/undo_host.dart';
 
 class RecipeDetailScreen extends ConsumerWidget {
@@ -32,11 +31,11 @@ class RecipeDetailScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text(r.title, overflow: TextOverflow.ellipsis),
         actions: [
-          BarActions(children: [
+          OhBarActions(children: [
             // Icon plus a short word (fleet ruling on top bars).
-            TextButton.icon(
-              icon: const Icon(Icons.edit_outlined),
-              label: const Text('Edit'),
+            OhBarAction(
+              icon: Icons.edit_outlined,
+              label: 'Edit',
               onPressed: () async {
                 await Navigator.of(context).push(MaterialPageRoute(
                     builder: (_) => RecipeEditScreen(existing: r)));
@@ -47,9 +46,9 @@ class RecipeDetailScreen extends ConsumerWidget {
             // closes and the app-wide Undo re-seats the recipe, ingredients
             // and all. Meals already logged and plans already made keep their
             // own copies either way.
-            TextButton.icon(
-              icon: const Icon(Icons.delete_outline),
-              label: const Text('Delete'),
+            OhBarAction(
+              icon: Icons.delete_outline,
+              label: 'Delete',
               onPressed: () async {
                 final repo = ref.read(recipeRepositoryProvider);
                 final undo = ref.read(undoControllerProvider);

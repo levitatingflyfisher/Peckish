@@ -31,7 +31,7 @@ class RecipesScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Recipes'),
-        actions: const [ThemeToggleAction()],
+        actions: const [OhBarActions(children: [ThemeToggleAction()])],
       ),
       floatingActionButton: FloatingActionButton(
         tooltip: 'Add recipe',

@@ -135,16 +135,38 @@ class _LocalModelsSectionState extends ConsumerState<LocalModelsSection>
                   child: Text(_checking ? 'Checking…' : 'Check the model'),
                 ),
               ),
-              if (_checkResult case final r?)
+              if (_checkResult case final r?) ...[
+                // Fleet error ruling: a plain sentence first; the raw
+                // report (the field-test lesson: a pasteable diagnostic)
+                // lives behind Details, never as the first thing shown.
                 Padding(
                   padding: const EdgeInsets.only(top: AppSpacing.sm),
-                  child: SelectableText(
-                    r.report,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: r.ok ? AppColors.secondaryText(context) : AppColors.clay,
+                  child: Text(
+                    r.ok
+                        ? 'The model works: it answered in '
+                            '${r.elapsed.inMilliseconds} ms.'
+                        : 'The model didn’t answer. Details has what went '
+                            'wrong, to copy into a bug report.',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: r.ok ? null : AppColors.clay,
                     ),
                   ),
                 ),
+                ExpansionTile(
+                  title: const Text('Details'),
+                  tilePadding: EdgeInsets.zero,
+                  childrenPadding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                  expandedAlignment: Alignment.centerLeft,
+                  children: [
+                    SelectableText(
+                      r.report,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: AppColors.secondaryText(context),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ],
           ],
         ),

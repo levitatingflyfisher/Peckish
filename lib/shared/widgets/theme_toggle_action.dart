@@ -14,15 +14,12 @@ class ThemeToggleAction extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final mode = ref.watch(userPrefsProvider).value?.themeMode ??
         OhThemeModePreference.defaultValue;
-    // The label stops growing at 2x text so the bar still fits at 320dp
-    // (see BarActions); the page itself scales fully.
-    return MediaQuery.withClampedTextScaling(
-      maxScaleFactor: 2.0,
-      child: OhThemeToggle(
-        value: mode,
-        onChanged: (next) =>
-            ref.read(settingsRepositoryProvider).setThemeMode(next),
-      ),
+    // Inside an OhBarActions row the toggle folds by space like every
+    // other command, so the bar fits at 320dp x 3.0 without a clamp here.
+    return OhThemeToggle(
+      value: mode,
+      onChanged: (next) =>
+          ref.read(settingsRepositoryProvider).setThemeMode(next),
     );
   }
 }

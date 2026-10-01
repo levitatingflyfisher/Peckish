@@ -54,7 +54,7 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
       // History pins its month bar.
       appBar: AppBar(
         title: const Text('Plan'),
-        actions: const [ThemeToggleAction()],
+        actions: const [OhBarActions(children: [ThemeToggleAction()])],
       ),
       body: OhPage(
           padding: EdgeInsets.zero,

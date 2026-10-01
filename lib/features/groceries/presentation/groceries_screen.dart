@@ -39,7 +39,7 @@ class GroceriesScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Groceries'),
-        actions: const [ThemeToggleAction()],
+        actions: const [OhBarActions(children: [ThemeToggleAction()])],
       ),
       body: OhPage(
           padding: EdgeInsets.zero,

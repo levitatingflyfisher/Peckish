@@ -157,4 +157,34 @@ void main() {
     expect(got.firstWhere((e) => e.id == 'p-1').kcalPerServing, 620);
     expect(got.firstWhere((e) => e.id == 'p-2').kcalPerServing, isNull);
   });
+
+  // Rollout concern 5: watchDays watched only the plan table, so a recipe
+  // renamed elsewhere kept its old title on the plan until the plan itself
+  // changed. The stream now also follows the recipes and meals it names.
+  test('watchDays re-emits when a planned recipe is renamed', () async {
+    await repo.upsert(const PlanEntry(
+      id: 'p-1',
+      day: '2026-07-27',
+      slot: PlanSlot.dinner,
+      kind: PlanKind.recipe,
+      refId: 'r-1',
+    ));
+    final titles = <String?>[];
+    final sub = repo.watchDays(['2026-07-27']).listen(
+        (entries) => titles.add(entries.single.title));
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    expect(titles.last, 'Weeknight Tacos');
+
+    final recipes = RecipeRepository(db);
+    final r = (await recipes.byId('r-1'))!;
+    await recipes.update(Recipe(
+      id: r.id,
+      title: 'Friday Tacos',
+      servings: r.servings,
+      createdAt: r.createdAt,
+    ));
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    expect(titles.last, 'Friday Tacos');
+    await sub.cancel();
+  });
 }

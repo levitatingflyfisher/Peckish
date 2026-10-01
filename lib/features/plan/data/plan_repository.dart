@@ -89,10 +89,18 @@ class PlanRepository {
     return _resolveTitles(rows);
   }
 
-  Stream<List<PlanEntry>> watchDays(List<String> days) =>
-      (_db.select(_db.planEntries)..where((p) => p.day.isIn(days)))
-          .watch()
-          .asyncMap((_) => entriesForDays(days));
+  /// The plan for [days], re-read whenever the plan or anything a plan row
+  /// names changes: a recipe renamed or re-costed elsewhere (its title and
+  /// kcal per serving), its ingredients, or a saved meal.
+  Stream<List<PlanEntry>> watchDays(List<String> days) => _db
+      .customSelect('SELECT 1', readsFrom: {
+        _db.planEntries,
+        _db.recipes,
+        _db.recipeIngredients,
+        _db.savedMeals,
+      })
+      .watch()
+      .asyncMap((_) => entriesForDays(days));
 
   Future<List<PlanEntry>> _resolveTitles(List<PlanEntryRow> rows) async {
     final recipeIds = <String>{

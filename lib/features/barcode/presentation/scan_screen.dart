@@ -15,7 +15,6 @@ import 'package:peckish/features/barcode/presentation/product_sheet.dart';
 import 'package:peckish/features/barcode/presentation/scanner_view.dart';
 import 'package:peckish/features/diary/presentation/regulars_rail.dart';
 import 'package:peckish/shared/theme/app_spacing.dart';
-import 'package:peckish/shared/widgets/bar_actions.dart';
 
 /// One lookup client for the app; overridable in tests.
 final offClientProvider = Provider<OffClient>((ref) => OffClient());
@@ -133,20 +132,18 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
       appBar: AppBar(
         title: const Text('Scan a barcode'),
         actions: [
-          BarActions(children: [
+          OhBarActions(children: [
             if (_hasCamera)
               // Icon plus a word (fleet ruling on top bars); the tooltip
               // keeps the whole sentence for a long press or a screen reader.
-              Tooltip(
-                message:
+              OhBarAction(
+                icon: _cameraOff
+                    ? Icons.videocam_off_outlined
+                    : Icons.videocam_outlined,
+                label: _cameraOff ? 'Start camera' : 'Stop camera',
+                tooltip:
                     _cameraOff ? 'Turn the camera on' : 'Turn the camera off',
-                child: TextButton.icon(
-                  icon: Icon(_cameraOff
-                      ? Icons.videocam_off_outlined
-                      : Icons.videocam_outlined),
-                  label: Text(_cameraOff ? 'Start camera' : 'Stop camera'),
-                  onPressed: () => setState(() => _cameraOff = !_cameraOff),
-                ),
+                onPressed: () => setState(() => _cameraOff = !_cameraOff),
               ),
           ]),
         ],

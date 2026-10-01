@@ -81,7 +81,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('History'),
-        actions: const [ThemeToggleAction()],
+        actions: const [OhBarActions(children: [ThemeToggleAction()])],
       ),
       // The month control is pinned OUTSIDE the scroll view. It used to
       // ride at the top of the list, which meant that by the time you had

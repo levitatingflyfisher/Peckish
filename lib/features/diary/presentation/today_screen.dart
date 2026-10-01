@@ -17,7 +17,6 @@ import 'package:peckish/features/diary/domain/suggestion_engine.dart';
 import 'package:peckish/features/food/domain/macro_set.dart';
 import 'package:peckish/shared/theme/app_colors.dart';
 import 'package:peckish/shared/theme/app_spacing.dart';
-import 'package:peckish/shared/widgets/bar_actions.dart';
 import 'package:peckish/shared/widgets/theme_toggle_action.dart';
 
 /// Today — the daily loop. Law: logging a regular costs ONE tap (the recents
@@ -37,12 +36,13 @@ class TodayScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Today'),
         actions: [
-          BarActions(children: [
+          OhBarActions(children: [
             // History lives on the nav bar now; the corner is for Settings
-            // (icon plus word) and the theme choice.
-            TextButton.icon(
-              icon: const Icon(Icons.settings_outlined),
-              label: const Text('Settings'),
+            // (icon plus word) and the theme choice. The row folds words by
+            // space, so the title stays whole at 320dp x 3.0.
+            OhBarAction(
+              icon: Icons.settings_outlined,
+              label: 'Settings',
               onPressed: () => context.push('/settings'),
             ),
             const ThemeToggleAction(),

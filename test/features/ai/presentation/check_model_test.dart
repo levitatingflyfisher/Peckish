@@ -147,6 +147,13 @@ void main() {
     await tester.tap(find.text('Check the model'));
     await tester.pumpAndSettle();
 
+    // A plain sentence first (fleet error ruling); the copyable block is
+    // the detail behind it.
+    expect(find.textContaining('The model works'), findsOneWidget);
+    expect(find.textContaining('pass: true'), findsNothing);
+    await tester.ensureVisible(find.text('Details'));
+    await tester.tap(find.text('Details'));
+    await tester.pumpAndSettle();
     expect(find.textContaining('pass: true'), findsOneWidget);
     expect(find.textContaining('elapsed: 42ms'), findsOneWidget);
     expect(find.textContaining('backend: gpu'), findsOneWidget);
@@ -175,6 +182,13 @@ void main() {
     await tester.tap(find.text('Check the model'));
     await tester.pumpAndSettle();
 
+    // The raw exception is never the first thing on screen: a sentence
+    // says what happened, and Details holds the real error to copy.
+    expect(find.textContaining('didn’t answer'), findsOneWidget);
+    expect(find.textContaining('native crash'), findsNothing);
+    await tester.ensureVisible(find.text('Details'));
+    await tester.tap(find.text('Details'));
+    await tester.pumpAndSettle();
     expect(find.textContaining('pass: false'), findsOneWidget);
     expect(find.textContaining('native crash'), findsOneWidget,
         reason: 'the real underlying error, not a re-hash of the calm '

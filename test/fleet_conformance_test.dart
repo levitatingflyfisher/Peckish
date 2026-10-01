@@ -24,6 +24,9 @@ void main() => runFleetConformance(const FleetAppConfig(
         // tooltip; test/shared/widgets/top_bar_words_test.dart holds the
         // ruling itself (a visible word, never an icon alone).
         FleetCheck.c11IconLabels,
+        // C11 strict: every bar command is an OhBarAction (or the toggle) in
+        // an OhBarActions row, so its word is visible wherever it fits.
+        FleetCheck.c11StrictBarLabels,
         // C9: every routed screen has a way in.
         FleetCheck.c9Routes,
         // Item 24: the screens below are swept at 360dp × 1.3 (and 320dp ×
